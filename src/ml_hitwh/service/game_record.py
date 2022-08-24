@@ -10,7 +10,7 @@ __all__ = ("new_game", "record")
 
 async def next_game_id(now: datetime):
     today_begin = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_count = await Game.find(Game.create_time >= int(today_begin.timestamp())).count()
+    today_count = await Game.find(Game.create_time >= today_begin).count()
     return today_begin.year % 100 * 100_0000 + today_begin.month * 1_0000 + today_begin.day * 100 + today_count + 1
 
 
@@ -20,7 +20,7 @@ async def new_game(create_user_id: int, group_id: int) -> Game:
     game = Game(game_id=game_id,
                 group_id=group_id,
                 create_user_id=create_user_id,
-                create_time=now.timestamp())
+                create_time=now)
 
     await game.insert()
     return game
@@ -34,7 +34,6 @@ async def record(game_id: int, user_id: int, point: int) -> Game:
     for r in game.record:
         if r.user_id == user_id:
             raise BadRequestError("你已经记录过这场对局了，可以对此消息回复“撤销结算”指令撤销你的分数后重新记录")
-
 
     game.record.append(GameRecord(user_id=user_id, point=point))
 
