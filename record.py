@@ -1,4 +1,3 @@
-from audioop import reverse
 from random import randint
 from nonebot.adapters import Message
 from nonebot import on_command, on_keyword, on_message
