@@ -1,3 +1,4 @@
+from audioop import reverse
 from random import randint
 from nonebot.adapters import Message
 from nonebot import on_command, on_keyword, on_message
@@ -17,40 +18,48 @@ create = on_command("新建对局", aliases=set(tuple(["xj", "new"])), priority=
 
 @create.handle()
 async def new_game(bot: Bot, event: Event):
-    while True:
-        global game_info
-        id = randint(1000, 9999)
-        if id not in game_info:
-            break
-    game_info[id] = []
-    await bot.send(message="新建对局成功，对局编号为{}".format(id), event=event)
+    global game_info
+    if event.get_event_name() != "message.group.normal":
+        await bot.send(message="请在群聊中使用此功能！", event=event)
+        return
+    group_id = str(event.get_session_id()).split("_")[1]
+    game_info[group_id] = []
+    await bot.send(message="新建对局成功", event=event)
 
 
-count = on_command("", priority=5)
+count = on_command("结算", priority=5)
 # 计数用
 
 
 @count.handle()
 async def counts(bot: Bot, event: Event):
-    global game_info
-    nums = str(event.get_message()).split(" ")
-    try:
-        if int(nums[0]) in game_info:
-            try:
-                for i in range(len(nums)):
-                    nums[i] = int(nums[i])
-            except:
-                await bot.send(message="输入的信息或许有误？", event=event)
-        else:
-            return
-    except:
+    if event.get_event_name() != "message.group.normal":
+        await bot.send(message="请在群聊中使用此功能！", event=event)
         return
-    if len(nums) == 2:
-        game_info[nums[0]].append([event.get_user_id(), nums[1]])
-    elif len(nums) == 3:
-        game_info[nums[0]].append([str(nums[2]), nums[1]])
-    # await bot.send(message=str(game_info[nums[0]]), event=event)
-    if len(game_info[nums[0]]) == 4:
-        await bot.send(message=f"请检查输入：\n{str(game_info[nums[0]])}", event=event)
-        del game_info[nums[0]]
-        
+    global game_info
+    group_id = str(event.get_session_id()).split("_")[1]
+    if group_id not in game_info:
+        await bot.send(message="当前并没有正在进行的对局！", event=event)
+        return
+    whatever, user, credit = str(event.get_message()).split(" ")
+    try:
+        credit = int(credit)
+    except:
+        await bot.send(message="输入是否有错误？", event=event)
+        return
+    game_info[group_id].append([user, credit])
+    await bot.send(message=f"已记录数据：{user} {credit}", event=event)
+    if len(game_info[group_id]) == 4:
+        counts = 0
+        for info in game_info[group_id]:
+            counts += info[1]
+        if counts != 100000:
+            await bot.send(message="输入是否有错误？总数错误", event=event)
+        game_info[group_id].sort(key = lambda item: item[1], reverse = True)
+        info = "信息已输入，请确认信息：\n"
+        info += f"{game_info[group_id][0][0]}\t\t{game_info[group_id][0][1]}\t\t1位\n"
+        info += f"{game_info[group_id][1][0]}\t\t{game_info[group_id][1][1]}\t\t2位\n"
+        info += f"{game_info[group_id][2][0]}\t\t{game_info[group_id][2][1]}\t\t3位\n"
+        info += f"{game_info[group_id][3][0]}\t\t{game_info[group_id][3][1]}\t\t4位"
+        await bot.send(event = event, message=info)
+        del game_info[group_id]
