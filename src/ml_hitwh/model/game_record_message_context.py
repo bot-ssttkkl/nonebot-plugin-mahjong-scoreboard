@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import tzlocal
 from beanie import Document
 from pymongo import IndexModel
 
@@ -7,7 +8,7 @@ from pymongo import IndexModel
 class GameRecordMessageContext(Document):
     message_id: int
     game_id: int
-    create_time: datetime
+    create_time: datetime = datetime.now(tzlocal.get_localzone())
     extra: dict = {}
 
     class Settings:
