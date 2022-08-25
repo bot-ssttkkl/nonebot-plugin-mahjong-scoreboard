@@ -1,6 +1,9 @@
 __pycache__
 data/*.json
-
+.env.*
+bot.py
+docker-compose.yml
+Dockerfile
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python

@@ -1,21 +1,21 @@
 [tool.poetry]
 name = "ml_hitwh"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
-packages = [
-    { include = "ml_hitwh", from = "src" },
-]
+description = "ml_hitwh"
+authors = []
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.7.3"
-nonebot2 = "^2.0.0-beta.5"
-beanie = "^1.11.9"
-tzlocal = "^4.2"
+nonebot2 = "^2.0.0-beta.1"
 
 [tool.poetry.dev-dependencies]
-nonebug = "^0.2.1"
+nb-cli = "^0.6.0"
+
+[tool.nonebot]
+plugins = []
+plugin_dirs = ["src/plugins"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry_core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
