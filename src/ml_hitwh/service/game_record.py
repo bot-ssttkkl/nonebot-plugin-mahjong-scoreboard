@@ -28,6 +28,8 @@ async def new_game(create_user_id: int, group_id: int) -> Game:
 
 async def record(game_id: int, user_id: int, point: int) -> Game:
     game = await Game.find_one(Game.game_id == game_id)
+    if game is None:
+        raise BadRequestError("未找到对局")
     if game.state != GameState.uncompleted:
         raise BadRequestError("这场对局不处于未完成状态")
 
@@ -45,3 +47,25 @@ async def record(game_id: int, user_id: int, point: int) -> Game:
 
     await game.save()
     return game
+
+
+async def revert_record(game_id: int, user_id: int) -> Game:
+    game = await Game.find_one(Game.game_id == game_id)
+    if game is None:
+        raise BadRequestError("未找到对局")
+
+    for r in game.record:
+        if r.user_id == user_id:
+            game.record.remove(r)
+            break
+    else:
+        raise BadRequestError("你还没有记录过这场对局")
+
+    game.state = GameState.uncompleted
+    await game.save()
+    return game
+
+
+async def delete_game(game_id: int) -> bool:
+    result = await Game.find_one(Game.game_id == game_id).delete_one()
+    return result.deleted_count == 1
