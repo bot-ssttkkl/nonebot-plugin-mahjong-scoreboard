@@ -2,8 +2,8 @@ from datetime import datetime
 
 import tzlocal
 
-from ml_hitwh.errors import BadRequestError
-from ml_hitwh.model.game import Game, GameRecord, GameState
+from ..errors import BadRequestError
+from ..model.game import Game, GameRecord, GameState
 
 __all__ = ("new_game", "record")
 

@@ -1,16 +1,22 @@
+from datetime import datetime
+import json
 from io import StringIO
-
-from ml_hitwh.errors import BadRequestError
-from ml_hitwh.model.game import GameState
-from ml_hitwh.model.game_record_message_context import GameRecordMessageContext
-from ml_hitwh.service import game_record
+import os
+from ..info import PATH
+from ..errors import BadRequestError
+from ..model.game import GameState
+from ..model.game_record_message_context import GameRecordMessageContext
+from ..service import game_record
 from nonebot import on_fullmatch, on_startswith
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
-
 from .utils import split_message, get_user_name
 
 
+print("Begin Record")
+
+
 async def get_context(event: GroupMessageEvent):
+    """查找是否有未完成的对局"""
     message_id = None
     for seg in event.original_message:
         if seg.type == "reply":
@@ -18,12 +24,19 @@ async def get_context(event: GroupMessageEvent):
             break
 
     if message_id:
-        return await GameRecordMessageContext.find_one(GameRecordMessageContext.message_id == message_id)
-
+        global PATH
+        try:
+            with open(PATH + f"data/context/{message_id}.json", "r", encoding="utf-8") as f:
+                return json.loads(f.read())
+        except:
+            return
 
 async def save_context(game_id: int, message_id: int, **kwargs):
-    context = GameRecordMessageContext(game_id=game_id, message_id=message_id, extra=kwargs)
-    await context.insert()
+    """保存未完成对局"""
+    global PATH
+    with open(PATH + f"data/context/{message_id}.json", "w", encoding="utf-8") as f:
+        context = {"game_id": game_id, "message_id": message_id, "extra": kwargs}
+        f.write(json.dumps(context))
 
 
 # 用户新建对局
@@ -32,10 +45,22 @@ new_game_matcher = on_fullmatch("新建对局", priority=5)
 
 @new_game_matcher.handle()
 async def new_game(event: GroupMessageEvent):
-    game = await game_record.new_game(event.user_id, event.group_id)
-    send_result = await new_game_matcher.send(f"成功新建对局{game.game_id}，对此消息回复“结算 <分数>”指令记录你的分数")
+    """新建对局"""
+    # game: game_id, group_id, create_user, create_time
+    count = 0
+    game_id:int
+    while True:
+        # 记录保存，分配对局编号，创建记录文件
+        if not os.path.exists(PATH + "data/" + datetime.now().strftime("%Y%m%d") + f"{count}.json"):
+            game_id = datetime.now().strftime("%Y%m%d") + f"{count}"
+            with open(PATH + "data/" + f"{game_id}.json", "w", encoding="utf-8") as f:
+                game = {"game_id": game_id, "group_id": event.group_id, "create_user": event.user_id, "create_time": str(datetime.now())}
+                f.write(json.dumps(game))
+                break
+        count += 1
+    send_result = await new_game_matcher.send(f"成功新建对局{game_id}，对此消息回复“结算 <分数>”指令记录你的分数")
 
-    await save_context(game_id=game.game_id, message_id=send_result["message_id"])
+    await save_context(game_id=game_id, message_id=send_result["message_id"])
 
 
 # 计数用
@@ -49,9 +74,9 @@ async def record(bot: Bot, event: GroupMessageEvent):
         game_id = None
         point = None
 
-        context = await get_context(event)
+        context = get_context(event)
         if context:
-            game_id = context.game_id
+            game_id = context["game_id"]
 
         args = split_message(event.message)
 
@@ -89,6 +114,10 @@ async def record(bot: Bot, event: GroupMessageEvent):
         except ValueError:
             raise BadRequestError("分数不合法")
 
+        def record(game_id, user_id, point):
+            global PATH
+            game = {"game"}
+            pass
         game = await game_record.record(game_id, user_id, point)
 
         with StringIO() as sb:

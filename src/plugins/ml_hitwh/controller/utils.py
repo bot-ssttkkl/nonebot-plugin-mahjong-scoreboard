@@ -20,5 +20,6 @@ def split_message(message: Message) -> List[MessageSegment]:
 
 
 async def get_user_name(user_id: int, group_id: int, bot: Bot):
+    """获取用户名，优先返回群昵称，其次返回用户昵称"""
     user_info = await bot.get_group_member_info(group_id=group_id, user_id=user_id)
     return user_info["card"] or user_info["nickname"]
