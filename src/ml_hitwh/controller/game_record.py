@@ -1,12 +1,12 @@
 from io import StringIO
 
+from nonebot import on_command
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
+
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.game import GameState, Game
 from ml_hitwh.model.game_record_message_context import GameRecordMessageContext
 from ml_hitwh.service import game_record
-from nonebot import on_command
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
-
 from .utils import split_message, get_user_name
 
 
@@ -73,20 +73,27 @@ async def record(bot: Bot, event: GroupMessageEvent):
                 # 结算 对局<编号> @<用户> <分数>
                 game_id = args[1].data["text"][len("对局"):]
 
-                if args[2].type == "at":
-                    # 结算 对局<编号> @<用户> <分数>
-                    user_id = args[2].data["qq"]
-                    point = args[3].data["text"]
-                else:
+                if args[2].type == "text":
                     # 结算 对局<编号> <分数>
                     point = args[2].data["text"]
+                elif args[2].type == "at":
+                    # 结算 对局<编号> @<用户> <分数>
+                    user_id = int(args[2].data["qq"])
+                    point = args[3].data["text"]
+                else:
+                    raise BadRequestError("指令格式不合法")
             else:
                 # 结算 <分数>
                 point = args[1].data["text"]
-        else:
+        elif args[1].type == "at":
             # 结算 @<用户> <分数>
             user_id = int(args[1].data["qq"])
             point = args[2].data["text"]
+        else:
+            raise BadRequestError("指令格式不合法")
+
+        if not game_id:
+            raise BadRequestError("请指定对局编号")
 
         try:
             game_id = int(game_id)
