@@ -18,7 +18,7 @@ class GameRecord(BaseModel):
     point: int
 
 
-class Game(Document):
+class GameModel(BaseModel):
     game_id: int
     group_id: int
     state: GameState = GameState.uncompleted
@@ -26,6 +26,8 @@ class Game(Document):
     create_user_id: int
     create_time: datetime
 
+
+class Game(Document, GameModel):
     class Settings:
         indexes = [
             IndexModel("game_id", unique=True),
