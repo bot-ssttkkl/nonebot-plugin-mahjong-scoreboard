@@ -1,10 +1,10 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 
 import pymongo
 from beanie import Document
-from pydantic import conlist, BaseModel
+from pydantic import BaseModel
 from pymongo import IndexModel
 
 
@@ -24,7 +24,7 @@ class GameState(Enum):
 class GameRecord(BaseModel):
     user_id: int
     score: int  # 分数
-    point: Optional[float] = None  # pt
+    point: Optional[int] = None  # pt
 
 
 class GameModel(BaseModel):
@@ -33,9 +33,22 @@ class GameModel(BaseModel):
     players: int
     wind: Wind
     state: GameState = GameState.uncompleted
-    record: conlist(GameRecord, max_items=4) = []
+    record: List[GameRecord] = []
     create_user_id: int
     create_time: datetime
+
+    @property
+    def game_type_text(self):
+        if self.players == 4 and self.wind == Wind.EAST:
+            return "四人东"
+        elif self.players == 4 and self.wind == Wind.SOUTH:
+            return "四人南"
+        elif self.players == 3 and self.wind == Wind.EAST:
+            return "三人东"
+        elif self.players == 3 and self.wind == Wind.SOUTH:
+            return "三人南"
+        else:
+            raise RuntimeError("invalid players and wind")
 
 
 class Game(Document, GameModel):

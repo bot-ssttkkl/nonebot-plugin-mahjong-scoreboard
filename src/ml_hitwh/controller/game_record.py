@@ -26,18 +26,15 @@ async def save_context(game_id: int, message_id: int, **kwargs):
     await context.insert()
 
 
-async def build_game_record_text(game: Game, bot: Bot, event: GroupMessageEvent):
-    with StringIO() as sb:
-        if game.state == GameState.completed:
-            for i, r in enumerate(game.record):
-                name = await get_user_name(r.user_id, event.group_id, bot)
-                sb.write(f"#{i + 1}  {name}\t{str(r.score).rjust(6)}\t{r.point}\n")
-        else:
-            for r in game.record:
-                name = await get_user_name(r.user_id, event.group_id, bot)
-                sb.write(f"{name}\t{str(r.score).rjust(6)}\n")
-
-        return sb.getvalue()
+async def build_game_record_text(f, game: Game, bot: Bot, event: GroupMessageEvent):
+    if game.state == GameState.completed:
+        for i, r in enumerate(game.record):
+            name = await get_user_name(r.user_id, event.group_id, bot)
+            f.write(f"#{i + 1}  {name}\t{str(r.score).rjust(6)}\t{r.point}\n")
+    else:
+        for r in game.record:
+            name = await get_user_name(r.user_id, event.group_id, bot)
+            f.write(f"{name}\t{str(r.score).rjust(6)}\n")
 
 
 # 用户新建对局
@@ -137,18 +134,18 @@ async def record(bot: Bot, event: GroupMessageEvent):
 
         game = await game_record.record(game_id, user_id, point)
 
-        with StringIO() as sb:
+        with StringIO() as sio:
             if game.state == GameState.uncompleted or game.state == GameState.invalid_total_point:
-                sb.write(f"成功记录到对局{game.game_id}，当前记录情况：\n\n")
+                sio.write(f"成功记录到对局{game.game_id}，当前记录情况：\n\n")
             elif game.state == GameState.completed:
-                sb.write(f"成功记录到对局{game.game_id}，对局已成功结算。当前记录情况：\n\n")
+                sio.write(f"成功记录到对局{game.game_id}，对局已成功结算。当前记录情况：\n\n")
 
-            sb.write(await build_game_record_text(game, bot, event))
+            await build_game_record_text(sio, game, bot, event)
 
             if game.state == GameState.invalid_total_point:
-                sb.write("\n警告：分数之和不等于100000，对此消息回复“/撤销结算”指令撤销你的分数后重新记录")
+                sio.write("\n警告：分数之和不等于100000，对此消息回复“/撤销结算”指令撤销你的分数后重新记录")
 
-            send_result = await record_matcher.send(sb.getvalue())
+            send_result = await record_matcher.send(sio.getvalue())
 
         await save_context(game_id=game.game_id, message_id=send_result["message_id"], user_id=user_id)
     except BadRequestError as e:
@@ -198,12 +195,12 @@ async def revert_record(bot: Bot, event: GroupMessageEvent):
 
         game = await game_record.revert_record(game_id, user_id)
 
-        with StringIO() as sb:
+        with StringIO() as sio:
             if game.state == GameState.uncompleted:
-                sb.write(f"成功撤销记录到对局{game.game_id}，当前记录情况：\n\n")
-            sb.write(await build_game_record_text(game, bot, event))
+                sio.write(f"成功撤销记录到对局{game.game_id}，当前记录情况：\n\n")
+            await build_game_record_text(sio, game, bot, event)
 
-            send_result = await record_matcher.send(sb.getvalue())
+            send_result = await record_matcher.send(sio.getvalue())
 
         await save_context(game_id=game.game_id, message_id=send_result["message_id"], user_id=user_id)
 
