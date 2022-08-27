@@ -1,4 +1,6 @@
+from asyncio import Lock
 from datetime import datetime
+from math import log, ceil
 
 import tzlocal
 
@@ -7,11 +9,36 @@ from ml_hitwh.model.game import Game, GameRecord, GameState
 
 __all__ = ("new_game", "record")
 
+game_counter = 0
+game_counter_date = None
+game_counter_sync_mutex = Lock()
+
 
 async def next_game_id(now: datetime):
-    today_begin = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_count = await Game.find(Game.create_time >= today_begin).count()
-    return today_begin.year % 100 * 100_0000 + today_begin.month * 1_0000 + today_begin.day * 100 + today_count + 1
+    global game_counter, game_counter_date
+
+    # 判断是否需要从数据库同步计数
+    if game_counter_date is None:
+        async with game_counter_sync_mutex:
+            if game_counter_date is None:
+                today_begin = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                game_counter = await Game.find(Game.create_time >= today_begin).count()
+                game_counter_date = now.date()
+
+    if game_counter_date != now.date():
+        game_counter_date = now.date()
+        game_counter = 0
+
+    game_counter += 1
+    num = game_counter
+
+    # 编号默认为2位，当天对局数超过100时再扩展
+    if num < 100:
+        num_digit = 2
+    else:
+        num_digit = ceil(log(num, 10))
+
+    return (today_begin.year % 100 * 10000 + today_begin.month * 100 + today_begin.day) * num_digit + num
 
 
 async def new_game(create_user_id: int, group_id: int) -> Game:
