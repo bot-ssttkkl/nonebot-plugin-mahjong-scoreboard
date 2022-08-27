@@ -4,7 +4,7 @@ from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
 
 from ml_hitwh.errors import BadRequestError
-from ml_hitwh.model.game import GameState, Game
+from ml_hitwh.model.game import GameState, Game, Wind
 from ml_hitwh.model.game_record_message_context import GameRecordMessageContext
 from ml_hitwh.service import game_record
 from .utils import split_message, get_user_name
@@ -28,9 +28,15 @@ async def save_context(game_id: int, message_id: int, **kwargs):
 
 async def build_game_record_text(game: Game, bot: Bot, event: GroupMessageEvent):
     with StringIO() as sb:
-        for i, r in enumerate(sorted(game.record, key=lambda r: r.point, reverse=True)):
-            name = await get_user_name(r.user_id, event.group_id, bot)
-            sb.write(f"#{i + 1}  {name}\t{str(r.point).rjust(6)}\n")
+        if game.state == GameState.completed:
+            for i, r in enumerate(game.record):
+                name = await get_user_name(r.user_id, event.group_id, bot)
+                sb.write(f"#{i + 1}  {name}\t{str(r.score).rjust(6)}\t{r.point}\n")
+        else:
+            for r in game.record:
+                name = await get_user_name(r.user_id, event.group_id, bot)
+                sb.write(f"{name}\t{str(r.score).rjust(6)}\n")
+
         return sb.getvalue()
 
 
@@ -40,10 +46,34 @@ new_game_matcher = on_command("新建对局", priority=5)
 
 @new_game_matcher.handle()
 async def new_game(event: GroupMessageEvent):
-    game = await game_record.new_game(event.user_id, event.group_id)
-    send_result = await new_game_matcher.send(f"成功新建对局{game.game_id}，对此消息回复“结算 <分数>”指令记录你的分数")
+    try:
+        players = 4
+        wind = Wind.SOUTH
 
-    await save_context(game_id=game.game_id, message_id=send_result["message_id"])
+        args = split_message(event.message)
+        if len(args) > 1:
+            game_type = str(args[1])
+            if game_type == "四人东":
+                players = 4
+                wind = Wind.EAST
+            elif game_type == "四人南":
+                players = 4
+                wind = Wind.SOUTH
+            elif game_type == "三人东":
+                players = 3
+                wind = Wind.EAST
+            elif game_type == "三人南":
+                players = 3
+                wind = Wind.SOUTH
+            else:
+                raise BadRequestError("对局类型不合法")
+
+        game = await game_record.new_game(event.user_id, event.group_id, players, wind)
+        send_result = await new_game_matcher.send(f"成功新建对局{game.game_id}，对此消息回复“/结算 <分数>”指令记录你的分数")
+
+        await save_context(game_id=game.game_id, message_id=send_result["message_id"])
+    except BadRequestError as e:
+        await new_game_matcher.send(e.message)
 
 
 # 计数用
@@ -116,7 +146,7 @@ async def record(bot: Bot, event: GroupMessageEvent):
             sb.write(await build_game_record_text(game, bot, event))
 
             if game.state == GameState.invalid_total_point:
-                sb.write("警告：分数之和不等于100000，对此消息回复“撤销结算”指令撤销你的分数后重新记录")
+                sb.write("\n警告：分数之和不等于100000，对此消息回复“/撤销结算”指令撤销你的分数后重新记录")
 
             send_result = await record_matcher.send(sb.getvalue())
 
