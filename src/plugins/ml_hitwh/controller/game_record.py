@@ -1,18 +1,17 @@
-from datetime import datetime
 import json
-from io import StringIO
 import os
-from ..info import PATH
+from datetime import datetime
+from io import StringIO
+
+from nonebot import on_fullmatch, on_startswith
+from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent
+
 from ..errors import BadRequestError
+from ..info import PATH
 from ..model.game import GameState
 from ..model.game_record_message_context import GameRecordMessageContext
 from ..service import game_record
-from nonebot import on_fullmatch, on_startswith
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
-from .utils import split_message, get_user_name
-
-
-print("Begin Record")
+from .utils import get_user_name, split_message
 
 
 async def get_context(event: GroupMessageEvent):
