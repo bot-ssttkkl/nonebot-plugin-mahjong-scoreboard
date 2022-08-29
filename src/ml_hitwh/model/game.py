@@ -1,60 +1,54 @@
-from datetime import datetime
-from enum import Enum
-from typing import Optional, List
+import enum
 
-import pymongo
-from beanie import Document
-from pydantic import BaseModel
-from pymongo import IndexModel
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, func, BigInteger, Enum
+from sqlalchemy.orm import relationship
+
+from ml_hitwh.model import OrmBase
 
 
-class Wind(Enum):
-    EAST = 0
-    SOUTH = 1
-    WEST = 2
-    NORTH = 3
+class PlayerAndWind(enum.Enum):
+    FOUR_MEN_EAST = 1
+    FOUR_MEN_SOUTH = 2
+    THREE_MEN_EAST = 3
+    THREE_MEN_SOUTH = 4
 
 
-class GameState(Enum):
-    uncompleted = 0
-    completed = 1
-    invalid_total_point = 2
+class GameState(enum.Enum):
+    uncompleted = 1
+    completed = 2
+    invalid_total_point = 3
 
 
-class GameRecord(BaseModel):
-    user_id: int
-    score: int  # 分数
-    point: Optional[int] = None  # pt
+class Game(OrmBase):
+    __tablename__ = 'game'
+
+    # 应用使用的ID
+    id = Column('id', Integer, primary_key=True, autoincrement=True)
+    # 外部使用的代号
+    code = Column('code', Integer, nullable=False)
+    group_id = Column('group_id', BigInteger, nullable=False)
+    create_user_id = Column('create_user_id', BigInteger)
+
+    season_id = Column('season_id', Integer, ForeignKey("season.id"))
+    season = relationship('SeasonOrm', foreign_keys='Game.season_id', back_populates='games')
+
+    player_and_wind = Column('player_and_wind', Enum(PlayerAndWind), default=PlayerAndWind.FOUR_MEN_SOUTH)
+    state = Column('state', Enum(GameState), default=GameState.uncompleted)
+
+    create_time = Column('create_time', DateTime, server_default=func.now())
+    delete_time = Column('delete_time', DateTime)
+
+    records = relationship("GameRecord", foreign_keys='GameRecord.game_id', back_populates="game")
 
 
-class GameModel(BaseModel):
-    game_id: int
-    group_id: int
-    players: int
-    wind: Wind
-    state: GameState = GameState.uncompleted
-    record: List[GameRecord] = []
-    create_user_id: int
-    create_time: datetime
+class GameRecord(OrmBase):
+    __tablename__ = 'game_record'
 
-    @property
-    def game_type_text(self):
-        if self.players == 4 and self.wind == Wind.EAST:
-            return "四人东"
-        elif self.players == 4 and self.wind == Wind.SOUTH:
-            return "四人南"
-        elif self.players == 3 and self.wind == Wind.EAST:
-            return "三人东"
-        elif self.players == 3 and self.wind == Wind.SOUTH:
-            return "三人南"
-        else:
-            raise RuntimeError("invalid players and wind")
+    id = Column('id', Integer, primary_key=True, autoincrement=True)
 
+    game_id = Column('game_id', Integer, ForeignKey("game.id"), nullable=False)
+    game = relationship('Game', foreign_keys='GameRecord.game_id', back_populates='records')
 
-class Game(Document, GameModel):
-    class Settings:
-        indexes = [
-            IndexModel("game_id", unique=True),
-            [("group_id", pymongo.ASCENDING), ("record.user_id", pymongo.ASCENDING)],
-            [("status", pymongo.ASCENDING), ("create_time", pymongo.ASCENDING)]
-        ]
+    user_id = Column('user_id', BigInteger, nullable=False)
+    score = Column('score', Integer, nullable=False)  # 分数
+    point = Column('point', Integer)  # pt

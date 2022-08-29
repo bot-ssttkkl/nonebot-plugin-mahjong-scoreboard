@@ -1,9 +1,18 @@
-from typing import List
+from typing import List, Optional
 
 from nonebot import Bot
-from nonebot.adapters.onebot.v11 import Message, MessageSegment
+from nonebot.adapters.onebot.v11 import Message, MessageSegment, MessageEvent
 
 __all__ = ("split_message", "get_user_name")
+
+
+def get_reply_message_id(event: MessageEvent) -> Optional[int]:
+    message_id = None
+    for seg in event.original_message:
+        if seg.type == "reply":
+            message_id = int(seg.data["id"])
+            break
+    return message_id
 
 
 def split_message(message: Message) -> List[MessageSegment]:

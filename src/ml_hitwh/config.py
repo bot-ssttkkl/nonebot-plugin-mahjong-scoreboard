@@ -3,8 +3,7 @@ from pydantic import BaseSettings, conlist
 
 
 class Config(BaseSettings):
-    ml_mongo_conn_url: str
-    ml_mongo_database_name: str
+    ml_database_conn_url: str
 
     # TODO: 支持按群组动态配置
     ml_horse_point_four_men_south: conlist(int, min_items=4, max_items=4) = [50, 10, -10, -30]

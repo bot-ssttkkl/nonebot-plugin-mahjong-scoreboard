@@ -1,22 +1,17 @@
-from datetime import datetime
+from sqlalchemy import Column, BigInteger, Integer, DateTime, func, ForeignKey
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.orm import relationship
 
-import tzlocal
-from beanie import Document
-from pydantic import BaseModel
-from pymongo import IndexModel
-
-
-class GameRecordMessageContextModel(BaseModel):
-    message_id: int
-    game_id: int
-    create_time: datetime = datetime.now(tzlocal.get_localzone())
-    extra: dict = {}
+from ml_hitwh.model import OrmBase
 
 
-class GameRecordMessageContext(Document, GameRecordMessageContextModel):
-    class Settings:
-        indexes = [
-            IndexModel("message_id", unique=True),
-            "game_id",
-            IndexModel("create_time", expireAfterSeconds=86400)
-        ]
+class GameRecordMessageContext(OrmBase):
+    __tablename__ = "game_record_message_context"
+
+    message_id = Column(BigInteger, primary_key=True)
+
+    game_id = Column(Integer, ForeignKey("game.id"))
+    game = relationship('Game', foreign_keys='GameRecordMessageContextOrm.game_id')
+
+    create_time = Column(DateTime, server_default=func.now())
+    extra = Column(JSON)
