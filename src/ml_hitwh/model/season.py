@@ -17,7 +17,7 @@ class SeasonOrm(OrmBase):
     id = Column("id", Integer, primary_key=True, autoincrement=True)
 
     group_id = Column('group_id', BigInteger, nullable=False)
-    state = Column('state', Enum(SeasonState), default=SeasonState.initial)
+    state = Column('state', Enum(SeasonState), nullable=False, default=SeasonState.initial)
 
     name = Column("name", String)
     code = Column("code", Integer)
@@ -34,10 +34,10 @@ class SeasonOrm(OrmBase):
 class UserSeasonPointOrm(OrmBase):
     __tablename__ = 'user_season_point'
 
-    user_id = Column('user_id', Integer, primary_key=True)
-    group_id = Column('group_id', Integer, primary_key=True)
+    user_id = Column('user_id', Integer, nullable=False, primary_key=True)
+    season_id = Column('season_id', Integer, nullable=False, primary_key=True)
 
-    point = Column('point', Integer, default=0)
+    point = Column('point', Integer, nullable=False, default=0)
 
     last_change_log_id = Column('last_change_log_id', Integer, ForeignKey("user_season_point_change_log.id"))
     last_change_log = relationship('UserSeasonPointChangeLogOrm',

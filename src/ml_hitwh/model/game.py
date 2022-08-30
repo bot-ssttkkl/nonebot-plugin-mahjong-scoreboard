@@ -32,10 +32,11 @@ class Game(OrmBase):
     season_id = Column('season_id', Integer, ForeignKey("season.id"))
     season = relationship('SeasonOrm', foreign_keys='Game.season_id', back_populates='games')
 
-    player_and_wind = Column('player_and_wind', Enum(PlayerAndWind), default=PlayerAndWind.FOUR_MEN_SOUTH)
-    state = Column('state', Enum(GameState), default=GameState.uncompleted)
+    player_and_wind = Column('player_and_wind', Enum(PlayerAndWind), nullable=False,
+                             default=PlayerAndWind.FOUR_MEN_SOUTH)
+    state = Column('state', Enum(GameState), nullable=False, default=GameState.uncompleted)
 
-    create_time = Column('create_time', DateTime, server_default=func.now())
+    create_time = Column('create_time', DateTime, nullable=False, server_default=func.now())
     delete_time = Column('delete_time', DateTime)
 
     records = relationship("GameRecord", foreign_keys='GameRecord.game_id', back_populates="game")
