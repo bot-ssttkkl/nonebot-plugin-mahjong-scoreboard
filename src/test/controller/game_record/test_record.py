@@ -16,7 +16,7 @@ GAME_ID = 22082601
 class TestRecord(FakeContextManagerMixin, MyTest):
     @pytest.fixture
     def mock_record_factory(self, load_plugin, monkeypatch):
-        from ml_hitwh.model.game import GameModel
+        from ml_hitwh.model.orm.game import GameModel
 
         def factory(result: Union[GameModel, Exception]):
             async def record(game_id: int, user_id: int, point: int) -> GameModel:
@@ -37,7 +37,7 @@ class TestRecord(FakeContextManagerMixin, MyTest):
                             mock_record_factory,
                             load_plugin):
         from nonebot.adapters.onebot.v11 import Message
-        from ml_hitwh.model.game import GameModel
+        from ml_hitwh.model.orm.game import GameModel
 
         async def test_record(message: Message,
                               reply: bool,
@@ -81,14 +81,14 @@ class TestRecord(FakeContextManagerMixin, MyTest):
     async def test_record_1(self, factory_test_record):
         # [引用消息]/结算 20000
         from nonebot.adapters.onebot.v11 import Message, MessageSegment
-        from ml_hitwh.model.game import GameModel, GameRecord
+        from ml_hitwh.model.orm.game import GameModel, GameRecordOrm
 
         msg = Message([MessageSegment.text("/结算 20000")])
         result_game = GameModel(game_id=GAME_ID,
                                 group_id=GROUP_ID,
                                 create_user_id=USER_ID,
                                 create_time=datetime.now(tzlocal.get_localzone()),
-                                record=[GameRecord(user_id=USER_ID, point=20000)])
+                                record=[GameRecordOrm(user_id=USER_ID, point=20000)])
         expect_msg = "成功记录到对局22082601，当前记录情况：\n" \
                      "\n" \
                      "#1  TESTUSER\t 20000\n"
@@ -99,14 +99,14 @@ class TestRecord(FakeContextManagerMixin, MyTest):
     async def test_record_2(self, factory_test_record):
         # /结算 对局22082601 20000
         from nonebot.adapters.onebot.v11 import Message, MessageSegment
-        from ml_hitwh.model.game import GameModel, GameRecord
+        from ml_hitwh.model.orm.game import GameModel, GameRecordOrm
 
         msg = Message([MessageSegment.text(f"/结算 对局{GAME_ID} 20000")])
         result_game = GameModel(game_id=GAME_ID,
                                 group_id=GROUP_ID,
                                 create_user_id=USER_ID,
                                 create_time=datetime.now(tzlocal.get_localzone()),
-                                record=[GameRecord(user_id=USER_ID, point=20000)])
+                                record=[GameRecordOrm(user_id=USER_ID, point=20000)])
         expect_msg = "成功记录到对局22082601，当前记录情况：\n" \
                      "\n" \
                      "#1  TESTUSER\t 20000\n"
@@ -117,14 +117,14 @@ class TestRecord(FakeContextManagerMixin, MyTest):
     async def test_record_3(self, factory_test_record):
         # [引用]/结算 @用户 20000
         from nonebot.adapters.onebot.v11 import Message, MessageSegment
-        from ml_hitwh.model.game import GameModel, GameRecord
+        from ml_hitwh.model.orm.game import GameModel, GameRecordOrm
 
         msg = Message([MessageSegment.text(f"/结算 "), MessageSegment.at(USER_ID), MessageSegment.text("20000")])
         result_game = GameModel(game_id=GAME_ID,
                                 group_id=GROUP_ID,
                                 create_user_id=USER_ID,
                                 create_time=datetime.now(tzlocal.get_localzone()),
-                                record=[GameRecord(user_id=USER_ID, point=20000)])
+                                record=[GameRecordOrm(user_id=USER_ID, point=20000)])
         expect_msg = "成功记录到对局22082601，当前记录情况：\n" \
                      "\n" \
                      "#1  TESTUSER\t 20000\n"
@@ -135,7 +135,7 @@ class TestRecord(FakeContextManagerMixin, MyTest):
     async def test_record_4(self, factory_test_record):
         # /结算 对局22082601 @用户 20000
         from nonebot.adapters.onebot.v11 import Message, MessageSegment
-        from ml_hitwh.model.game import GameModel, GameRecord
+        from ml_hitwh.model.orm.game import GameModel, GameRecordOrm
 
         msg = Message([MessageSegment.text(f"/结算 对局22082601 "),
                        MessageSegment.at(USER_ID), MessageSegment.text("20000")])
@@ -143,7 +143,7 @@ class TestRecord(FakeContextManagerMixin, MyTest):
                                 group_id=GROUP_ID,
                                 create_user_id=USER_ID,
                                 create_time=datetime.now(tzlocal.get_localzone()),
-                                record=[GameRecord(user_id=USER_ID, point=20000)])
+                                record=[GameRecordOrm(user_id=USER_ID, point=20000)])
         expect_msg = "成功记录到对局22082601，当前记录情况：\n" \
                      "\n" \
                      "#1  TESTUSER\t 20000\n"

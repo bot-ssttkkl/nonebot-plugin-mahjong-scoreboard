@@ -3,8 +3,6 @@ from typing import List, Optional
 from nonebot import Bot
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, MessageEvent
 
-__all__ = ("split_message", "get_user_name")
-
 
 def get_reply_message_id(event: MessageEvent) -> Optional[int]:
     message_id = None

@@ -4,7 +4,7 @@ from typing import Awaitable, Callable
 
 from beanie.odm.enums import SortDirection
 
-from ml_hitwh.model.game import Game, GameState
+from ml_hitwh.model.orm.game import GameOrm, GameState
 
 __all__ = ("write_games_as_csv",)
 
@@ -21,10 +21,10 @@ async def write_games_as_csv(f, start_date: date, end_date: date, tz: tzinfo,
                      '三位ID', '三位分数', '三位PT收支',
                      '四位ID', '四位分数', '四位PT收支', ])
     counter = 1
-    async for g in Game.find(Game.state == GameState.completed,
-                             start_time <= Game.create_time,
-                             Game.create_time < end_time,
-                             sort=[("create_time", SortDirection.DESCENDING)]):
+    async for g in GameOrm.find(GameOrm.state == GameState.completed,
+                                start_time <= GameOrm.create_time,
+                                GameOrm.create_time < end_time,
+                                sort=[("create_time", SortDirection.DESCENDING)]):
         row = [
             counter, g.game_id, g.game_type_text,
             g.create_time.astimezone(tz).strftime("%Y-%m-%d %H:%M"),

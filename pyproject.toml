@@ -18,6 +18,13 @@ tzlocal = "^4.2"
 [tool.poetry.dev-dependencies]
 nonebug = "^0.2.1"
 aiosqlite = "^0.17.0"
+sqlalchemy2-stubs = "^0.0.2a29"
+
+[[tool.poetry.source]]
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple/"
+default = true
+secondary = false
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

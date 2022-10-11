@@ -15,7 +15,7 @@ class TestNewGame(FakeContextManagerMixin,
 
     @pytest.fixture
     def mock_new_game_service(self, load_plugin, monkeypatch):
-        from ml_hitwh.model.game import GameModel, Wind
+        from ml_hitwh.model.orm.game import GameModel, Wind
 
         async def new_game(create_user_id: int, group_id: int, players: int, wind: Wind) -> GameModel:
             game = GameModel(game_id=GAME_ID,
@@ -60,7 +60,7 @@ class TestNewGame(FakeContextManagerMixin,
     @pytest.mark.asyncio
     async def test_new_game_1(self, factory_test_new_game, mock_new_game_service):
         from nonebot.adapters.onebot.v11 import Message, MessageSegment
-        from ml_hitwh.model.game import Wind
+        from ml_hitwh.model.orm.game import Wind
 
         message = Message(MessageSegment.text("/新建对局"))
         expect_msg = f"成功新建对局{GAME_ID}，对此消息回复“/结算 <分数>”指令记录你的分数"
@@ -71,7 +71,7 @@ class TestNewGame(FakeContextManagerMixin,
     @pytest.mark.asyncio
     async def test_new_game_2(self, factory_test_new_game, mock_new_game_service):
         from nonebot.adapters.onebot.v11 import Message, MessageSegment
-        from ml_hitwh.model.game import Wind
+        from ml_hitwh.model.orm.game import Wind
 
         message = Message(MessageSegment.text("/新建对局 四人东"))
         expect_msg = f"成功新建对局{GAME_ID}，对此消息回复“/结算 <分数>”指令记录你的分数"
@@ -82,7 +82,7 @@ class TestNewGame(FakeContextManagerMixin,
     @pytest.mark.asyncio
     async def test_new_game_2(self, factory_test_new_game, mock_new_game_service):
         from nonebot.adapters.onebot.v11 import Message, MessageSegment
-        from ml_hitwh.model.game import Wind
+        from ml_hitwh.model.orm.game import Wind
 
         message = Message(MessageSegment.text("/新建对局 四人南"))
         expect_msg = f"成功新建对局{GAME_ID}，对此消息回复“结算 <分数>”指令记录你的分数"
@@ -93,7 +93,7 @@ class TestNewGame(FakeContextManagerMixin,
     @pytest.mark.asyncio
     async def test_new_game_3(self, factory_test_new_game, mock_new_game_service):
         from nonebot.adapters.onebot.v11 import Message, MessageSegment
-        from ml_hitwh.model.game import Wind
+        from ml_hitwh.model.orm.game import Wind
 
         message = Message(MessageSegment.text("/新建对局 三人东"))
         expect_msg = f"成功新建对局{GAME_ID}，对此消息回复“结算 <分数>”指令记录你的分数"
@@ -104,7 +104,7 @@ class TestNewGame(FakeContextManagerMixin,
     @pytest.mark.asyncio
     async def test_new_game_4(self, factory_test_new_game, mock_new_game_service):
         from nonebot.adapters.onebot.v11 import Message, MessageSegment
-        from ml_hitwh.model.game import Wind
+        from ml_hitwh.model.orm.game import Wind
 
         message = Message(MessageSegment.text("/新建对局 三人南"))
         expect_msg = f"成功新建对局{GAME_ID}，对此消息回复“结算 <分数>”指令记录你的分数"
