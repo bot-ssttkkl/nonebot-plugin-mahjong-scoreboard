@@ -72,6 +72,7 @@ async def record_game(game_code: int,
             raise BadRequestError("这场对局已经存在4人记录")
 
         record = GameRecordOrm(game_id=game.id, user_id=user.id)
+        session.add(record)
         game.records.append(record)
 
     record.score = score
@@ -137,7 +138,7 @@ async def _handle_full_recorded_game(game: GameOrm):
     elif indexed_record[2][0].score == indexed_record[3][0].score:
         _divide_horse_point(indexed_record, horse_point, 2, 3)
 
-    for i, r in enumerate(game.records):
+    for i, (r, j) in enumerate(indexed_record):
         # 30000返，1000点=1pt
         # TODO: 动态配置
         r.point = horse_point[i] + ceil((r.score - 30000) / 1000)
@@ -172,7 +173,7 @@ async def _make_season_user_point_change(game: GameOrm):
         user_point = (await session.execute(stmt)).scalar_one_or_none()
 
         if user_point is None:
-            user_point = SeasonUserPointOrm(season_id=game.season_id, user_id=r.user_id)
+            user_point = SeasonUserPointOrm(season_id=game.season_id, user_id=r.user_id, point=0)
             session.add(user_point)
 
         user_point.point += r.point

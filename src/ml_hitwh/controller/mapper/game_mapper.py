@@ -1,7 +1,6 @@
 from typing import TextIO
 
 from nonebot import Bot
-from nonebot.adapters.onebot.v11 import GroupMessageEvent
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -12,15 +11,16 @@ from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
 
 
-async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent, *, map_promoter: bool = False):
+async def map_game(io: TextIO, game: GameOrm, bot: Bot, *, map_promoter: bool = False):
     session = data_source.session()
 
     stmt = select(GameOrm).where(GameOrm.id == game.id).limit(1).options(
         selectinload(GameOrm.season),
         selectinload(GameOrm.promoter),
+        selectinload(GameOrm.group),
         selectinload(GameOrm.records).joinedload(GameRecordOrm.user)
     )
-    game = (await session.execute(stmt)).scalar_one_or_none()
+    game: GameOrm = (await session.execute(stmt)).scalar_one_or_none()
 
     # 对局22090901  四人南
     io.write('对局')
@@ -47,7 +47,7 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent
         # promoter = await session.get(UserOrm, game.promoter_user_id)
         io.write('创建者：')
         io.write(game.promoter.nickname or
-                 await get_user_name(game.promoter.binding_qq, event.group_id, bot))
+                 await get_user_name(game.promoter.binding_qq, game.group.binding_qq, bot))
         io.write('\n')
 
     if len(game.records) > 0:
@@ -56,9 +56,9 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent
 
         # #1  Player Name    10000  (+5)
         # [...]
-        for i, r in enumerate(game.records):
+        for i, r in enumerate(sorted(game.records, key=lambda r: r.point, reverse=True)):
             # user = await session.get(UserOrm, r.user_id)
-            name = r.user.nickname or await get_user_name(r.user.binding_qq, event.group_id, bot)
+            name = r.user.nickname or await get_user_name(r.user.binding_qq, game.group.binding_qq, bot)
             io.write('#')
             io.write(str(i + 1))
             io.write('  ')

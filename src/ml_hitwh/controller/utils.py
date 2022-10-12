@@ -1,7 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from nonebot import Bot
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, MessageEvent
+from nonebot.internal.matcher import Matcher
+
+from ml_hitwh.errors import BadRequestError
 
 
 def get_reply_message_id(event: MessageEvent) -> Optional[int]:
@@ -29,3 +32,33 @@ def split_message(message: Message) -> List[MessageSegment]:
 async def get_user_name(user_id: int, group_id: int, bot: Bot):
     user_info = await bot.get_group_member_info(group_id=group_id, user_id=user_id)
     return user_info["card"] or user_info["nickname"]
+
+
+def parse_int_or_error(raw: Union[int, str, None], desc: str) -> int:
+    if not raw:
+        raise BadRequestError(f"请指定{desc}")
+
+    try:
+        return int(raw)
+    except ValueError:
+        raise BadRequestError(f"输入的{desc}不合法")
+
+
+async def parse_int_or_reject(raw: Union[int, str, None], desc: str, matcher: Matcher) -> int:
+    if not raw:
+        await matcher.reject(f"请指定{desc}")
+
+    try:
+        return int(raw)
+    except ValueError:
+        await matcher.reject(f"输入的{desc}不合法。请重新输入")
+
+
+async def parse_int_or_finish(raw: Union[int, str, None], desc: str, matcher: Matcher) -> int:
+    if not raw:
+        await matcher.finish(f"请指定{desc}")
+
+    try:
+        return int(raw)
+    except ValueError:
+        await matcher.finish(f"输入的{desc}不合法")

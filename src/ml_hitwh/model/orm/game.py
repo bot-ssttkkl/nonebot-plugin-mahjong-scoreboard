@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 
 from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
@@ -17,18 +17,18 @@ class GameOrm(OrmBase):
     __tablename__ = 'games'
 
     # 应用使用的ID（全局唯一）
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
+    id: int = Column(Integer, nullable=False, primary_key=True, autoincrement=True)
     # 外部使用的代号（群组内唯一）
     code: int = Column(Integer, nullable=False)
 
     group_id: int = Column(Integer, ForeignKey('groups.id'), nullable=False)
     group: "GroupOrm" = relationship('GroupOrm', foreign_keys='GameOrm.group_id')
 
-    promoter_user_id: int = Column(Integer, ForeignKey('users.id'))
-    promoter: "UserOrm" = relationship('UserOrm', foreign_keys='GameOrm.promoter_user_id')
+    promoter_user_id: Optional[int] = Column(Integer, ForeignKey('users.id'))
+    promoter: Optional["UserOrm"] = relationship('UserOrm', foreign_keys='GameOrm.promoter_user_id')
 
-    season_id: int = Column(Integer, ForeignKey('seasons.id'))
-    season: "SeasonOrm" = relationship('SeasonOrm', foreign_keys='GameOrm.season_id')
+    season_id: Optional[int] = Column(Integer, ForeignKey('seasons.id'))
+    season: Optional["SeasonOrm"] = relationship('SeasonOrm', foreign_keys='GameOrm.season_id')
 
     player_and_wind: PlayerAndWind = Column(Enum(PlayerAndWind), nullable=False,
                                             default=PlayerAndWind.four_men_south)
@@ -38,12 +38,12 @@ class GameOrm(OrmBase):
                                                   foreign_keys='GameRecordOrm.game_id',
                                                   back_populates="game")
 
-    complete_time: datetime = Column(DateTime)
+    complete_time: Optional[datetime] = Column(DateTime)
 
     accessible: bool = Column(Boolean, nullable=False, default=True)
     create_time: datetime = Column(DateTime, nullable=False, server_default=func.now())
-    update_time: datetime = Column(DateTime)
-    delete_time: datetime = Column(DateTime)
+    update_time: datetime = Column('update_time', DateTime, nullable=False, server_default=func.now())
+    delete_time: Optional[datetime] = Column(DateTime)
 
 
 class GameRecordOrm(OrmBase):

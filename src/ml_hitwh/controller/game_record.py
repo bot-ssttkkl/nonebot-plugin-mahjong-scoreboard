@@ -12,7 +12,7 @@ from ml_hitwh.controller.mapper import map_game
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState
 from ml_hitwh.service import game_record_service
-from .utils import split_message
+from .utils import split_message, parse_int_or_error
 from ..service.group_service import get_group_by_binding_qq
 from ..service.user_service import get_user_by_binding_qq
 
@@ -86,7 +86,7 @@ async def new_game(bot: Bot, event: GroupMessageEvent):
     game = await game_record_service.new_game(user, group, player_and_wind)
 
     with StringIO() as sio:
-        await map_game(sio, game, bot, event)
+        await map_game(sio, game, bot)
         sio.write('\n')
         sio.write('新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩')
         msg = sio.getvalue()
@@ -149,7 +149,7 @@ async def record(bot: Bot, event: GroupMessageEvent):
     game = await game_record_service.record_game(game_code, group, user, score)
 
     with StringIO() as sio:
-        await map_game(sio, game, bot, event)
+        await map_game(sio, game, bot)
         sio.write('\n')
         if game.state == GameState.uncompleted:
             sio.write('结算成功')
@@ -205,7 +205,7 @@ async def revert_record(bot: Bot, event: GroupMessageEvent):
     game = await game_record_service.revert_record(bot, game_code, group, user, operator)
 
     with StringIO() as sio:
-        await map_game(sio, game, bot, event)
+        await map_game(sio, game, bot)
         sio.write('\n')
         sio.write('撤销结算成功')
         msg = sio.getvalue()
@@ -306,7 +306,7 @@ async def query_by_code(bot: Bot, event: GroupMessageEvent):
         raise BadRequestError("未找到对局")
 
     with StringIO() as sio:
-        await map_game(sio, game, bot, event, map_promoter=True)
+        await map_game(sio, game, bot, map_promoter=True)
         msg = sio.getvalue()
 
     send_result = await query_by_code_matcher.send(msg)
@@ -338,12 +338,3 @@ async def delete_game(bot: Bot, event: GroupMessageEvent):
 
     await query_by_code_matcher.send(f'成功删除对局{game_code}')
 
-
-def parse_int_or_error(raw: Union[int, str, None], desc: str) -> int:
-    if not raw:
-        raise BadRequestError(f"请指定{desc}")
-
-    try:
-        return int(raw)
-    except ValueError:
-        raise BadRequestError(f"{desc}不合法")
