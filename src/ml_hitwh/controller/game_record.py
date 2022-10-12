@@ -155,58 +155,56 @@ async def record(bot: Bot, event: GroupMessageEvent):
     await save_context(game_code=game.code, message_id=send_result["message_id"], user_id=user_id)
 
 
-#
-#
-# # =============== 撤销结算 ===============
-# revert_record_matcher = on_command("撤销结算", priority=5)
-#
-#
-# @revert_record_matcher.handle()
-# @handle_error(revert_record_matcher)
-# async def revert_record(bot: Bot, event: GroupMessageEvent):
-#     user_id = event.user_id
-#     game_code = None
-#
-#     context = await get_context(event)
-#     if context:
-#         user_id = context.extra.get("user_id", None)
-#         game_code = context.game_code
-#
-#     args = split_message(event.message)
-#
-#     if len(args) > 1:
-#         if args[1].type == "text":
-#             if args[1].data["text"].startswith("对局"):
-#                 # 以下两种格式：
-#                 # 撤销结算 对局<编号>
-#                 # 撤销结算 对局<编号> @<用户>
-#                 game_code = args[1].data["text"][len("对局"):]
-#
-#                 if len(args) > 2 and args[2].type == "at":
-#                     # 撤销结算 对局<编号> @<用户>
-#                     user_id = args[2].data["qq"]
-#                 # else:
-#                 # 撤销结算 对局<编号>
-#         else:
-#             # 撤销结算 @<用户>
-#             user_id = int(args[1].data["qq"])
-#     # else:
-#     # 撤销结算
-#
-#     game_code = parse_int_or_error(game_code, '对局编号')
-#
-#     game = await game_client.revert_record(sender=build_sender_params(bot, event),
-#                                            code=game_code,
-#                                            user_binding_qq=user_id)
-#
-#     with StringIO() as sio:
-#         await map_game(sio, game, bot, event)
-#         sio.write('\n')
-#         sio.write('撤销结算成功')
-#         msg = sio.getvalue()
-#
-#     send_result = await record_matcher.send(msg)
-#     await save_context(game_code=game['code'], message_id=send_result["message_id"], user_id=user_id)
+# =============== 撤销结算 ===============
+revert_record_matcher = on_command("撤销结算", priority=5)
+
+
+@revert_record_matcher.handle()
+@general_interceptor(revert_record_matcher)
+async def revert_record(bot: Bot, event: GroupMessageEvent):
+    user_id = event.user_id
+    game_code = None
+
+    context = await get_context(event)
+    if context:
+        user_id = context.extra.get("user_id", None)
+        game_code = context.game_code
+
+    args = split_message(event.message)
+
+    if len(args) > 1:
+        if args[1].type == "text":
+            if args[1].data["text"].startswith("对局"):
+                # 以下两种格式：
+                # 撤销结算 对局<编号>
+                # 撤销结算 对局<编号> @<用户>
+                game_code = args[1].data["text"][len("对局"):]
+
+                if len(args) > 2 and args[2].type == "at":
+                    # 撤销结算 对局<编号> @<用户>
+                    user_id = int(args[2].data["qq"])
+                # else:
+                # 撤销结算 对局<编号>
+        else:
+            # 撤销结算 @<用户>
+            user_id = int(args[1].data["qq"])
+    # else:
+    # 撤销结算
+
+    game_code = parse_int_or_error(game_code, '对局编号')
+
+    game = await game_record_service.revert_record(bot, game_code, event.group_id, user_id)
+
+    with StringIO() as sio:
+        await map_game(sio, game, bot, event)
+        sio.write('\n')
+        sio.write('撤销结算成功')
+        msg = sio.getvalue()
+
+    send_result = await record_matcher.send(msg)
+    await save_context(game_code=game.code, message_id=send_result["message_id"], user_id=user_id)
+
+
 #
 #
 # # =============== 设置对局PT ===============

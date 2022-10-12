@@ -4,7 +4,7 @@ from typing import Type
 from nonebot import logger
 from nonebot.internal.matcher import Matcher
 
-from ml_hitwh.errors import BadRequestError, ApiError
+from ml_hitwh.errors import BadRequestError
 
 
 def handle_error(matcher: Type[Matcher]):
@@ -13,7 +13,7 @@ def handle_error(matcher: Type[Matcher]):
         async def wrapped_func(*args, **kwargs):
             try:
                 return await func(*args, **kwargs)
-            except (BadRequestError, ApiError) as e:
+            except BadRequestError as e:
                 await matcher.finish(e.message)
             except Exception as e:
                 logger.exception(e)

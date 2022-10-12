@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import ceil
 from typing import List, Tuple
 
 import tzlocal
+from nonebot.adapters.onebot.v11 import Bot
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -10,11 +11,33 @@ from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState
 from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
+from ml_hitwh.model.orm.group import GroupOrm
+from ml_hitwh.model.orm.user import UserOrm
 from ml_hitwh.service.group_service import get_group_by_binding_qq
 from ml_hitwh.service.user_service import get_user_by_binding_qq
 from ml_hitwh.utils import encode_date, count_digit
 
 __all__ = ("new_game", "record_game")
+
+
+async def ensure_modification_allowed(bot: Bot,
+                                      game: GameOrm,
+                                      group: GroupOrm,
+                                      user: UserOrm):
+    if game.state != GameState.completed:
+        return
+
+    # 24小时内，对局创建者可以修改
+    if datetime.now() - game.create_time < timedelta(hours=24):
+        if game.promoter_user_id == user.id:
+            return
+
+    # 群管理可以修改
+    member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
+    if member_info["role"] != "member":
+        return
+
+    raise BadRequestError("没有权限")
 
 
 async def new_game(promoter_user_binding_qq: int,
@@ -153,7 +176,7 @@ async def record_game(game_code: int,
 
     if record is None:
         if len(game.records) == 4:
-            raise BadRequestError("这场对局已经有4人记录")
+            raise BadRequestError("这场对局已经有4人记录了")
 
         record = GameRecordOrm(game_id=game.id, user_id=user.id)
         game.records.append(record)
@@ -166,28 +189,38 @@ async def record_game(game_code: int,
     await session.commit()
     return game
 
-# async def revert_record(game_id: int, user_id: int) -> GameOrm:
-#     game = await GameOrm.find_one(GameOrm.game_id == game_id)
-#     if game is None:
-#         raise BadRequestError("未找到对局")
-#
-#     for r in game.record:
-#         if r.user_id == user_id:
-#             game.record.remove(r)
-#             break
-#     else:
-#         raise BadRequestError("你还没有记录过这场对局")
-#
-#     if game.state == GameState.completed:
-#         for r in game.record:
-#             r.point = None
-#
-#     game.state = GameState.uncompleted
-#
-#     await game.save()
-#     return game
-#
-#
+
+async def revert_record(bot: Bot, game_code: int,
+                        group_binding_qq: int,
+                        user_binding_qq: int) -> GameOrm:
+    session = data_source.session()
+
+    group = await get_group_by_binding_qq(group_binding_qq)
+    user = await get_user_by_binding_qq(user_binding_qq)
+
+    stmt = select(GameOrm).where(
+        GameOrm.group == group and GameOrm.game_code == game_code and GameOrm.accessible
+    ).limit(1).options(
+        selectinload(GameOrm.records)
+    )
+    game: GameOrm = (await session.execute(stmt)).scalar_one_or_none()
+    if game is None:
+        raise BadRequestError("未找到对局")
+
+    await ensure_modification_allowed(bot, game, group, user)
+
+    for r in game.records:
+        if r.user_id == user.id:
+            await session.delete(r)
+            break
+    else:
+        raise BadRequestError("你还没有记录过这场对局")
+
+    game.state = GameState.uncompleted
+
+    await session.commit()
+    return game
+
 # async def delete_game(game_id: int) -> bool:
 #     result = await GameOrm.find_one(GameOrm.game_id == game_id).delete_one()
 #     return result.deleted_count == 1

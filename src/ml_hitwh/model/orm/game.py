@@ -53,7 +53,7 @@ class GameRecordOrm(OrmBase):
     user: "UserOrm" = relationship('UserOrm', foreign_keys='GameRecordOrm.user_id')
 
     score: int = Column(Integer, nullable=False)  # 分数
-    point: int = Column(Integer)  # pt
+    point: int = Column(Integer, nullable=False, default=0)  # pt
 
 
 __all__ = ("GameOrm", "GameRecordOrm")
