@@ -2,14 +2,24 @@ from typing import TextIO
 
 from nonebot import Bot
 from nonebot.adapters.onebot.v11 import GroupMessageEvent
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
+from ml_hitwh.controller.mapper.enums_mapper import player_and_wind_mapping, game_state_mapping
 from ml_hitwh.controller.utils import get_user_name
-from ml_hitwh.controller.utils.mapper.enums_mapper import player_and_wind_mapping, game_state_mapping
-from ml_hitwh.model.enums import PlayerAndWind, GameState
+from ml_hitwh.model.enums import GameState
+from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.game import GameOrm
 
 
 async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent, *, map_sponsor: bool = False):
+    session = data_source.session()
+    stmt = select(GameOrm).execution_options(populate_existing=True).options(
+        selectinload(GameOrm.season),
+        selectinload(GameOrm.records)
+    )
+    await session.execute(stmt)
+
     # 对局22090901  四人南
     io.write('对局')
     io.write(str(game.code))

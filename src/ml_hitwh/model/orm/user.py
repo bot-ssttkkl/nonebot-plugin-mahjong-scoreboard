@@ -11,3 +11,6 @@ class UserOrm(OrmBase):
     password = Column(String)
     nickname = Column(String)
     binding_qq = Column(BigInteger)
+
+
+__all__ = ("UserOrm",)

@@ -16,8 +16,8 @@ def handle_error(matcher: Type[Matcher]):
             except (BadRequestError, ApiError) as e:
                 await matcher.finish(e.message)
             except Exception as e:
-                await matcher.finish(f"内部错误：{type(e)}{str(e)}")
                 logger.exception(e)
+                await matcher.finish(f"内部错误：{type(e)}{str(e)}")
 
         return wrapped_func
 

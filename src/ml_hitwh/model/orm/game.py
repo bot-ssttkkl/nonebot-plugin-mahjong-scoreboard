@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean
+from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 
 from . import OrmBase
@@ -13,14 +13,14 @@ class GameOrm(OrmBase):
     # 外部使用的代号（群组内唯一）
     code = Column(Integer, nullable=False)
 
-    group_id = Column(Integer, nullable=False)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
     group = relationship('GroupOrm', foreign_keys='GameOrm.group_id')
 
-    promoter_user_id = Column(Integer)
+    promoter_user_id = Column(Integer, ForeignKey('users.id'))
     promoter = relationship('UserOrm', foreign_keys='GameOrm.promoter_user_id')
 
-    season_id = Column(Integer)
-    season = relationship('SeasonOrm', foreign_keys='GameOrm.season_id', back_populates='games')
+    season_id = Column(Integer, ForeignKey('seasons.id'))
+    season = relationship('SeasonOrm', foreign_keys='GameOrm.season_id')
 
     player_and_wind = Column(Enum(PlayerAndWind), nullable=False,
                              default=PlayerAndWind.four_men_south)
@@ -37,11 +37,14 @@ class GameOrm(OrmBase):
 class GameRecordOrm(OrmBase):
     __tablename__ = 'game_records'
 
-    game_id = Column('game_id', Integer, primary_key=True, nullable=False)
+    game_id = Column(Integer, ForeignKey('games.id'), primary_key=True, nullable=False)
     game = relationship('GameOrm', foreign_keys='GameRecordOrm.game_id', back_populates='records')
 
-    user_id = Column('user_id', Integer, primary_key=True, nullable=False)
-    user = relationship('User', foreign_keys='GameRecordOrm.user_id')
+    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True, nullable=False)
+    user = relationship('UserOrm', foreign_keys='GameRecordOrm.user_id')
 
-    score = Column('score', Integer, nullable=False)  # 分数
-    point = Column('point', Integer)  # pt
+    score = Column(Integer, nullable=False)  # 分数
+    point = Column(Integer)  # pt
+
+
+__all__ = ("GameOrm", "GameRecordOrm")

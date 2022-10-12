@@ -8,12 +8,11 @@ from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
 from pydantic import BaseModel
 
 from ml_hitwh.errors import BadRequestError
-from ml_hitwh.model.orm.game import PlayerAndWind
+from ml_hitwh.model.enums import PlayerAndWind
 from ml_hitwh.service import game_record_service
 from .utils import split_message
-from .utils.interceptor import handle_error
-from .utils.mapper import map_game
-from ..model.enums import GameState
+from ml_hitwh.controller.interceptor import general_interceptor
+from ml_hitwh.controller.mapper import map_game
 
 CONTEXT_TTL = 7200
 
@@ -61,12 +60,12 @@ async def save_context(game_code: int, message_id: int, **kwargs):
     context_data[message_id] = context
 
 
-# 用户新建对局
+# =============== 新建对局 ===============
 new_game_matcher = on_command("新建对局", priority=5)
 
 
 @new_game_matcher.handle()
-@handle_error(new_game_matcher)
+@general_interceptor(new_game_matcher)
 async def new_game(bot: Bot, event: GroupMessageEvent):
     player_and_wind = PlayerAndWind.four_men_south
 
@@ -85,75 +84,76 @@ async def new_game(bot: Bot, event: GroupMessageEvent):
     with StringIO() as sio:
         await map_game(sio, game, bot, event)
         sio.write('\n')
-        sio.write('新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩')
+        sio.write('新建对局成功，对此消息回复“/记录 <成绩>”指令记录你的成绩')
         msg = sio.getvalue()
 
     send_result = await new_game_matcher.send(msg)
-    await save_context(game_code=game['code'], message_id=send_result["message_id"])
+    await save_context(game_code=game.code, message_id=send_result["message_id"])
 
 
-# =============== 结算 ===============
-record_matcher = on_command("结算", priority=5)
-
-
-@record_matcher.handle()
-@handle_error(record_matcher)
-async def record(bot: Bot, event: GroupMessageEvent):
-    user_id = event.user_id
-    game_code = None
-    score = None
-
-    context = await get_context(event)
-    if context:
-        game_code = context.game_code
-
-    args = split_message(event.message)
-
-    if len(args) <= 1:
-        raise BadRequestError("指令格式不合法")
-
-    if args[1].type == "text":
-        if args[1].data["text"].startswith("对局"):
-            # 以下两种格式：
-            # 结算 对局<编号> <成绩>
-            # 结算 对局<编号> @<用户> <成绩>
-            game_code = args[1].data["text"][len("对局"):]
-
-            if args[2].type == "text":
-                # 结算 对局<编号> <成绩>
-                score = args[2].data["text"]
-            elif args[2].type == "at":
-                # 结算 对局<编号> @<用户> <成绩>
-                user_id = int(args[2].data["qq"])
-                score = args[3].data["text"]
-            else:
-                raise BadRequestError("指令格式不合法")
-        else:
-            # 结算 <成绩>
-            score = args[1].data["text"]
-    elif args[1].type == "at":
-        # 结算 @<用户> <成绩>
-        user_id = int(args[1].data["qq"])
-        score = args[2].data["text"]
-    else:
-        raise BadRequestError("指令格式不合法")
-
-    game_code = parse_int_or_error(game_code, '对局编号')
-    score = parse_int_or_error(game_code, '成绩')
-
-    game = await game_record_service.record_game(game_code, event.group_id, event.user_id, score)
-
-    with StringIO() as sio:
-        await map_game(sio, game, bot, event)
-        sio.write('\n')
-        if game['state'] == GameState.uncompleted:
-            sio.write('记录成功')
-        elif game['state'] == GameState.invalid_total_point:
-            sio.write("警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩")
-        msg = sio.getvalue()
-
-    send_result = await record_matcher.send(msg)
-    await save_context(game_code=game['code'], message_id=send_result["message_id"], user_id=user_id)
+#
+# # =============== 记录 ===============
+# record_matcher = on_command("记录", priority=5)
+#
+#
+# @record_matcher.handle()
+# @handle_error(record_matcher)
+# async def record(bot: Bot, event: GroupMessageEvent):
+#     user_id = event.user_id
+#     game_code = None
+#     score = None
+#
+#     context = await get_context(event)
+#     if context:
+#         game_code = context.game_code
+#
+#     args = split_message(event.message)
+#
+#     if len(args) <= 1:
+#         raise BadRequestError("指令格式不合法")
+#
+#     if args[1].type == "text":
+#         if args[1].data["text"].startswith("对局"):
+#             # 以下两种格式：
+#             # 结算 对局<编号> <成绩>
+#             # 结算 对局<编号> @<用户> <成绩>
+#             game_code = args[1].data["text"][len("对局"):]
+#
+#             if args[2].type == "text":
+#                 # 结算 对局<编号> <成绩>
+#                 score = args[2].data["text"]
+#             elif args[2].type == "at":
+#                 # 结算 对局<编号> @<用户> <成绩>
+#                 user_id = int(args[2].data["qq"])
+#                 score = args[3].data["text"]
+#             else:
+#                 raise BadRequestError("指令格式不合法")
+#         else:
+#             # 结算 <成绩>
+#             score = args[1].data["text"]
+#     elif args[1].type == "at":
+#         # 结算 @<用户> <成绩>
+#         user_id = int(args[1].data["qq"])
+#         score = args[2].data["text"]
+#     else:
+#         raise BadRequestError("指令格式不合法")
+#
+#     game_code = parse_int_or_error(game_code, '对局编号')
+#     score = parse_int_or_error(game_code, '成绩')
+#
+#     game = await game_record_service.record_game(game_code, event.group_id, event.user_id, score)
+#
+#     with StringIO() as sio:
+#         await map_game(sio, game, bot, event)
+#         sio.write('\n')
+#         if game['state'] == GameState.uncompleted:
+#             sio.write('记录成功')
+#         elif game['state'] == GameState.invalid_total_point:
+#             sio.write("警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩")
+#         msg = sio.getvalue()
+#
+#     send_result = await record_matcher.send(msg)
+#     await save_context(game_code=game['code'], message_id=send_result["message_id"], user_id=user_id)
 
 
 #

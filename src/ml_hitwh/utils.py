@@ -18,5 +18,5 @@ def count_digit(x: int) -> int:
     n = 0
     while x > 0:
         n += 1
-        x /= 10
+        x //= 10
     return n
