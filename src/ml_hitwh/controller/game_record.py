@@ -200,8 +200,9 @@ async def revert_record(bot: Bot, event: GroupMessageEvent):
     game_code = parse_int_or_error(game_code, '对局编号')
 
     user = await get_user_by_binding_qq(user_id)
+    operator = await get_user_by_binding_qq(event.user_id)
     group = await get_group_by_binding_qq(event.group_id)
-    game = await game_record_service.revert_record(bot, game_code, group, user)
+    game = await game_record_service.revert_record(bot, game_code, group, user, operator)
 
     with StringIO() as sio:
         await map_game(sio, game, bot, event)
@@ -312,33 +313,32 @@ async def query_by_code(bot: Bot, event: GroupMessageEvent):
     await save_context(game_code=game.code, message_id=send_result["message_id"])
 
 
-#
-#
-# # =============== 删除对局 ===============
-# delete_game_matcher = on_command("删除对局", priority=5)
-#
-#
-# @delete_game_matcher.handle()
-# @handle_error(delete_game_matcher)
-# async def delete_game(bot: Bot, event: GroupMessageEvent):
-#     game_code = None
-#
-#     context = await get_context(event)
-#     if context:
-#         game_code = context.game_code
-#
-#     args = split_message(event.message)
-#     if len(args) >= 2:
-#         game_code = int(args[1].data["text"])
-#
-#     game_code = parse_int_or_error(game_code, '对局编号')
-#
-#     await game_client.delete(sender=build_sender_params(bot, event),
-#                              code=game_code)
-#
-#     await query_by_code_matcher.send(f'成功删除对局{game_code}')
-#
-#
+# =============== 删除对局 ===============
+delete_game_matcher = on_command("删除对局", priority=5)
+
+
+@delete_game_matcher.handle()
+@general_interceptor(delete_game_matcher)
+async def delete_game(bot: Bot, event: GroupMessageEvent):
+    game_code = None
+
+    context = await get_context(event)
+    if context:
+        game_code = context.game_code
+
+    args = split_message(event.message)
+    if len(args) >= 2:
+        game_code = int(args[1].data["text"])
+
+    game_code = parse_int_or_error(game_code, '对局编号')
+
+    group = await get_group_by_binding_qq(event.group_id)
+    operator = await get_user_by_binding_qq(event.user_id)
+    await game_record_service.delete_game(bot, game_code, group, operator)
+
+    await query_by_code_matcher.send(f'成功删除对局{game_code}')
+
+
 def parse_int_or_error(raw: Union[int, str, None], desc: str) -> int:
     if not raw:
         raise BadRequestError(f"请指定{desc}")

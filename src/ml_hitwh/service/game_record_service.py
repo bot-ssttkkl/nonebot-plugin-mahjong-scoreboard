@@ -90,8 +90,10 @@ async def _handle_full_recorded_game(game: GameOrm):
     sum_score = sum(map(lambda r: r.score, game.records))
     if sum_score != 25000 * 4:
         game.state = GameState.invalid_total_point
-    else:
-        game.state = GameState.completed
+        return
+
+    game.state = GameState.completed
+    game.complete_time = datetime.now()
 
     # 计算pt
     if not game.season_id:
@@ -186,9 +188,11 @@ async def _make_season_user_point_change(game: GameOrm):
     # 这里不需要commit
 
 
-async def revert_record(bot: Bot, game_code: int,
+async def revert_record(bot: Bot,
+                        game_code: int,
                         group: GroupOrm,
-                        user: UserOrm) -> GameOrm:
+                        user: UserOrm,
+                        operator: UserOrm) -> GameOrm:
     session = data_source.session()
 
     game = await get_game_by_code(game_code, group, selectinload(GameOrm.records))
@@ -204,7 +208,7 @@ async def revert_record(bot: Bot, game_code: int,
 
     if game.state == GameState.completed:
         # 超过24小时后，只有群管理能够修改对局
-        if datetime.now() - game.create_time >= timedelta(days=1) and not is_group_admin(bot, user, group):
+        if datetime.now() - game.complete_time >= timedelta(days=1) and not is_group_admin(bot, operator, group):
             raise BadRequestError("没有权限")
 
         if game.season_id:
@@ -249,6 +253,30 @@ async def get_game_by_code(game_code: int, group: GroupOrm, *options) -> Optiona
     game: GameOrm = (await session.execute(stmt)).scalar_one_or_none()
     return game
 
-# async def delete_game(game_id: int) -> bool:
-#     result = await GameOrm.find_one(GameOrm.game_id == game_id).delete_one()
-#     return result.deleted_count == 1
+
+async def delete_game(bot: Bot,
+                      game_code: int,
+                      group: GroupOrm,
+                      operator: UserOrm):
+    session = data_source.session()
+
+    game = await get_game_by_code(game_code, group)
+    if game is None:
+        raise BadRequestError("未找到对局")
+
+    if game.state == GameState.completed and datetime.now() - game.complete_time >= timedelta(days=1):
+        # 已完成对局超过24小时后，只有群管理能够修改对局
+        if not await is_group_admin(bot, operator, group):
+            raise BadRequestError("没有权限")
+    else:
+        # 否则，只有发起人和群管理能够修改对局
+        if game.promoter_user_id != operator.id and not await is_group_admin(bot, operator, group):
+            raise BadRequestError("没有权限")
+
+    if game.state == GameState.completed and game.season_id:
+        await _revert_season_user_point_change(game)
+
+    game.accessible = False
+    game.delete_time = datetime.now()
+
+    await session.commit()

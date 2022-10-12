@@ -38,6 +38,8 @@ class GameOrm(OrmBase):
                                                   foreign_keys='GameRecordOrm.game_id',
                                                   back_populates="game")
 
+    complete_time: datetime = Column(DateTime)
+
     accessible: bool = Column(Boolean, nullable=False, default=True)
     create_time: datetime = Column(DateTime, nullable=False, server_default=func.now())
     update_time: datetime = Column(DateTime)
