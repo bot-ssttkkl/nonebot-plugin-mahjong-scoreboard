@@ -9,7 +9,7 @@ from ml_hitwh.controller.mapper.enums_mapper import player_and_wind_mapping, gam
 from ml_hitwh.controller.utils import get_user_name
 from ml_hitwh.model.enums import GameState
 from ml_hitwh.model.orm import data_source
-from ml_hitwh.model.orm.game import GameOrm
+from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
 
 
 async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent, *, map_sponsor: bool = False):
@@ -17,6 +17,10 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent
     stmt = select(GameOrm).execution_options(populate_existing=True).options(
         selectinload(GameOrm.season),
         selectinload(GameOrm.records)
+    )
+    await session.execute(stmt)
+    stmt = select(GameRecordOrm).execution_options(populate_existing=True).options(
+        selectinload(GameRecordOrm.user)
     )
     await session.execute(stmt)
 
