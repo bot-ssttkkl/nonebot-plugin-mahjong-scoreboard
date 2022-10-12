@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from math import ceil
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import tzlocal
 from nonebot.adapters.onebot.v11 import Bot
@@ -13,8 +13,6 @@ from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
 from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.user import UserOrm
-from ml_hitwh.service.group_service import get_group_by_binding_qq
-from ml_hitwh.service.user_service import get_user_by_binding_qq
 from ml_hitwh.utils import encode_date, count_digit
 
 __all__ = ("new_game", "record_game")
@@ -40,12 +38,10 @@ async def ensure_modification_allowed(bot: Bot,
     raise BadRequestError("没有权限")
 
 
-async def new_game(promoter_user_binding_qq: int,
-                   group_binding_qq: int,
+async def new_game(promoter: UserOrm,
+                   group: GroupOrm,
                    player_and_wind: PlayerAndWind) -> GameOrm:
     session = data_source.session()
-    promoter = await get_user_by_binding_qq(promoter_user_binding_qq)
-    group = await get_group_by_binding_qq(group_binding_qq)
 
     now = datetime.now(tzlocal.get_localzone())
     game_code_base = encode_date(now)
@@ -111,7 +107,7 @@ async def _handle_full_recorded_game(game: GameOrm):
         raise ValueError("invalid players and wind")
 
     # 降序排序（带上原索引）
-    indexed_record: List[Tuple[GameRecordOrm, int]] = [(r, i) for i, r in enumerate(game.record)]
+    indexed_record: List[Tuple[GameRecordOrm, int]] = [(r, i) for i, r in enumerate(game.records)]
     indexed_record.sort(key=lambda tup: tup[0].score, reverse=True)
 
     # 处理同分
@@ -140,27 +136,19 @@ async def _handle_full_recorded_game(game: GameOrm):
     elif indexed_record[2][0].score == indexed_record[3][0].score:
         _divide_horse_point(indexed_record, horse_point, 2, 3)
 
-    for i, r in enumerate(game.record):
+    for i, r in enumerate(game.records):
         # 30000返，1000点=1pt
         # TODO: 动态配置
         r.point = horse_point[i] + ceil((r.score - 30000) / 1000)
 
 
 async def record_game(game_code: int,
-                      group_binding_qq: int,
-                      user_binding_qq: int,
+                      group: GroupOrm,
+                      user: UserOrm,
                       score: int) -> GameOrm:
     session = data_source.session()
 
-    group = await get_group_by_binding_qq(group_binding_qq)
-    user = await get_user_by_binding_qq(user_binding_qq)
-
-    stmt = select(GameOrm).where(
-        GameOrm.group == group and GameOrm.game_code == game_code and GameOrm.accessible
-    ).limit(1).options(
-        selectinload(GameOrm.records)
-    )
-    game: GameOrm = (await session.execute(stmt)).scalar_one_or_none()
+    game = await get_game_by_code(game_code, group)
 
     if game is None:
         raise BadRequestError("未找到对局")
@@ -191,19 +179,11 @@ async def record_game(game_code: int,
 
 
 async def revert_record(bot: Bot, game_code: int,
-                        group_binding_qq: int,
-                        user_binding_qq: int) -> GameOrm:
+                        group: GroupOrm,
+                        user: UserOrm) -> GameOrm:
     session = data_source.session()
 
-    group = await get_group_by_binding_qq(group_binding_qq)
-    user = await get_user_by_binding_qq(user_binding_qq)
-
-    stmt = select(GameOrm).where(
-        GameOrm.group == group and GameOrm.game_code == game_code and GameOrm.accessible
-    ).limit(1).options(
-        selectinload(GameOrm.records)
-    )
-    game: GameOrm = (await session.execute(stmt)).scalar_one_or_none()
+    game = await get_game_by_code(game_code, group)
     if game is None:
         raise BadRequestError("未找到对局")
 
@@ -219,6 +199,18 @@ async def revert_record(bot: Bot, game_code: int,
     game.state = GameState.uncompleted
 
     await session.commit()
+    return game
+
+
+async def get_game_by_code(game_code: int, group: GroupOrm) -> Optional[GameOrm]:
+    session = data_source.session()
+
+    stmt = select(GameOrm).where(
+        GameOrm.group == group, GameOrm.code == game_code, GameOrm.accessible
+    ).limit(1).options(
+        selectinload(GameOrm.records)
+    )
+    game: GameOrm = (await session.execute(stmt)).scalar_one_or_none()
     return game
 
 # async def delete_game(game_id: int) -> bool:

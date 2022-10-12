@@ -13,6 +13,8 @@ from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState
 from ml_hitwh.service import game_record_service
 from .utils import split_message
+from ..service.group_service import get_group_by_binding_qq
+from ..service.user_service import get_user_by_binding_qq
 
 CONTEXT_TTL = 7200
 
@@ -79,7 +81,9 @@ async def new_game(bot: Bot, event: GroupMessageEvent):
         else:
             raise BadRequestError("对局类型不合法")
 
-    game = await game_record_service.new_game(event.user_id, event.group_id, player_and_wind)
+    user = await get_user_by_binding_qq(event.user_id)
+    group = await get_group_by_binding_qq(event.group_id)
+    game = await game_record_service.new_game(user, group, player_and_wind)
 
     with StringIO() as sio:
         await map_game(sio, game, bot, event)
@@ -140,7 +144,9 @@ async def record(bot: Bot, event: GroupMessageEvent):
     game_code = parse_int_or_error(game_code, '对局编号')
     score = parse_int_or_error(score, '成绩')
 
-    game = await game_record_service.record_game(game_code, event.group_id, user_id, score)
+    user = await get_user_by_binding_qq(user_id)
+    group = await get_group_by_binding_qq(event.group_id)
+    game = await game_record_service.record_game(game_code, group, user, score)
 
     with StringIO() as sio:
         await map_game(sio, game, bot, event)
@@ -193,7 +199,9 @@ async def revert_record(bot: Bot, event: GroupMessageEvent):
 
     game_code = parse_int_or_error(game_code, '对局编号')
 
-    game = await game_record_service.revert_record(bot, game_code, event.group_id, user_id)
+    user = await get_user_by_binding_qq(user_id)
+    group = await get_group_by_binding_qq(event.group_id)
+    game = await game_record_service.revert_record(bot, game_code, group, user)
 
     with StringIO() as sio:
         await map_game(sio, game, bot, event)
@@ -272,34 +280,38 @@ async def revert_record(bot: Bot, event: GroupMessageEvent):
 #     await save_context(game_code=game['code'], message_id=send_result["message_id"], user_id=user_id)
 #
 #
-# # =============== 查询对局 ===============
-# query_by_code_matcher = on_command("查询对局", priority=5)
-#
-#
-# @query_by_code_matcher.handle()
-# @handle_error(query_by_code_matcher)
-# async def query_by_code(bot: Bot, event: GroupMessageEvent):
-#     game_code = None
-#
-#     context = await get_context(event)
-#     if context:
-#         game_code = context.game_code
-#
-#     args = split_message(event.message)
-#     if len(args) >= 2 and args[1].type == 'text':
-#         game_code = args[1].data["text"]
-#
-#     game_code = parse_int_or_error(game_code, '对局编号')
-#
-#     game = await game_client.query_by_code(sender=build_sender_params(bot, event),
-#                                            code=game_code)
-#
-#     with StringIO() as sio:
-#         await map_game(sio, game, bot, event, map_sponsor=True)
-#         msg = sio.getvalue()
-#
-#     send_result = await query_by_code_matcher.send(msg)
-#     await save_context(game_code=game['code'], message_id=send_result["message_id"])
+# =============== 查询对局 ===============
+query_by_code_matcher = on_command("查询对局", priority=5)
+
+
+@query_by_code_matcher.handle()
+@general_interceptor(query_by_code_matcher)
+async def query_by_code(bot: Bot, event: GroupMessageEvent):
+    game_code = None
+
+    context = await get_context(event)
+    if context:
+        game_code = context.game_code
+
+    args = split_message(event.message)
+    if len(args) >= 2 and args[1].type == 'text':
+        game_code = args[1].data["text"]
+
+    game_code = parse_int_or_error(game_code, '对局编号')
+
+    group = await get_group_by_binding_qq(event.group_id)
+    game = await game_record_service.get_game_by_code(game_code, group)
+    if game is None:
+        raise BadRequestError("未找到对局")
+
+    with StringIO() as sio:
+        await map_game(sio, game, bot, event, map_sponsor=True)
+        msg = sio.getvalue()
+
+    send_result = await query_by_code_matcher.send(msg)
+    await save_context(game_code=game.code, message_id=send_result["message_id"])
+
+
 #
 #
 # # =============== 删除对局 ===============

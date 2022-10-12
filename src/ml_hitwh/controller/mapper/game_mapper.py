@@ -16,7 +16,8 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent
     session = data_source.session()
     stmt = select(GameOrm).execution_options(populate_existing=True).options(
         selectinload(GameOrm.season),
-        selectinload(GameOrm.records)
+        selectinload(GameOrm.records),
+        selectinload(GameOrm.promoter)
     )
     await session.execute(stmt)
     stmt = select(GameRecordOrm).execution_options(populate_existing=True).options(
