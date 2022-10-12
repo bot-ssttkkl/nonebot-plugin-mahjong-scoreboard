@@ -12,18 +12,15 @@ from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
 
 
-async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent, *, map_sponsor: bool = False):
+async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent, *, map_promoter: bool = False):
     session = data_source.session()
-    stmt = select(GameOrm).execution_options(populate_existing=True).options(
+
+    stmt = select(GameOrm).where(GameOrm.id == game.id).limit(1).options(
         selectinload(GameOrm.season),
-        selectinload(GameOrm.records),
-        selectinload(GameOrm.promoter)
+        selectinload(GameOrm.promoter),
+        selectinload(GameOrm.records).joinedload(GameRecordOrm.user)
     )
-    await session.execute(stmt)
-    stmt = select(GameRecordOrm).execution_options(populate_existing=True).options(
-        selectinload(GameRecordOrm.user)
-    )
-    await session.execute(stmt)
+    game = (await session.execute(stmt)).scalar_one_or_none()
 
     # 对局22090901  四人南
     io.write('对局')
@@ -34,9 +31,10 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent
 
     # 所属赛季：Season Name
     io.write('所属赛季：')
-    if game.season is None:
+    if game.season_id is None:
         io.write('无')
     else:
+        # season = await session.get(SeasonOrm, game.season_id)
         io.write(game.season.name)
     io.write('\n')
 
@@ -45,7 +43,8 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent
     io.write(game_state_mapping[GameState(game.state)])
     io.write('\n')
 
-    if map_sponsor:
+    if map_promoter:
+        # promoter = await session.get(UserOrm, game.promoter_user_id)
         io.write('创建者：')
         io.write(game.promoter.nickname or
                  await get_user_name(game.promoter.binding_qq, event.group_id, bot))
@@ -58,6 +57,7 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, event: GroupMessageEvent
         # #1  Player Name    10000  (+5)
         # [...]
         for i, r in enumerate(game.records):
+            # user = await session.get(UserOrm, r.user_id)
             name = r.user.nickname or await get_user_name(r.user.binding_qq, event.group_id, bot)
             io.write('#')
             io.write(str(i + 1))

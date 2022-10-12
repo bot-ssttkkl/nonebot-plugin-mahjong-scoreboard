@@ -305,7 +305,7 @@ async def query_by_code(bot: Bot, event: GroupMessageEvent):
         raise BadRequestError("未找到对局")
 
     with StringIO() as sio:
-        await map_game(sio, game, bot, event, map_sponsor=True)
+        await map_game(sio, game, bot, event, map_promoter=True)
         msg = sio.getvalue()
 
     send_result = await query_by_code_matcher.send(msg)

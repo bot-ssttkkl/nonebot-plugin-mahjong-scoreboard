@@ -18,6 +18,6 @@ class SeasonState(int, Enum):
     finished = 2
 
 
-class UserSeasonPointChangeType(Enum):
+class SeasonUserPointChangeType(Enum):
     game = 0
     manually = 1

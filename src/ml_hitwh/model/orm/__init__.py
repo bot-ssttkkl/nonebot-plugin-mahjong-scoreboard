@@ -25,7 +25,7 @@ class DataSource:
         async def on_startup():
             self._engine = create_async_engine(conf.ml_database_conn_url,
                                                # 仅当debug模式时回显sql语句
-                                               echo=driver.config.log_level == 'debug',
+                                               echo=driver.config.log_level.lower() == 'debug',
                                                future=True)
             # noinspection PyUnresolvedReferences
             from . import game, group, season, user

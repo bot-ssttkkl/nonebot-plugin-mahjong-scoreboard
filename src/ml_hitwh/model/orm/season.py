@@ -5,7 +5,7 @@ from sqlalchemy import Column, Integer, DateTime, String, Enum, func, ARRAY, For
 from sqlalchemy.orm import relationship
 
 from . import OrmBase
-from ..enums import SeasonState, UserSeasonPointChangeType
+from ..enums import SeasonState, SeasonUserPointChangeType
 
 if TYPE_CHECKING:
     from .game import GameOrm
@@ -38,40 +38,40 @@ class SeasonOrm(OrmBase):
     delete_time: datetime = Column('delete_time', DateTime)
 
 
-class UserSeasonPointOrm(OrmBase):
-    __tablename__ = 'user_season_points'
+class SeasonUserPointOrm(OrmBase):
+    __tablename__ = 'season_user_points'
 
     user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False, primary_key=True)
-    user: 'UserOrm' = relationship('UserOrm', foreign_keys='UserSeasonPointOrm.user_id')
+    user: 'UserOrm' = relationship('UserOrm', foreign_keys='SeasonUserPointOrm.user_id')
 
     season_id: int = Column(Integer, ForeignKey('seasons.id'), nullable=False, primary_key=True)
-    season: 'SeasonOrm' = relationship('SeasonOrm', foreign_keys='UserSeasonPointOrm.season_id')
+    season: 'SeasonOrm' = relationship('SeasonOrm', foreign_keys='SeasonUserPointOrm.season_id')
 
     point: int = Column(Integer, nullable=False, default=0)
 
-    last_change_log_id: int = Column(Integer, ForeignKey('user_season_point_change_logs.id'))
-    last_change_log: 'UserSeasonPointChangeLogOrm' = relationship('UserSeasonPointChangeLogOrm',
-                                                                  foreign_keys='UserSeasonPointOrm.last_change_log_id')
+    last_change_log_id: int = Column(Integer, ForeignKey('season_user_point_change_logs.id'))
+    last_change_log: 'SeasonUserPointChangeLogOrm' = relationship('SeasonUserPointChangeLogOrm',
+                                                                  foreign_keys='SeasonUserPointOrm.last_change_log_id')
 
 
-class UserSeasonPointChangeLogOrm(OrmBase):
-    __tablename__ = 'user_season_point_change_logs'
+class SeasonUserPointChangeLogOrm(OrmBase):
+    __tablename__ = 'season_user_point_change_logs'
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
 
     user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user: 'UserOrm' = relationship('UserOrm', foreign_keys='UserSeasonPointChangeLogOrm.user_id')
+    user: 'UserOrm' = relationship('UserOrm', foreign_keys='SeasonUserPointChangeLogOrm.user_id')
 
     season_id: int = Column(Integer, ForeignKey('seasons.id'), nullable=False)
-    season: 'SeasonOrm' = relationship('SeasonOrm', foreign_keys='UserSeasonPointChangeLogOrm.season_id')
+    season: 'SeasonOrm' = relationship('SeasonOrm', foreign_keys='SeasonUserPointChangeLogOrm.season_id')
 
-    change_type: UserSeasonPointChangeType = Column(Enum(UserSeasonPointChangeType), nullable=False)
+    change_type: SeasonUserPointChangeType = Column(Enum(SeasonUserPointChangeType), nullable=False)
     change_point: int = Column(Integer, nullable=False)
 
     related_game_id: int = Column(Integer, ForeignKey('games.id'))
-    related_game: 'GameOrm' = relationship('GameOrm', foreign_keys='UserSeasonPointChangeLogOrm.related_game_id')
+    related_game: 'GameOrm' = relationship('GameOrm', foreign_keys='SeasonUserPointChangeLogOrm.related_game_id')
 
     create_time: datetime = Column('create_time', DateTime, nullable=False, server_default=func.now())
 
 
-__all__ = ("SeasonOrm", "UserSeasonPointOrm", "UserSeasonPointChangeLogOrm")
+__all__ = ("SeasonOrm", "SeasonUserPointOrm", "SeasonUserPointChangeLogOrm")

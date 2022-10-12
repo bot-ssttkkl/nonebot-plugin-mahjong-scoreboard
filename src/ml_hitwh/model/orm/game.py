@@ -34,7 +34,8 @@ class GameOrm(OrmBase):
                                             default=PlayerAndWind.four_men_south)
     state: GameState = Column(Enum(GameState), nullable=False, default=GameState.uncompleted)
 
-    records: List["GameRecordOrm"] = relationship("GameRecordOrm", foreign_keys='GameRecordOrm.game_id',
+    records: List["GameRecordOrm"] = relationship("GameRecordOrm",
+                                                  foreign_keys='GameRecordOrm.game_id',
                                                   back_populates="game")
 
     accessible: bool = Column(Boolean, nullable=False, default=True)
