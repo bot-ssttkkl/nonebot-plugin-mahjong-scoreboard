@@ -5,7 +5,7 @@ from nonebot.adapters.onebot.v11 import MessageEvent, Message, GroupMessageEvent
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
-from ml_hitwh.controller.interceptor import general_interceptor
+from ml_hitwh.controller.interceptor import workflow_interceptor
 from ml_hitwh.controller.mapper.season_mapper import map_season
 from ml_hitwh.controller.utils import parse_int_or_reject, split_message
 from ml_hitwh.errors import BadRequestError
@@ -37,7 +37,7 @@ query_running_season_matcher = on_command("赛季信息", aliases={"查询赛季
 
 
 @query_running_season_matcher.handle()
-@general_interceptor(query_running_season_matcher)
+@workflow_interceptor(query_running_season_matcher)
 async def query_running_season_begin(bot: Bot, event: MessageEvent, matcher: Matcher):
     if isinstance(event, GroupMessageEvent):
         matcher.set_arg("binding_qq", Message(str(event.group_id)))
@@ -51,7 +51,7 @@ async def query_running_season_begin(bot: Bot, event: MessageEvent, matcher: Mat
 
 
 @query_running_season_matcher.got("binding_qq", "群号？")
-@general_interceptor(query_running_season_matcher)
+@workflow_interceptor(query_running_season_matcher)
 async def query_running_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matcher: Matcher,
                                                     raw_arg=ArgPlainText("binding_qq")):
     binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
@@ -61,7 +61,7 @@ async def query_running_season_got_group_binding_qq(bot: Bot, event: MessageEven
 
 
 @query_running_season_matcher.handle()
-@general_interceptor(query_running_season_matcher)
+@workflow_interceptor(query_running_season_matcher)
 async def query_running_season_handle(bot: Bot, event: MessageEvent, matcher: Matcher):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
 
@@ -88,14 +88,14 @@ new_season_matcher = on_command("新赛季", priority=5)
 
 
 @new_season_matcher.handle()
-@general_interceptor(new_season_matcher)
+@workflow_interceptor(new_season_matcher)
 async def new_season_begin(bot: Bot, event: MessageEvent, matcher: Matcher):
     if isinstance(event, GroupMessageEvent):
         matcher.set_arg("binding_qq", Message(str(event.group_id)))
 
 
 @new_season_matcher.got("binding_qq", "群号？")
-@general_interceptor(new_season_matcher)
+@workflow_interceptor(new_season_matcher)
 async def new_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matcher: Matcher,
                                           raw_arg=ArgPlainText("binding_qq")):
     binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
@@ -105,7 +105,7 @@ async def new_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matcher
 
 
 @new_season_matcher.got("code", "赛季代号？")
-@general_interceptor(new_season_matcher)
+@workflow_interceptor(new_season_matcher)
 async def new_season_got_code(bot: Bot, event: MessageEvent, matcher: Matcher,
                               raw_arg=ArgPlainText("code")):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
@@ -117,7 +117,7 @@ async def new_season_got_code(bot: Bot, event: MessageEvent, matcher: Matcher,
 
 
 @new_season_matcher.got("name", "赛季名称？")
-@general_interceptor(new_season_matcher)
+@workflow_interceptor(new_season_matcher)
 async def new_season_got_name(bot: Bot, event: MessageEvent, matcher: Matcher,
                               raw_arg=ArgPlainText("name")):
     matcher.state["name"] = raw_arg
@@ -134,7 +134,7 @@ async def new_season_got_east_game_enabled(bot: Bot, event: MessageEvent, matche
 
 
 @new_season_matcher.got("south_game_horse_point", "半庄战马点？通过空格分割")
-@general_interceptor(new_season_matcher)
+@workflow_interceptor(new_season_matcher)
 async def new_season_got_south_game_horse_point(bot: Bot, event: MessageEvent, matcher: Matcher,
                                                 raw_arg=ArgPlainText("south_game_horse_point")):
     if not matcher.state["south_game_enabled"]:
@@ -165,7 +165,7 @@ async def new_season_got_east_game_enabled(bot: Bot, event: MessageEvent, matche
 
 
 @new_season_matcher.got("east_game_horse_point", "东风战马点？通过空格分割")
-@general_interceptor(new_season_matcher)
+@workflow_interceptor(new_season_matcher)
 async def new_season_got_east_game_horse_point(bot: Bot, event: MessageEvent, matcher: Matcher,
                                                raw_arg=ArgPlainText("east_game_horse_point")):
     if not matcher.state["east_game_enabled"]:
@@ -183,7 +183,7 @@ async def new_season_got_east_game_horse_point(bot: Bot, event: MessageEvent, ma
 
 
 @new_season_matcher.handle()
-@general_interceptor(new_season_matcher)
+@workflow_interceptor(new_season_matcher)
 async def new_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
     season = SeasonOrm(code=matcher.state["code"],
                        name=matcher.state["name"],
@@ -203,7 +203,7 @@ async def new_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
 
 
 @new_season_matcher.handle()
-@general_interceptor(new_season_matcher)
+@workflow_interceptor(new_season_matcher)
 async def new_season_handle(bot: Bot, event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         season = matcher.state["season"]
@@ -216,7 +216,7 @@ async def new_season_handle(bot: Bot, event: MessageEvent, matcher: Matcher):
 
 
 @new_season_matcher.handle()
-@general_interceptor(new_season_matcher)
+@workflow_interceptor(new_season_matcher)
 async def new_season_start(bot: Bot, event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
@@ -232,14 +232,14 @@ start_season_matcher = on_command("开启赛季", priority=5)
 
 
 @start_season_matcher.handle()
-@general_interceptor(start_season_matcher)
+@workflow_interceptor(start_season_matcher)
 async def start_season_begin(bot: Bot, event: MessageEvent, matcher: Matcher):
     if isinstance(event, GroupMessageEvent):
         matcher.set_arg("binding_qq", Message(str(event.group_id)))
 
 
 @start_season_matcher.got("binding_qq", "群号？")
-@general_interceptor(start_season_matcher)
+@workflow_interceptor(start_season_matcher)
 async def start_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matcher: Matcher,
                                             raw_arg=ArgPlainText("binding_qq")):
     binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
@@ -249,7 +249,7 @@ async def start_season_got_group_binding_qq(bot: Bot, event: MessageEvent, match
 
 
 @start_season_matcher.got("code", "赛季代号？")
-@general_interceptor(start_season_matcher)
+@workflow_interceptor(start_season_matcher)
 async def start_season_matcher_got_code(bot: Bot, event: MessageEvent, matcher: Matcher,
                                         raw_arg=ArgPlainText("code")):
     season = await season_service.get_season_by_code(raw_arg, matcher.state["group"])
@@ -261,7 +261,7 @@ async def start_season_matcher_got_code(bot: Bot, event: MessageEvent, matcher: 
 
 
 @start_season_matcher.handle()
-@general_interceptor(start_season_matcher)
+@workflow_interceptor(start_season_matcher)
 async def start_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
     season = matcher.state["season"]
 
@@ -275,7 +275,7 @@ async def start_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
 
 
 @start_season_matcher.handle()
-@general_interceptor(start_season_matcher)
+@workflow_interceptor(start_season_matcher)
 async def start_season_end(bot: Bot, event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
@@ -291,14 +291,14 @@ finish_season_matcher = on_command("结束赛季", priority=5)
 
 
 @finish_season_matcher.handle()
-@general_interceptor(finish_season_matcher)
+@workflow_interceptor(finish_season_matcher)
 async def finish_season_begin(bot: Bot, event: MessageEvent, matcher: Matcher):
     if isinstance(event, GroupMessageEvent):
         matcher.set_arg("binding_qq", Message(str(event.group_id)))
 
 
 @finish_season_matcher.got("binding_qq", "群号？")
-@general_interceptor(finish_season_matcher)
+@workflow_interceptor(finish_season_matcher)
 async def finish_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matcher: Matcher,
                                              raw_arg=ArgPlainText("binding_qq")):
     binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
@@ -308,7 +308,7 @@ async def finish_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matc
 
 
 @finish_season_matcher.handle()
-@general_interceptor(finish_season_matcher)
+@workflow_interceptor(finish_season_matcher)
 async def finish_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
     season = await season_service.get_season_by_id(group.running_season_id)
@@ -327,7 +327,7 @@ async def finish_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher)
 
 
 @finish_season_matcher.handle()
-@general_interceptor(finish_season_matcher)
+@workflow_interceptor(finish_season_matcher)
 async def finish_season_end(bot: Bot, event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
