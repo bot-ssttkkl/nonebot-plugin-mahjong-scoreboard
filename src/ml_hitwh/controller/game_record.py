@@ -1,7 +1,6 @@
 import time
 from collections import OrderedDict
 from io import StringIO
-from typing import Union
 
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
@@ -63,7 +62,7 @@ async def save_context(game_code: int, message_id: int, **kwargs):
 
 
 # =============== 新建对局 ===============
-new_game_matcher = on_command("新建对局", priority=5)
+new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
 
 
 @new_game_matcher.handle()
@@ -337,4 +336,3 @@ async def delete_game(bot: Bot, event: GroupMessageEvent):
     await game_record_service.delete_game(bot, game_code, group, operator)
 
     await query_by_code_matcher.send(f'成功删除对局{game_code}')
-

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, TYPE_CHECKING, Optional
 
 from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
 
 from . import OrmBase
 from ..enums import PlayerAndWind, GameState
@@ -42,7 +42,7 @@ class GameOrm(OrmBase):
 
     accessible: bool = Column(Boolean, nullable=False, default=True)
     create_time: datetime = Column(DateTime, nullable=False, server_default=func.now())
-    update_time: datetime = Column('update_time', DateTime, nullable=False, server_default=func.now())
+    update_time: datetime = Column(DateTime, nullable=False, server_default=func.now())
     delete_time: Optional[datetime] = Column(DateTime)
 
 

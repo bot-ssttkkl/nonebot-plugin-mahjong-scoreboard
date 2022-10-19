@@ -43,11 +43,8 @@ async def query_running_season_begin(bot: Bot, event: MessageEvent, matcher: Mat
         matcher.set_arg("binding_qq", Message(str(event.group_id)))
 
     args = split_message(event.message)
-    if len(args) > 1:
-        if args[1].type == 'text':
-            matcher.state["season_code"] = args[1].data["text"]
-        else:
-            raise BadRequestError("指令格式不合法")
+    if len(args) > 1 and args[1].type == 'text':
+        matcher.state["season_code"] = args[1].data["text"]
 
 
 @query_running_season_matcher.got("binding_qq", "群号？")

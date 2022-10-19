@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from math import ceil
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 import tzlocal
 from nonebot.adapters.onebot.v11 import Bot
@@ -14,6 +14,7 @@ from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
 from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.season import SeasonUserPointOrm, SeasonUserPointChangeLogOrm, SeasonOrm
 from ml_hitwh.model.orm.user import UserOrm
+from ml_hitwh.service.game_service import get_game_by_code
 from ml_hitwh.service.group_service import is_group_admin
 from ml_hitwh.utils import encode_date, count_digit
 
@@ -243,16 +244,6 @@ async def _revert_season_user_point_change(game: GameOrm):
         await session.delete(change_log)
 
     # 这里不需要commit
-
-
-async def get_game_by_code(game_code: int, group: GroupOrm, *options) -> Optional[GameOrm]:
-    session = data_source.session()
-
-    stmt = select(GameOrm).where(
-        GameOrm.group == group, GameOrm.code == game_code, GameOrm.accessible
-    ).limit(1).options(*options)
-    game: GameOrm = (await session.execute(stmt)).scalar_one_or_none()
-    return game
 
 
 async def delete_game(bot: Bot,

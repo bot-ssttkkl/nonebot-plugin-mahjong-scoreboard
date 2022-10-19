@@ -1,9 +1,7 @@
 from typing import TextIO, Optional
 
-from ml_hitwh.controller.mapper.enums_mapper import season_state_mapping
+from ml_hitwh.controller.mapper import season_state_mapping, datetime_format
 from ml_hitwh.model.orm.season import SeasonOrm
-
-datetime_format = '%Y-%m-%d %H:%M'
 
 
 def map_season(io: TextIO, season: SeasonOrm, *, group_info: Optional[dict] = None):
