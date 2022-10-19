@@ -100,6 +100,19 @@ async def map_group_recent_games_as_forward_msg(games: Iterable[GameOrm], bot: B
     return await map_games_as_forward_msg(games, bot, header=f"以下是本群的最近对局")
 
 
+async def map_user_uncompleted_games_as_forward_msg(games: Iterable[GameOrm], group: GroupOrm, user: UserOrm, bot: Bot):
+    member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
+    return await map_games_as_forward_msg(games, bot, header=Message([
+        MessageSegment.text("以下是"),
+        MessageSegment("at", {"qq": user.binding_qq, "name": member_info["nickname"]}),
+        MessageSegment.text("的未完成对局")
+    ]))
+
+
+async def map_group_uncompleted_games_as_forward_msg(games: Iterable[GameOrm], bot: Bot):
+    return await map_games_as_forward_msg(games, bot, header=f"以下是本群的未完成对局")
+
+
 async def map_games_as_forward_msg(games: Iterable[GameOrm], bot: Bot,
                                    *, header: Optional[Union[str, Message]] = None):
     self_info = await bot.get_login_info()
