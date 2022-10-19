@@ -1,6 +1,9 @@
 from typing import TextIO, Optional
 
+from ml_hitwh.controller.mapper.enums_mapper import season_state_mapping
 from ml_hitwh.model.orm.season import SeasonOrm
+
+datetime_format = '%Y-%m-%d %H:%M'
 
 
 def map_season(io: TextIO, season: SeasonOrm, *, group_info: Optional[dict] = None):
@@ -20,6 +23,21 @@ def map_season(io: TextIO, season: SeasonOrm, *, group_info: Optional[dict] = No
         io.write(' (')
         io.write(str(group_info["group_id"]))
         io.write(')\n')
+
+    if season.state:
+        io.write('状态：')
+        io.write(season_state_mapping[season.state])
+        io.write('\n')
+
+    if season.start_time:
+        io.write('开始时间：')
+        io.write(season.start_time.strftime(datetime_format))
+        io.write('\n')
+
+    if season.finish_time:
+        io.write('结束时间：')
+        io.write(season.finish_time.strftime(datetime_format))
+        io.write('\n')
 
     # 半庄战：开启
     io.write('半庄战：')

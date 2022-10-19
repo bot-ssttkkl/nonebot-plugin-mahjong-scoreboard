@@ -27,7 +27,7 @@ class SeasonOrm(OrmBase):
     name: str = Column(String, nullable=False)
 
     start_time: Optional[datetime] = Column(DateTime)
-    end_time: Optional[datetime] = Column(DateTime)
+    finish_time: Optional[datetime] = Column(DateTime)
 
     south_game_enabled: bool = Column(Boolean, nullable=False)
     south_game_horse_point: Optional[List[int]] = Column(ARRAY(Integer, dimensions=1))

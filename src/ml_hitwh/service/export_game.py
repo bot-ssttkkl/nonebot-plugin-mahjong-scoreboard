@@ -13,7 +13,7 @@
 # async def write_games_as_csv(f, start_date: date, end_date: date, tz: tzinfo,
 #                              user_id_mapper: Callable[[int], Awaitable[str]]):
 #     start_time = datetime.combine(start_date, time(0, 0, 0, 0), tz)
-#     end_time = datetime.combine(end_date, time(0, 0, 0, 0), tz) + timedelta(days=1)
+#     finish_time = datetime.combine(end_date, time(0, 0, 0, 0), tz) + timedelta(days=1)
 #
 #     writer = csv.writer(f)
 #     writer.writerow(['', '对局编号', '对局类型', '对局时间',
@@ -24,7 +24,7 @@
 #     counter = 1
 #     async for g in GameOrm.find(GameOrm.state == GameState.completed,
 #                                 start_time <= GameOrm.create_time,
-#                                 GameOrm.create_time < end_time,
+#                                 GameOrm.create_time < finish_time,
 #                                 sort=[("create_time", SortDirection.DESCENDING)]):
 #         row = [
 #             counter, g.game_id, g.game_type_text,

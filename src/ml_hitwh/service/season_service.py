@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import select
@@ -38,10 +39,26 @@ async def get_season_by_id(season_id: int) -> Optional[SeasonOrm]:
 async def start_season(season: SeasonOrm):
     session = data_source.session()
     group: GroupOrm = await session.get(GroupOrm, season.group_id)
+    if season.state != SeasonState.initial:
+        raise BadRequestError("该赛季已经开启或已经结束")
     if group.running_season_id:
         raise BadRequestError("当前已经有开启的赛季")
 
     season.state = SeasonState.running
+    season.start_time = datetime.utcnow()
     group.running_season_id = season.id
+
+    await session.commit()
+
+
+async def finish_season(season: SeasonOrm):
+    session = data_source.session()
+    group: GroupOrm = await session.get(GroupOrm, season.group_id)
+    if season.state != SeasonState.running:
+        raise BadRequestError("该赛季尚未开启或已经结束")
+
+    season.state = SeasonState.finished
+    season.finish_time = datetime.utcnow()
+    group.running_season_id = None
 
     await session.commit()
