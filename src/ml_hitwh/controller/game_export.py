@@ -33,7 +33,7 @@ require_group_binding_qq(export_season_games_matcher)
 
 
 @export_season_games_matcher.handle()
-@general_interceptor(export_season_games_matcher)
+@workflow_interceptor(export_season_games_matcher)
 async def export_season_games(bot: Bot, event: MessageEvent, matcher: Matcher):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
 
@@ -84,7 +84,7 @@ require_group_binding_qq(export_group_games_matcher)
 
 
 @export_group_games_matcher.handle()
-@general_interceptor(export_group_games_matcher)
+@workflow_interceptor(export_group_games_matcher)
 async def export_group_games(bot: Bot, event: MessageEvent, matcher: Matcher):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
     games = await get_group_games(group)

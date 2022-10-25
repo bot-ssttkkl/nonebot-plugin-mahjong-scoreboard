@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy.sql.functions import count
 
 from ml_hitwh.model.orm import data_source
-from ml_hitwh.model.orm.season import SeasonOrm, SeasonUserPointOrm
+from ml_hitwh.model.orm.season import SeasonOrm, SeasonUserPointOrm, SeasonUserPointChangeLogOrm
 from ml_hitwh.model.orm.user import UserOrm
 
 
@@ -16,6 +16,16 @@ async def get_season_user_points(season: SeasonOrm) -> List[SeasonUserPointOrm]:
     ).order_by(SeasonUserPointOrm.point.desc())
     sup = (await session.execute(stmt)).scalars().all()
     return sup
+
+
+async def get_season_user_point_change_logs(season: SeasonOrm) -> List[SeasonUserPointChangeLogOrm]:
+    session = data_source.session()
+
+    stmt = select(SeasonUserPointChangeLogOrm).where(
+        SeasonUserPointChangeLogOrm.season == season
+    ).order_by(SeasonUserPointChangeLogOrm.create_time)
+    logs = (await session.execute(stmt)).scalars().all()
+    return logs
 
 
 async def get_season_user_point(season: SeasonOrm, user: UserOrm) -> Optional[SeasonUserPointOrm]:
