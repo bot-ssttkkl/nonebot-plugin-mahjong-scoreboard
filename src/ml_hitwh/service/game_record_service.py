@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 from math import ceil
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from nonebot import require
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, delete
 
 from ml_hitwh.errors import BadRequestError
-from ml_hitwh.model.enums import PlayerAndWind, GameState, SeasonUserPointChangeType
+from ml_hitwh.model.enums import PlayerAndWind, GameState, SeasonUserPointChangeType, Wind
 from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm, GameProgressOrm
 from ml_hitwh.model.orm.group import GroupOrm
@@ -20,9 +20,22 @@ require("nonebot_plugin_apscheduler")
 __all__ = ("record_game", "revert_record", "delete_game")
 
 
+async def _ensure_permission(game: GameOrm, group: GroupOrm, operator: UserOrm):
+    completed_before_24h = (game.state == GameState.completed and
+                            datetime.now() - game.complete_time >= timedelta(days=1))
+
+    if not completed_before_24h and game.promoter_user_id == operator.id:
+        return
+    if await is_group_admin(operator, group):
+        return
+
+    raise BadRequestError("没有权限")
+
+
 async def record_game(game: GameOrm,
                       user: UserOrm,
-                      score: int) -> GameOrm:
+                      score: int,
+                      wind: Optional[Wind]) -> GameOrm:
     session = data_source.session()
 
     if game.state == GameState.completed:
@@ -44,6 +57,7 @@ async def record_game(game: GameOrm,
         game.records.append(record)
 
     record.score = score
+    record.wind = wind
 
     if len(game.records) == 4:
         await _handle_full_recorded_game(game)
@@ -54,6 +68,10 @@ async def record_game(game: GameOrm,
 
 async def _handle_full_recorded_game(game: GameOrm):
     session = data_source.session()
+
+    progress = await session.get(GameProgressOrm, game.id)
+    if progress is not None:
+        return
 
     # 总分校验
     sum_score = sum(map(lambda r: r.score, game.records))
@@ -165,7 +183,7 @@ async def revert_record(game_code: int,
 
     game = await get_game_by_code(game_code, group)
     if game is None:
-        raise BadRequestError("未找到对局")
+        raise BadRequestError("未找到指定对局")
 
     for r in game.records:
         if r.user_id == user.id:
@@ -175,9 +193,7 @@ async def revert_record(game_code: int,
         raise BadRequestError("你还没有记录过这场对局")
 
     if game.state == GameState.completed:
-        # 超过24小时后，只有群管理能够修改对局
-        if datetime.now() - game.complete_time >= timedelta(days=1) and not await is_group_admin(operator, group):
-            raise BadRequestError("没有权限")
+        await _ensure_permission(game, group, operator)
 
         if game.season_id:
             await _revert_season_user_point_change(game)
@@ -219,16 +235,9 @@ async def delete_game(game_code: int,
 
     game = await get_game_by_code(game_code, group)
     if game is None:
-        raise BadRequestError("未找到对局")
+        raise BadRequestError("未找到指定对局")
 
-    if game.state == GameState.completed and datetime.now() - game.complete_time >= timedelta(days=1):
-        # 已完成对局超过24小时后，只有群管理能够修改对局
-        if not await is_group_admin(operator, group):
-            raise BadRequestError("没有权限")
-    else:
-        # 否则，只有发起人和群管理能够修改对局
-        if game.promoter_user_id != operator.id and not await is_group_admin(operator, group):
-            raise BadRequestError("没有权限")
+    await _ensure_permission(game, group, operator)
 
     if game.state == GameState.completed and game.season_id:
         await _revert_season_user_point_change(game)
@@ -239,17 +248,50 @@ async def delete_game(game_code: int,
     await session.commit()
 
 
-async def make_game_progress(game: GameOrm, round: int, honba: int, parent: UserOrm):
+async def make_game_progress(game_code: int, round: int, honba: int,
+                             group: GroupOrm, operator: UserOrm):
     session = data_source.session()
-    if game.progress_id is None:
-        progress = GameProgressOrm()
-        game.progress = progress
+
+    game = await get_game_by_code(game_code, group)
+    if game is None:
+        raise BadRequestError("未找到指定对局")
+
+    if game.state == GameState.completed:
+        await _ensure_permission(game, group, operator)
+
+        if game.season_id:
+            await _revert_season_user_point_change(game)
+
+        game.state = GameState.uncompleted
+
+    progress = await session.get(GameProgressOrm, game.id)
+
+    if progress is None:
+        progress = GameProgressOrm(game_id=game.id)
         session.add(progress)
-    else:
-        progress = await session.get(GameProgressOrm, game.progress_id)
 
     progress.round = round
     progress.honba = honba
-    progress.parent = parent
 
     await session.commit()
+    return game
+
+
+async def remove_game_progress(game_code: int, group: GroupOrm):
+    session = data_source.session()
+
+    game = await get_game_by_code(game_code, group)
+    if game is None:
+        raise BadRequestError("未找到指定对局")
+
+    progress = await session.get(GameProgressOrm, game.id)
+
+    if progress is not None:
+        stmt = delete(GameProgressOrm).where(GameProgressOrm.game_id == game.id)
+        await session.execute(stmt)
+
+        if len(game.records) == 4:
+            await _handle_full_recorded_game(game)
+
+    await session.commit()
+    return game

@@ -18,6 +18,17 @@ class SeasonState(int, Enum):
     finished = 2
 
 
-class SeasonUserPointChangeType(Enum):
+class SeasonUserPointChangeType(int, Enum):
     game = 0
     manually = 1
+
+
+class Wind(int, Enum):
+    """
+    风
+    """
+
+    east = 0
+    south = 1
+    west = 2
+    north = 3

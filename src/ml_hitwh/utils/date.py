@@ -10,13 +10,3 @@ def decode_date(code: int) -> date:
     month = code // 100 % 100
     day = code % 100
     return date(year, month, day)
-
-
-def count_digit(x: int) -> int:
-    if x == 0:
-        return 1
-    n = 0
-    while x > 0:
-        n += 1
-        x //= 10
-    return n

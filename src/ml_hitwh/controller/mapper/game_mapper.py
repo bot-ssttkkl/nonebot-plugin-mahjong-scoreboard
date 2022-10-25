@@ -2,10 +2,11 @@ from io import StringIO
 
 from nonebot.adapters.onebot.v11 import MessageSegment, Message
 
-from ml_hitwh.controller.mapper import player_and_wind_mapping, game_state_mapping, datetime_format
+from ml_hitwh.controller.mapper import player_and_wind_mapping, game_state_mapping, datetime_format, digit_mapping, \
+    wind_mapping
 from ml_hitwh.model.enums import GameState
 from ml_hitwh.model.orm import data_source
-from ml_hitwh.model.orm.game import GameOrm
+from ml_hitwh.model.orm.game import GameOrm, GameProgressOrm
 from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.season import SeasonOrm
 from ml_hitwh.model.orm.user import UserOrm
@@ -50,18 +51,35 @@ async def map_game(game: GameOrm, *, map_promoter: bool = False) -> Message:
             io.write(game.complete_time.strftime(datetime_format))
             io.write('\n')
 
+        progress = await session.get(GameProgressOrm, game.id)
+        if progress is not None:
+            io.write('进度：')
+            if progress.round <= 4:
+                io.write('东')
+                io.write(digit_mapping[progress.round])
+            else:
+                io.write('南')
+                io.write(digit_mapping[progress.round - 4])
+            io.write('局')
+            io.write(str(progress.honba))
+            io.write('本场\n')
+
         if len(game.records) > 0:
             # [空行]
             io.write('\n')
 
-            # #1  Player Name    10000  (+5)
+            # #1 [东]    Player Name    10000  (+5)
             # [...]
             for i, r in enumerate(sorted(game.records, key=lambda r: r.point, reverse=True)):
                 user = await session.get(UserOrm, r.user_id)
                 name = await get_user_nickname(user, group)
                 io.write('#')
                 io.write(str(i + 1))
-                io.write('  ')
+                if r.wind is not None:
+                    io.write(' [')
+                    io.write(wind_mapping[r.wind])
+                    io.write(']')
+                io.write('    ')
                 io.write(name)
                 io.write('    ')
                 io.write(str(r.score))

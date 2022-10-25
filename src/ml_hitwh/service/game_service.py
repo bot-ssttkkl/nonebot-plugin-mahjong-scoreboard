@@ -14,7 +14,8 @@ from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
 from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.season import SeasonOrm
 from ml_hitwh.model.orm.user import UserOrm
-from ml_hitwh.utils import count_digit, encode_date
+from ml_hitwh.utils.date import encode_date
+from ml_hitwh.utils.integer import count_digit
 
 require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
@@ -28,7 +29,7 @@ async def _delete_all_uncompleted_game():
     one_day_ago = now - timedelta(days=1)
     stmt = delete(GameOrm).where(GameOrm.state != GameState.completed,
                                  GameOrm.create_time > one_day_ago,
-                                 GameOrm.progress_id == None)
+                                 GameOrm.progress == None)
     result = await session.execute(stmt)
     logger.success(f"deleted {result.rowcount} outdated uncompleted game(s)")
 
@@ -78,16 +79,6 @@ async def new_game(promoter: UserOrm,
     return game
 
 
-async def get_game_by_code(game_code: int, group: GroupOrm) -> Optional[GameOrm]:
-    session = data_source.session()
-
-    stmt = select(GameOrm).where(
-        GameOrm.group == group, GameOrm.code == game_code, GameOrm.accessible
-    ).limit(1).options(selectinload(GameOrm.records))
-    game: Optional[GameOrm] = (await session.execute(stmt)).scalar_one_or_none()
-    return game
-
-
 def _build_game_query(stmt: Select,
                       *, offset: Optional[int] = None,
                       limit: Optional[int] = None,
@@ -106,10 +97,23 @@ def _build_game_query(stmt: Select,
         stmt.append_whereclause(GameOrm.create_time >= time_span[0])
         stmt.append_whereclause(GameOrm.create_time < time_span[1])
 
+    stmt.append_whereclause(GameOrm.accessible)
+
     stmt = (stmt.offset(offset).limit(limit)
             .options(selectinload(GameOrm.records)))
 
     return stmt
+
+
+async def get_game_by_code(game_code: int, group: GroupOrm) -> Optional[GameOrm]:
+    session = data_source.session()
+
+    stmt = select(GameOrm).where(
+        GameOrm.group == group, GameOrm.code == game_code
+    )
+    stmt = _build_game_query(stmt, limit=1)
+    game = (await session.execute(stmt)).scalar_one_or_none()
+    return game
 
 
 @overload

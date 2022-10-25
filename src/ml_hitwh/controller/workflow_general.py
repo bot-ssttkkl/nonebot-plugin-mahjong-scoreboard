@@ -22,7 +22,7 @@ def require_group_binding_qq(matcher_type: Type[Matcher], require_admin: bool = 
     @workflow_interceptor(matcher_type)
     async def got(event: MessageEvent, matcher: Matcher,
                   raw_arg=ArgPlainText("binding_qq")):
-        binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
+        binding_qq = await parse_int_or_reject(raw_arg, "群号")
 
         matcher.state["group_info"] = await get_group_info(binding_qq)
         matcher.state["binding_qq"] = binding_qq

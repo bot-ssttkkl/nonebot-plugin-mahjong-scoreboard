@@ -15,7 +15,7 @@ from ml_hitwh.model.enums import SeasonState
 from ml_hitwh.service import season_service
 from ml_hitwh.service.game_service import get_season_games, get_group_games
 from ml_hitwh.service.group_service import get_group_by_binding_qq
-from ml_hitwh.utils import encode_date
+from ml_hitwh.utils.date import encode_date
 
 # ========== 导出赛季对局 ==========
 export_season_games_matcher = on_command("导出赛季对局", aliases={"导出对局"}, priority=5)

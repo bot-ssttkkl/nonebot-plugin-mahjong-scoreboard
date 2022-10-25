@@ -1,10 +1,12 @@
+import re
+
 from cachetools import TTLCache
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment, MessageEvent
 
 from ml_hitwh.controller.interceptor import general_interceptor
 from ml_hitwh.controller.mapper.game_mapper import map_game
-from ml_hitwh.controller.utils import split_message, parse_int_or_error
+from ml_hitwh.controller.utils import split_message, parse_int_or_error, try_parse_wind
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState
 from ml_hitwh.service import game_record_service, game_service, group_service, user_service
@@ -67,19 +69,29 @@ async def record(event: GroupMessageEvent):
     user_id = event.user_id
     game_code = None
     score = None
+    wind = None
 
     context = get_context(event)
     if context:
-        game_code = context.game_code
+        game_code = context["game_code"]
 
     args = split_message(event.message)[1:]
 
     for arg in args:
         if arg.type == "text":
-            if arg.data["text"].startswith("对局"):
-                game_code = arg.data["text"][len("对局"):]
+            text = arg.data["text"]
+            if text.startswith("对局"):
+                game_code = text[len("对局"):]
+            elif text.endswith("风"):
+                wind = try_parse_wind(text[:len("风")])
+            elif text.endswith("家"):
+                wind = try_parse_wind(text[:len("家")])
             else:
-                score = arg.data["text"]
+                pending_wind = try_parse_wind(text)
+                if pending_wind is not None:
+                    wind = pending_wind
+                else:
+                    score = text
         elif arg.type == 'at':
             user_id = int(arg.data["qq"])
 
@@ -93,7 +105,7 @@ async def record(event: GroupMessageEvent):
     if game is None:
         raise BadRequestError("未找到指定对局")
 
-    game = await game_record_service.record_game(game, user, score)
+    game = await game_record_service.record_game(game, user, score, wind)
 
     msg = await map_game(game)
     if game.state == GameState.uncompleted:
@@ -116,8 +128,8 @@ async def revert_record(event: GroupMessageEvent):
 
     context = get_context(event)
     if context:
-        user_id = context.extra.get("user_id", None)
-        game_code = context.game_code
+        user_id = context.get("user_id", None)
+        game_code = context["game_code"]
 
     args = split_message(event.message)[1:]
 
@@ -156,7 +168,7 @@ async def revert_record(event: GroupMessageEvent):
 #
 #     context = get_context(event)
 #     if context:
-#         game_code = context.game_code
+#         game_code = context["game_code"]
 #
 #     args = split_message(event.message)
 #
@@ -209,7 +221,7 @@ async def revert_record(event: GroupMessageEvent):
 #
 #
 # =============== 查询对局 ===============
-query_by_code_matcher = on_command("查询对局", priority=5)
+query_by_code_matcher = on_command("查询对局", aliases={"对局"}, priority=5)
 
 
 @query_by_code_matcher.handle()
@@ -219,7 +231,7 @@ async def query_by_code(event: GroupMessageEvent):
 
     context = get_context(event)
     if context:
-        game_code = context.game_code
+        game_code = context["game_code"]
 
     args = split_message(event.message)[1:]
     for arg in args:
@@ -231,7 +243,7 @@ async def query_by_code(event: GroupMessageEvent):
     group = await group_service.get_group_by_binding_qq(event.group_id)
     game = await game_record_service.get_game_by_code(game_code, group)
     if game is None:
-        raise BadRequestError("未找到对局")
+        raise BadRequestError("未找到指定对局")
 
     msg = await map_game(game)
     send_result = await query_by_code_matcher.send(msg)
@@ -249,7 +261,7 @@ async def delete_game(event: GroupMessageEvent):
 
     context = get_context(event)
     if context:
-        game_code = context.game_code
+        game_code = context["game_code"]
 
     args = split_message(event.message)[1:]
     for arg in args:
@@ -264,31 +276,56 @@ async def delete_game(event: GroupMessageEvent):
 
     await query_by_code_matcher.send(f'成功删除对局{game_code}')
 
-# # =============== 记录对局进度 ===============
-# make_game_progress_matcher = on_command("记录对局进度", aliases={"记录进度"}, priority=5)
-#
-# round_honba = r"([东南])([一二三四1234])局([1-9][0-9]*)本场"
-#
-# @make_game_progress_matcher.handle()
-# @general_interceptor(make_game_progress_matcher)
-# async def make_game_progress(event: GroupMessageEvent):
-#     game_code = None
-#
-#     context = get_context(event)
-#     if context:
-#         game_code = context.game_code
-#
-#     args = split_message(event.message)
-#     for arg in args:
-#         if arg.is_text:
-#             if arg.data["text"].startswith("对局"):
-#                 game_code = arg.data["text"][len("对局"):]
-#             elif arg.data["text"]
-#
-#     game_code = parse_int_or_error(game_code, '对局编号')
-#
-#     group = await group_service.get_group_by_binding_qq(event.group_id)
-#     operator = await user_service.get_user_by_binding_qq(event.user_id)
-#     await game_record_service.delete_game(game_code, group, operator)
-#
-#     await query_by_code_matcher.send(f'成功删除对局{game_code}')
+
+# =============== 设置对局进度 ===============
+make_game_progress_matcher = on_command("设置对局进度", aliases={"对局进度"}, priority=5)
+
+round_honba_pattern = r"([东南])([一二三四1234])局([0123456789零一两二三四五六七八九十百千万亿]+)本场"
+
+
+@make_game_progress_matcher.handle()
+@general_interceptor(make_game_progress_matcher)
+async def make_game_progress(event: GroupMessageEvent):
+    game_code = None
+    completed = False
+    round = None
+    honba = None
+
+    context = get_context(event)
+    if context:
+        game_code = context["game_code"]
+
+    args = split_message(event.message)
+    for arg in args:
+        if arg.type == 'text':
+            text = arg.data["text"]
+            if text.startswith("对局"):
+                game_code = arg.data["text"][len("对局"):]
+            elif text == '完成':
+                completed = True
+            else:
+                match_result = re.match(round_honba_pattern, text)
+                if match_result is not None:
+                    wind, round, honba = match_result.groups()
+
+                    round = parse_int_or_error(round, "局数", True)
+                    if wind == '南':
+                        round *= 2
+
+                    honba = parse_int_or_error(honba, "本场", True)
+
+    game_code = parse_int_or_error(game_code, '对局编号')
+
+    group = await group_service.get_group_by_binding_qq(event.group_id)
+    operator = await user_service.get_user_by_binding_qq(event.user_id)
+    if not completed:
+        game = await game_record_service.make_game_progress(game_code, round, honba, group, operator)
+    else:
+        game = await game_record_service.remove_game_progress(game_code, group)
+
+    msg = await map_game(game)
+    msg.append(MessageSegment.text("\n成功设置对局进度"))
+    if game.state == GameState.invalid_total_point:
+        msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
+    send_result = await query_by_code_matcher.send(msg)
+    save_context(send_result["message_id"], game_code=game.code)

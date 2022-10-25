@@ -1,4 +1,4 @@
-from ml_hitwh.model.enums import PlayerAndWind, GameState, SeasonState
+from ml_hitwh.model.enums import PlayerAndWind, GameState, SeasonState, Wind
 
 player_and_wind_mapping = {
     PlayerAndWind.four_men_east: '四人东',
@@ -15,6 +15,20 @@ season_state_mapping = {
     SeasonState.initial: '未开始',
     SeasonState.running: '进行中',
     SeasonState.finished: '已结束'
+}
+
+wind_mapping = {
+    Wind.east: '东',
+    Wind.south: '南',
+    Wind.west: '西',
+    Wind.north: '北'
+}
+
+digit_mapping = {
+    1: '一',
+    2: '二',
+    3: '三',
+    4: '四',
 }
 
 datetime_format = '%Y-%m-%d %H:%M'

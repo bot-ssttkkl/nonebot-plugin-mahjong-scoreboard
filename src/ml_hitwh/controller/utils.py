@@ -1,9 +1,11 @@
 from typing import List, Optional, Union
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, MessageEvent, ActionFailed, Bot
-from nonebot.internal.matcher import Matcher, current_bot
+from nonebot.internal.matcher import current_bot, current_matcher
 
 from ml_hitwh.errors import BadRequestError
+from ml_hitwh.model.enums import Wind
+from ml_hitwh.utils.integer import decode_integer
 
 
 def get_reply_message_id(event: MessageEvent) -> Optional[int]:
@@ -40,34 +42,43 @@ async def get_group_info(group_binding_qq: int):
         raise BadRequestError(e.info["wording"])
 
 
-def parse_int_or_error(raw: Union[int, str, None], desc: str) -> int:
+def parse_int_or_error(raw: Union[int, str, None], desc: str, allow_chinese: bool = False) -> int:
     if not raw:
         raise BadRequestError(f"请指定{desc}")
 
     try:
-        return int(raw)
+        if allow_chinese:
+            return decode_integer(raw)
+        else:
+            return int(raw)
     except ValueError:
         raise BadRequestError(f"输入的{desc}不合法")
 
 
-async def parse_int_or_reject(raw: Union[int, str, None], desc: str, matcher: Matcher) -> int:
+async def parse_int_or_reject(raw: Union[int, str, None], desc: str, allow_chinese: bool = False) -> int:
+    matcher = current_matcher.get()
     if not raw:
         await matcher.reject(f"请指定{desc}")
 
     try:
-        return int(raw)
+        if allow_chinese:
+            return decode_integer(raw)
+        else:
+            return int(raw)
     except ValueError:
         await matcher.reject(f"输入的{desc}不合法。请重新输入")
 
 
-async def parse_int_or_finish(raw: Union[int, str, None], desc: str, matcher: Matcher) -> int:
-    if not raw:
-        await matcher.finish(f"请指定{desc}")
-
-    try:
-        return int(raw)
-    except ValueError:
-        await matcher.finish(f"输入的{desc}不合法")
+def try_parse_wind(text: str) -> Optional[Wind]:
+    if text == "东":
+        return Wind.east
+    if text == "南":
+        return Wind.south
+    if text == "西":
+        return Wind.west
+    if text == "北":
+        return Wind.north
+    return None
 
 
 async def send_group_forward_msg(bot: Bot, group_id: int, messages: List[Message]):

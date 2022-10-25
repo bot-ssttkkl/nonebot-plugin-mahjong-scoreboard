@@ -4,6 +4,7 @@ from typing import List, TYPE_CHECKING, Optional
 from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 
+from ml_hitwh.model.enums import Wind
 from . import OrmBase
 from ..enums import PlayerAndWind, GameState
 
@@ -38,9 +39,9 @@ class GameOrm(OrmBase):
                                                   foreign_keys='GameRecordOrm.game_id',
                                                   back_populates="game")
 
-    progress_id: Optional[int] = Column(Integer, ForeignKey('game_progresses.id'))
     progress: Optional["GameProgressOrm"] = relationship("GameProgressOrm",
-                                                         foreign_keys='GameOrm.progress_id')
+                                                         foreign_keys='GameProgressOrm.game_id',
+                                                         uselist=False)
 
     complete_time: Optional[datetime] = Column(DateTime)
 
@@ -59,6 +60,8 @@ class GameRecordOrm(OrmBase):
     user_id: int = Column(Integer, ForeignKey('users.id'), primary_key=True, nullable=False)
     user: "UserOrm" = relationship('UserOrm', foreign_keys='GameRecordOrm.user_id')
 
+    wind: Optional[Wind] = Column(Enum(Wind))
+
     score: int = Column(Integer, nullable=False)  # 分数
     point: int = Column(Integer, nullable=False, default=0)  # pt
 
@@ -66,13 +69,11 @@ class GameRecordOrm(OrmBase):
 class GameProgressOrm(OrmBase):
     __tablename__ = 'game_progresses'
 
-    id: int = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    game_id: int = Column(Integer, ForeignKey('games.id'), primary_key=True, nullable=False)
+    game: "GameOrm" = relationship('GameOrm', foreign_keys='GameProgressOrm.game_id', back_populates='progress')
 
-    round: int = Column(Integer)
-    honba: int = Column(Integer)
-
-    parent_user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False)
-    parent: "UserOrm" = relationship('UserOrm', foreign_keys='GameProgressOrm.parent_user_id')
+    round: int = Column(Integer, nullable=False)
+    honba: int = Column(Integer, nullable=False)
 
 
 __all__ = ("GameOrm", "GameRecordOrm", "GameProgressOrm")
