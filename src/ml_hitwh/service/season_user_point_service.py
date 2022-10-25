@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy.future import select
 from sqlalchemy.sql.functions import count
@@ -6,6 +6,16 @@ from sqlalchemy.sql.functions import count
 from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.season import SeasonOrm, SeasonUserPointOrm
 from ml_hitwh.model.orm.user import UserOrm
+
+
+async def get_season_user_points(season: SeasonOrm) -> List[SeasonUserPointOrm]:
+    session = data_source.session()
+
+    stmt = select(SeasonUserPointOrm).where(
+        SeasonUserPointOrm.season == season
+    ).order_by(SeasonUserPointOrm.point.desc())
+    sup = (await session.execute(stmt)).scalars().all()
+    return sup
 
 
 async def get_season_user_point(season: SeasonOrm, user: UserOrm) -> Optional[SeasonUserPointOrm]:
