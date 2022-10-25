@@ -11,7 +11,7 @@ from ml_hitwh.service import season_service
 from ml_hitwh.service.group_service import get_group_by_binding_qq
 
 # ========== 赛季信息 ==========
-query_running_season_matcher = on_command("赛季信息", aliases={"查询赛季", "赛季"}, priority=5)
+query_running_season_matcher = on_command("查询赛季", aliases={"赛季"}, priority=5)
 
 
 @query_running_season_matcher.handle()

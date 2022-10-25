@@ -12,7 +12,7 @@ from ml_hitwh.service import season_service
 from ml_hitwh.service.group_service import get_group_by_binding_qq
 
 # ========== 新赛季 ==========
-new_season_matcher = on_command("新赛季", priority=5)
+new_season_matcher = on_command("新建赛季", aliases={"新赛季"}, priority=5)
 
 require_group_binding_qq(new_season_matcher, True)
 

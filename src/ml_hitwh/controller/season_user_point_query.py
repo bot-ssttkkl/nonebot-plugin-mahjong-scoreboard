@@ -13,7 +13,7 @@ from ml_hitwh.service.season_user_point_service import get_season_user_point_ran
 from ml_hitwh.service.user_service import get_user_by_binding_qq
 
 # ========== 查询PT ==========
-query_season_point = on_command("查询PT", aliases={"PT", "pt"}, priority=5)
+query_season_point = on_command("查询PT", aliases={"查询pt", "PT", "pt"}, priority=5)
 
 
 @query_season_point.handle()
@@ -44,7 +44,7 @@ async def query_season_point(event: GroupMessageEvent, matcher: Matcher):
 
 
 # ========== 查询榜单 ==========
-query_season_ranking = on_command("查询榜单", aliases={"查询排行", "榜单", "排行"}, priority=5)
+query_season_ranking = on_command("查询榜单", aliases={"榜单"}, priority=5)
 
 
 @query_season_ranking.handle()
