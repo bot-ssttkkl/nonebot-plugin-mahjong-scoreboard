@@ -1,3 +1,5 @@
+from datetime import date, timedelta, datetime, time
+
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageSegment
 from nonebot.internal.matcher import Matcher
@@ -25,7 +27,10 @@ async def query_user_recent_games(bot: Bot, event: GroupMessageEvent, matcher: M
     group = await get_group_by_binding_qq(event.group_id)
     user = await get_user_by_binding_qq(user_id)
 
-    games = await get_user_games(group, user, limit=30, reverse_order=True)
+    end_time = datetime.combine(date.today() + timedelta(days=1), time())
+    start_time = datetime.combine(end_time - timedelta(days=7), time())
+
+    games = await get_user_games(group, user, limit=30, reverse_order=True, time_span=(start_time, end_time))
     if len(games) != 0:
         member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
         header = Message([
@@ -50,7 +55,10 @@ query_group_recent_games_matcher = on_command("群最近对局", priority=5)
 async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: Matcher):
     group = await get_group_by_binding_qq(event.group_id)
 
-    games = await get_group_games(group, limit=30, reverse_order=True)
+    end_time = datetime.combine(date.today() + timedelta(days=1), time())
+    start_time = datetime.combine(end_time - timedelta(days=7), time())
+
+    games = await get_group_games(group, limit=30, reverse_order=True, time_span=(start_time, end_time))
     if len(games) != 0:
         header = Message(MessageSegment.text("以下是本群的最近对局"))
         messages = [header]
@@ -77,7 +85,7 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
     group = await get_group_by_binding_qq(event.group_id)
     user = await get_user_by_binding_qq(user_id)
 
-    games = await get_user_games(group, user, True, limit=30, reverse_order=True)
+    games = await get_user_games(group, user, uncompleted_only=True, limit=30, reverse_order=True)
     if len(games) != 0:
         member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
         header = Message([
@@ -103,7 +111,7 @@ query_group_recent_games_matcher = on_command("群未完成对局", priority=5)
 async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: Matcher):
     group = await get_group_by_binding_qq(event.group_id)
 
-    games = await get_group_games(group, True, limit=30, reverse_order=True)
+    games = await get_group_games(group, uncompleted_only=True, limit=30, reverse_order=True)
     if len(games) != 0:
         header = Message(MessageSegment.text("以下是本群的未完成对局"))
         messages = [header]

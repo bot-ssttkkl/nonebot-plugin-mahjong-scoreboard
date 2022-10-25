@@ -1,9 +1,6 @@
-import time
-from collections import OrderedDict
-
+from cachetools import TTLCache
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
-from pydantic import BaseModel
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment, MessageEvent
 
 from ml_hitwh.controller.interceptor import general_interceptor
 from ml_hitwh.controller.mapper.game_mapper import map_game
@@ -12,33 +9,10 @@ from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState
 from ml_hitwh.service import game_record_service, game_service, group_service, user_service
 
-CONTEXT_TTL = 7200
+context = TTLCache(maxsize=2 ** 31 - 1, ttl=7200)
 
 
-class GameRecordMessageContext(BaseModel):
-    message_id: int
-    game_code: int
-    expires_at: float = time.time() + CONTEXT_TTL
-    extra: dict = {}
-
-
-context_data = OrderedDict()
-
-
-# 弹出过期的context
-def collate_context():
-    now = time.time()
-    while len(context_data) > 0:
-        front = next(iter(context_data.values()))
-        if front.expires_at <= now:
-            context_data.popitem()
-        else:
-            break
-
-
-async def get_context(event: GroupMessageEvent):
-    collate_context()
-
+def get_context(event: MessageEvent):
     message_id = None
     for seg in event.original_message:
         if seg.type == "reply":
@@ -46,16 +20,11 @@ async def get_context(event: GroupMessageEvent):
             break
 
     if message_id:
-        return context_data.get(message_id, None)
+        return context.get(message_id, None)
 
 
-async def save_context(game_code: int, message_id: int, **kwargs):
-    collate_context()
-
-    context = GameRecordMessageContext(game_code=game_code, message_id=message_id, extra=kwargs)
-    if message_id in context_data:
-        del context_data[message_id]
-    context_data[message_id] = context
+def save_context(message_id: int, **kwargs):
+    context[message_id] = kwargs
 
 
 # =============== 新建对局 ===============
@@ -85,7 +54,7 @@ async def new_game(event: GroupMessageEvent):
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩'))
     send_result = await new_game_matcher.send(msg)
-    await save_context(game_code=game.code, message_id=send_result["message_id"])
+    save_context(send_result["message_id"], game_code=game.code)
 
 
 # =============== 结算 ===============
@@ -99,7 +68,7 @@ async def record(event: GroupMessageEvent):
     game_code = None
     score = None
 
-    context = await get_context(event)
+    context = get_context(event)
     if context:
         game_code = context.game_code
 
@@ -132,7 +101,7 @@ async def record(event: GroupMessageEvent):
     elif game.state == GameState.invalid_total_point:
         msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
     send_result = await record_matcher.send(msg)
-    await save_context(game_code=game.code, message_id=send_result["message_id"], user_id=user_id)
+    save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
 
 
 # =============== 撤销结算 ===============
@@ -145,7 +114,7 @@ async def revert_record(event: GroupMessageEvent):
     user_id = event.user_id
     game_code = None
 
-    context = await get_context(event)
+    context = get_context(event)
     if context:
         user_id = context.extra.get("user_id", None)
         game_code = context.game_code
@@ -169,7 +138,7 @@ async def revert_record(event: GroupMessageEvent):
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n撤销结算成功'))
     send_result = await record_matcher.send(msg)
-    await save_context(game_code=game.code, message_id=send_result["message_id"], user_id=user_id)
+    save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
 
 
 #
@@ -185,7 +154,7 @@ async def revert_record(event: GroupMessageEvent):
 #     game_code = None
 #     point = None
 #
-#     context = await get_context(event)
+#     context = get_context(event)
 #     if context:
 #         game_code = context.game_code
 #
@@ -248,7 +217,7 @@ query_by_code_matcher = on_command("查询对局", priority=5)
 async def query_by_code(event: GroupMessageEvent):
     game_code = None
 
-    context = await get_context(event)
+    context = get_context(event)
     if context:
         game_code = context.game_code
 
@@ -266,7 +235,7 @@ async def query_by_code(event: GroupMessageEvent):
 
     msg = await map_game(game)
     send_result = await query_by_code_matcher.send(msg)
-    await save_context(game_code=game.code, message_id=send_result["message_id"])
+    save_context(send_result["message_id"], game_code=game.code)
 
 
 # =============== 删除对局 ===============
@@ -278,7 +247,7 @@ delete_game_matcher = on_command("删除对局", priority=5)
 async def delete_game(event: GroupMessageEvent):
     game_code = None
 
-    context = await get_context(event)
+    context = get_context(event)
     if context:
         game_code = context.game_code
 
@@ -305,7 +274,7 @@ async def delete_game(event: GroupMessageEvent):
 # async def make_game_progress(event: GroupMessageEvent):
 #     game_code = None
 #
-#     context = await get_context(event)
+#     context = get_context(event)
 #     if context:
 #         game_code = context.game_code
 #

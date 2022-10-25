@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Tuple, overload
 
 import tzlocal
 from nonebot import logger, require
 from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql import Select
 
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import GameState, PlayerAndWind
@@ -87,67 +88,86 @@ async def get_game_by_code(game_code: int, group: GroupOrm) -> Optional[GameOrm]
     return game
 
 
+def _build_game_query(stmt: Select,
+                      *, offset: Optional[int] = None,
+                      limit: Optional[int] = None,
+                      uncompleted_only: bool = False,
+                      reverse_order: bool = False,
+                      time_span: Optional[Tuple[datetime, datetime]] = None):
+    if uncompleted_only:
+        stmt.append_whereclause(GameOrm.state != GameState.completed)
+
+    if reverse_order:
+        stmt = stmt.order_by(GameOrm.id.desc())
+    else:
+        stmt = stmt.order_by(GameOrm.id)
+
+    if time_span:
+        stmt.append_whereclause(GameOrm.create_time >= time_span[0])
+        stmt.append_whereclause(GameOrm.create_time < time_span[1])
+
+    stmt = (stmt.offset(offset).limit(limit)
+            .options(selectinload(GameOrm.records)))
+
+    return stmt
+
+
+@overload
 async def get_user_games(group: GroupOrm, user: UserOrm,
-                         uncompleted_only: bool = False,
-                         *, offset: Optional[int] = None,
+                         *, uncompleted_only: bool = False,
+                         offset: Optional[int] = None,
                          limit: Optional[int] = None,
-                         reverse_order: bool = False) -> List[GameOrm]:
+                         reverse_order: bool = False,
+                         time_span: Optional[Tuple[datetime, datetime]] = None) -> List[GameOrm]:
+    ...
+
+
+async def get_user_games(group: GroupOrm, user: UserOrm, **kwargs) -> List[GameOrm]:
     session = data_source.session()
 
-    where = [GameOrm.group == group, GameRecordOrm.user == user]
-    if uncompleted_only:
-        where.append(GameOrm.state != GameState.completed)
-
-    stmt = (select(GameOrm).join(GameRecordOrm).where(*where)
-            .offset(offset).limit(limit)
-            .options(selectinload(GameOrm.records)))
-
-    if reverse_order:
-        stmt = stmt.order_by(GameOrm.id.desc())
+    stmt = (select(GameOrm).join(GameRecordOrm)
+            .where(GameOrm.group == group, GameRecordOrm.user == user))
+    stmt = _build_game_query(stmt, **kwargs)
 
     result = await session.execute(stmt)
     return [row[0] for row in result]
 
 
+@overload
 async def get_group_games(group: GroupOrm,
-                          uncompleted_only: bool = False,
-                          *, offset: Optional[int] = None,
+                          *, uncompleted_only: bool = False,
+                          offset: Optional[int] = None,
                           limit: Optional[int] = None,
-                          reverse_order: bool = False) -> List[GameOrm]:
+                          reverse_order: bool = False,
+                          time_span: Optional[Tuple[datetime, datetime]] = None) -> List[GameOrm]:
+    ...
+
+
+async def get_group_games(group: GroupOrm, **kwargs) -> List[GameOrm]:
     session = data_source.session()
 
-    where = [GameOrm.group == group]
-    if uncompleted_only:
-        where.append(GameOrm.state != GameState.completed)
-
-    stmt = (select(GameOrm).where(*where)
-            .offset(offset).limit(limit)
-            .options(selectinload(GameOrm.records)))
-
-    if reverse_order:
-        stmt = stmt.order_by(GameOrm.id.desc())
+    stmt = select(GameOrm).where(GameOrm.group == group)
+    stmt = _build_game_query(stmt, **kwargs)
 
     result = await session.execute(stmt)
     return [row[0] for row in result]
 
 
+@overload
 async def get_season_games(season: SeasonOrm,
-                           uncompleted_only: bool = False,
-                           *, offset: Optional[int] = None,
+                           *, uncompleted_only: bool = False,
+                           offset: Optional[int] = None,
                            limit: Optional[int] = None,
-                           reverse_order: bool = False) -> List[GameOrm]:
+                           reverse_order: bool = False,
+                           time_span: Optional[Tuple[datetime, datetime]] = None) -> List[GameOrm]:
+    ...
+
+
+async def get_season_games(season: SeasonOrm, **kwargs) -> List[GameOrm]:
     session = data_source.session()
 
-    where = [GameOrm.season == season]
-    if uncompleted_only:
-        where.append(GameOrm.state != GameState.completed)
-
-    stmt = (select(GameOrm).where(*where)
-            .offset(offset).limit(limit)
-            .options(selectinload(GameOrm.records)))
-
-    if reverse_order:
-        stmt = stmt.order_by(GameOrm.id.desc())
+    stmt = select(GameOrm).where(GameOrm.season == season)
+    stmt = _build_game_query(stmt, **kwargs)
 
     result = await session.execute(stmt)
     return [row[0] for row in result]
