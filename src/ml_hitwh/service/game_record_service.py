@@ -1,16 +1,16 @@
 from datetime import datetime, timedelta
 from math import ceil
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import tzlocal
-from nonebot.adapters.onebot.v11 import Bot
-from sqlalchemy import select, and_
+from nonebot import logger, require
+from sqlalchemy import select, and_, delete
 from sqlalchemy.orm import selectinload
 
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState, SeasonUserPointChangeType
 from ml_hitwh.model.orm import data_source
-from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
+from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm, GameProgressOrm
 from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.season import SeasonUserPointOrm, SeasonUserPointChangeLogOrm, SeasonOrm
 from ml_hitwh.model.orm.user import UserOrm
@@ -18,12 +18,29 @@ from ml_hitwh.service.game_service import get_game_by_code
 from ml_hitwh.service.group_service import is_group_admin
 from ml_hitwh.utils import encode_date, count_digit
 
-__all__ = ("new_game", "record_game")
+require("nonebot_plugin_apscheduler")
+
+from nonebot_plugin_apscheduler import scheduler
+
+__all__ = ("new_game", "record_game", "revert_record", "delete_game")
+
+
+@scheduler.scheduled_job("cron", hour="*/2", id="delete_all_uncompleted_game")
+async def _delete_all_uncompleted_game():
+    session = data_source.session()
+
+    now = datetime.utcnow()
+    one_day_ago = now - timedelta(days=1)
+    stmt = delete(GameOrm).where(GameOrm.state != GameState.completed,
+                                 GameOrm.create_time > one_day_ago,
+                                 GameOrm.progress_id == None)
+    result = await session.execute(stmt)
+    logger.success(f"deleted {result.rowcount} outdated uncompleted game(s)")
 
 
 async def new_game(promoter: UserOrm,
                    group: GroupOrm,
-                   player_and_wind: PlayerAndWind) -> GameOrm:
+                   player_and_wind: Optional[PlayerAndWind]) -> GameOrm:
     session = data_source.session()
 
     now = datetime.now(tzlocal.get_localzone())
@@ -37,6 +54,23 @@ async def new_game(promoter: UserOrm,
     digit = max(2, count_digit(group.prev_game_code_identifier))
     game_code = group.prev_game_code_base * (10 ** digit) + group.prev_game_code_identifier
 
+    # 未指定player_and_wind时，若赛季启用了半庄则默认为半庄，否则为东风
+    if player_and_wind is None:
+        if group.running_season_id is not None:
+            season = await session.get(SeasonOrm, group.running_season_id)
+            if season.south_game_enabled:
+                player_and_wind = PlayerAndWind.four_men_south
+            else:
+                player_and_wind = PlayerAndWind.four_men_east
+        else:
+            player_and_wind = PlayerAndWind.four_men_south
+    else:
+        if group.running_season_id is not None:
+            season = await session.get(SeasonOrm, group.running_season_id)
+            if player_and_wind == PlayerAndWind.four_men_south and not season.south_game_enabled \
+                    or player_and_wind == PlayerAndWind.four_men_east and not season.east_game_enabled:
+                raise BadRequestError("当前赛季未开放此类型对局")
+
     game = GameOrm(code=game_code,
                    group_id=group.id,
                    promoter_user_id=promoter.id,
@@ -48,16 +82,11 @@ async def new_game(promoter: UserOrm,
     return game
 
 
-async def record_game(game_code: int,
-                      group: GroupOrm,
+async def record_game(game: GameOrm,
                       user: UserOrm,
                       score: int) -> GameOrm:
     session = data_source.session()
 
-    game = await get_game_by_code(game_code, group, selectinload(GameOrm.records))
-
-    if game is None:
-        raise BadRequestError("未找到对局")
     if game.state == GameState.completed:
         raise BadRequestError("这场对局已经处于完成状态")
 
@@ -190,8 +219,7 @@ async def _make_season_user_point_change(game: GameOrm):
     # 这里不需要commit
 
 
-async def revert_record(bot: Bot,
-                        game_code: int,
+async def revert_record(game_code: int,
                         group: GroupOrm,
                         user: UserOrm,
                         operator: UserOrm) -> GameOrm:
@@ -210,7 +238,7 @@ async def revert_record(bot: Bot,
 
     if game.state == GameState.completed:
         # 超过24小时后，只有群管理能够修改对局
-        if datetime.now() - game.complete_time >= timedelta(days=1) and not is_group_admin(bot, operator, group):
+        if datetime.now() - game.complete_time >= timedelta(days=1) and not is_group_admin(operator, group):
             raise BadRequestError("没有权限")
 
         if game.season_id:
@@ -246,8 +274,7 @@ async def _revert_season_user_point_change(game: GameOrm):
     # 这里不需要commit
 
 
-async def delete_game(bot: Bot,
-                      game_code: int,
+async def delete_game(game_code: int,
                       group: GroupOrm,
                       operator: UserOrm):
     session = data_source.session()
@@ -258,11 +285,11 @@ async def delete_game(bot: Bot,
 
     if game.state == GameState.completed and datetime.now() - game.complete_time >= timedelta(days=1):
         # 已完成对局超过24小时后，只有群管理能够修改对局
-        if not await is_group_admin(bot, operator, group):
+        if not await is_group_admin(operator, group):
             raise BadRequestError("没有权限")
     else:
         # 否则，只有发起人和群管理能够修改对局
-        if game.promoter_user_id != operator.id and not await is_group_admin(bot, operator, group):
+        if game.promoter_user_id != operator.id and not await is_group_admin(operator, group):
             raise BadRequestError("没有权限")
 
     if game.state == GameState.completed and game.season_id:
@@ -270,5 +297,21 @@ async def delete_game(bot: Bot,
 
     game.accessible = False
     game.delete_time = datetime.now()
+
+    await session.commit()
+
+
+async def make_game_progress(game: GameOrm, round: int, honba: int, parent: UserOrm):
+    session = data_source.session()
+    if game.progress_id is None:
+        progress = GameProgressOrm()
+        game.progress = progress
+        session.add(progress)
+    else:
+        progress = await session.get(GameProgressOrm, game.progress_id)
+
+    progress.round = round
+    progress.honba = honba
+    progress.parent = parent
 
     await session.commit()

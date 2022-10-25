@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, TYPE_CHECKING, Optional
 
 from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey
-from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy.orm import relationship
 
 from . import OrmBase
 from ..enums import PlayerAndWind, GameState
@@ -38,6 +38,10 @@ class GameOrm(OrmBase):
                                                   foreign_keys='GameRecordOrm.game_id',
                                                   back_populates="game")
 
+    progress_id: Optional[int] = Column(Integer, ForeignKey('game_progresses.id'))
+    progress: Optional["GameProgressOrm"] = relationship("GameProgressOrm",
+                                                         foreign_keys='GameOrm.progress_id')
+
     complete_time: Optional[datetime] = Column(DateTime)
 
     accessible: bool = Column(Boolean, nullable=False, default=True)
@@ -59,4 +63,16 @@ class GameRecordOrm(OrmBase):
     point: int = Column(Integer, nullable=False, default=0)  # pt
 
 
-__all__ = ("GameOrm", "GameRecordOrm")
+class GameProgressOrm(OrmBase):
+    __tablename__ = 'game_progresses'
+
+    id: int = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+
+    round: int = Column(Integer)
+    honba: int = Column(Integer)
+
+    parent_user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False)
+    parent: "UserOrm" = relationship('UserOrm', foreign_keys='GameProgressOrm.parent_user_id')
+
+
+__all__ = ("GameOrm", "GameRecordOrm", "GameProgressOrm")

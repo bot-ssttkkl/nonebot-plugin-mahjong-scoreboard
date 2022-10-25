@@ -1,6 +1,5 @@
 from typing import List, Optional, Union
 
-from nonebot import Bot
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, MessageEvent
 from nonebot.internal.matcher import Matcher
 
@@ -27,11 +26,6 @@ def split_message(message: Message) -> List[MessageSegment]:
             result.append(seg)
 
     return result
-
-
-async def get_user_name(user_id: int, group_id: int, bot: Bot):
-    user_info = await bot.get_group_member_info(group_id=group_id, user_id=user_id)
-    return user_info["card"] or user_info["nickname"]
 
 
 def parse_int_or_error(raw: Union[int, str, None], desc: str) -> int:

@@ -7,13 +7,11 @@ from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
 from pydantic import BaseModel
 
 from ml_hitwh.controller.interceptor import general_interceptor
-from ml_hitwh.controller.mapper import map_game
+from ml_hitwh.controller.mapper.game_mapper import map_game
+from ml_hitwh.controller.utils import split_message, parse_int_or_error
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState
-from ml_hitwh.service import game_record_service
-from .utils import split_message, parse_int_or_error
-from ..service.group_service import get_group_by_binding_qq
-from ..service.user_service import get_user_by_binding_qq
+from ml_hitwh.service import game_record_service, game_service, group_service, user_service
 
 CONTEXT_TTL = 7200
 
@@ -68,7 +66,7 @@ new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
 @new_game_matcher.handle()
 @general_interceptor(new_game_matcher)
 async def new_game(bot: Bot, event: GroupMessageEvent):
-    player_and_wind = PlayerAndWind.four_men_south
+    player_and_wind = None
 
     args = split_message(event.message)
     if len(args) > 1:
@@ -80,12 +78,12 @@ async def new_game(bot: Bot, event: GroupMessageEvent):
         else:
             raise BadRequestError("对局类型不合法")
 
-    user = await get_user_by_binding_qq(event.user_id)
-    group = await get_group_by_binding_qq(event.group_id)
+    user = await user_service.get_user_by_binding_qq(event.user_id)
+    group = await group_service.get_group_by_binding_qq(event.group_id)
     game = await game_record_service.new_game(user, group, player_and_wind)
 
     with StringIO() as sio:
-        await map_game(sio, game, bot)
+        await map_game(sio, game)
         sio.write('\n')
         sio.write('新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩')
         msg = sio.getvalue()
@@ -143,12 +141,17 @@ async def record(bot: Bot, event: GroupMessageEvent):
     game_code = parse_int_or_error(game_code, '对局编号')
     score = parse_int_or_error(score, '成绩')
 
-    user = await get_user_by_binding_qq(user_id)
-    group = await get_group_by_binding_qq(event.group_id)
-    game = await game_record_service.record_game(game_code, group, user, score)
+    user = await user_service.get_user_by_binding_qq(user_id)
+    group = await group_service.get_group_by_binding_qq(event.group_id)
+
+    game = await game_service.get_game_by_code(game_code, group)
+    if game is None:
+        raise BadRequestError("未找到对局")
+
+    game = await game_record_service.record_game(game, user, score)
 
     with StringIO() as sio:
-        await map_game(sio, game, bot)
+        await map_game(sio, game)
         sio.write('\n')
         if game.state == GameState.uncompleted:
             sio.write('结算成功')
@@ -198,13 +201,13 @@ async def revert_record(bot: Bot, event: GroupMessageEvent):
 
     game_code = parse_int_or_error(game_code, '对局编号')
 
-    user = await get_user_by_binding_qq(user_id)
-    operator = await get_user_by_binding_qq(event.user_id)
-    group = await get_group_by_binding_qq(event.group_id)
-    game = await game_record_service.revert_record(bot, game_code, group, user, operator)
+    user = await user_service.get_user_by_binding_qq(user_id)
+    operator = await user_service.get_user_by_binding_qq(event.user_id)
+    group = await group_service.get_group_by_binding_qq(event.group_id)
+    game = await game_record_service.revert_record(game_code, group, user, operator)
 
     with StringIO() as sio:
-        await map_game(sio, game, bot)
+        await map_game(sio, game)
         sio.write('\n')
         sio.write('撤销结算成功')
         msg = sio.getvalue()
@@ -299,13 +302,13 @@ async def query_by_code(bot: Bot, event: GroupMessageEvent):
 
     game_code = parse_int_or_error(game_code, '对局编号')
 
-    group = await get_group_by_binding_qq(event.group_id)
+    group = await group_service.get_group_by_binding_qq(event.group_id)
     game = await game_record_service.get_game_by_code(game_code, group)
     if game is None:
         raise BadRequestError("未找到对局")
 
     with StringIO() as sio:
-        await map_game(sio, game, bot, map_promoter=True)
+        await map_game(sio, game, map_promoter=True)
         msg = sio.getvalue()
 
     send_result = await query_by_code_matcher.send(msg)
@@ -331,8 +334,34 @@ async def delete_game(bot: Bot, event: GroupMessageEvent):
 
     game_code = parse_int_or_error(game_code, '对局编号')
 
-    group = await get_group_by_binding_qq(event.group_id)
-    operator = await get_user_by_binding_qq(event.user_id)
-    await game_record_service.delete_game(bot, game_code, group, operator)
+    group = await group_service.get_group_by_binding_qq(event.group_id)
+    operator = await user_service.get_user_by_binding_qq(event.user_id)
+    await game_record_service.delete_game(game_code, group, operator)
+
+    await query_by_code_matcher.send(f'成功删除对局{game_code}')
+
+
+# =============== 记录对局进度 ===============
+make_game_progress_matcher = on_command("记录对局进度", aliases={"记录进度"}, priority=5)
+
+
+@make_game_progress_matcher.handle()
+@general_interceptor(make_game_progress_matcher)
+async def make_game_progress(bot: Bot, event: GroupMessageEvent):
+    game_code = None
+
+    context = await get_context(event)
+    if context:
+        game_code = context.game_code
+
+    args = split_message(event.message)
+    if len(args) >= 2:
+        game_code = int(args[1].data["text"])
+
+    game_code = parse_int_or_error(game_code, '对局编号')
+
+    group = await group_service.get_group_by_binding_qq(event.group_id)
+    operator = await user_service.get_user_by_binding_qq(event.user_id)
+    await game_record_service.delete_game(game_code, group, operator)
 
     await query_by_code_matcher.send(f'成功删除对局{game_code}')

@@ -1,30 +1,23 @@
 from io import StringIO
 from typing import TextIO, Iterable, Optional, Union
 
-from nonebot import Bot
 from nonebot.adapters.onebot.v11 import MessageSegment, Message
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from nonebot.internal.matcher import current_bot
 
 from ml_hitwh.controller.mapper import player_and_wind_mapping, game_state_mapping, datetime_format
-from ml_hitwh.controller.utils import get_user_name
 from ml_hitwh.model.enums import GameState
 from ml_hitwh.model.orm import data_source
-from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
+from ml_hitwh.model.orm.game import GameOrm
 from ml_hitwh.model.orm.group import GroupOrm
+from ml_hitwh.model.orm.season import SeasonOrm
 from ml_hitwh.model.orm.user import UserOrm
+from ml_hitwh.service.group_service import get_user_nickname
 
 
-async def map_game(io: TextIO, game: GameOrm, bot: Bot, *, map_promoter: bool = False):
+async def map_game(io: TextIO, game: GameOrm, *, map_promoter: bool = False):
     session = data_source.session()
 
-    stmt = select(GameOrm).where(GameOrm.id == game.id).limit(1).options(
-        selectinload(GameOrm.season),
-        selectinload(GameOrm.promoter),
-        selectinload(GameOrm.group),
-        selectinload(GameOrm.records).joinedload(GameRecordOrm.user)
-    )
-    game: GameOrm = (await session.execute(stmt)).scalar_one_or_none()
+    group = await session.get(GroupOrm, game.group_id)
 
     # 对局22090901  四人南
     io.write('对局')
@@ -38,15 +31,15 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, *, map_promoter: bool = 
     if game.season_id is None:
         io.write('无')
     else:
-        # season = await session.get(SeasonOrm, game.season_id)
-        io.write(game.season.name)
+        season = await session.get(SeasonOrm, game.season_id)
+        io.write(season.name)
     io.write('\n')
 
     if map_promoter:
-        # promoter = await session.get(UserOrm, game.promoter_user_id)
+        promoter = await session.get(UserOrm, game.promoter_user_id)
         io.write('创建者：')
-        io.write(game.promoter.nickname or
-                 await get_user_name(game.promoter.binding_qq, game.group.binding_qq, bot))
+        io.write(promoter.nickname or
+                 await get_user_nickname(promoter, group))
         io.write('\n')
 
     # 状态：未完成
@@ -66,8 +59,8 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, *, map_promoter: bool = 
         # #1  Player Name    10000  (+5)
         # [...]
         for i, r in enumerate(sorted(game.records, key=lambda r: r.point, reverse=True)):
-            # user = await session.get(UserOrm, r.user_id)
-            name = r.user.nickname or await get_user_name(r.user.binding_qq, game.group.binding_qq, bot)
+            user = await session.get(UserOrm, r.user_id)
+            name = await get_user_nickname(user, group)
             io.write('#')
             io.write(str(i + 1))
             io.write('  ')
@@ -87,34 +80,36 @@ async def map_game(io: TextIO, game: GameOrm, bot: Bot, *, map_promoter: bool = 
             io.write('\n')
 
 
-async def map_user_recent_games_as_forward_msg(games: Iterable[GameOrm], group: GroupOrm, user: UserOrm, bot: Bot):
+async def map_user_recent_games_as_forward_msg(games: Iterable[GameOrm], group: GroupOrm, user: UserOrm):
+    bot = current_bot.get()
     member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
-    return await map_games_as_forward_msg(games, bot, header=Message([
+    return await map_games_as_forward_msg(games, header=Message([
         MessageSegment.text("以下是"),
         MessageSegment("at", {"qq": user.binding_qq, "name": member_info["nickname"]}),
         MessageSegment.text("的最近对局")
     ]))
 
 
-async def map_group_recent_games_as_forward_msg(games: Iterable[GameOrm], bot: Bot):
-    return await map_games_as_forward_msg(games, bot, header=f"以下是本群的最近对局")
+async def map_group_recent_games_as_forward_msg(games: Iterable[GameOrm]):
+    return await map_games_as_forward_msg(games, header=f"以下是本群的最近对局")
 
 
-async def map_user_uncompleted_games_as_forward_msg(games: Iterable[GameOrm], group: GroupOrm, user: UserOrm, bot: Bot):
+async def map_user_uncompleted_games_as_forward_msg(games: Iterable[GameOrm], group: GroupOrm, user: UserOrm):
+    bot = current_bot.get()
     member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
-    return await map_games_as_forward_msg(games, bot, header=Message([
+    return await map_games_as_forward_msg(games, header=Message([
         MessageSegment.text("以下是"),
         MessageSegment("at", {"qq": user.binding_qq, "name": member_info["nickname"]}),
         MessageSegment.text("的未完成对局")
     ]))
 
 
-async def map_group_uncompleted_games_as_forward_msg(games: Iterable[GameOrm], bot: Bot):
-    return await map_games_as_forward_msg(games, bot, header=f"以下是本群的未完成对局")
+async def map_group_uncompleted_games_as_forward_msg(games: Iterable[GameOrm]):
+    return await map_games_as_forward_msg(games, header=f"以下是本群的未完成对局")
 
 
-async def map_games_as_forward_msg(games: Iterable[GameOrm], bot: Bot,
-                                   *, header: Optional[Union[str, Message]] = None):
+async def map_games_as_forward_msg(games: Iterable[GameOrm], *, header: Optional[Union[str, Message]] = None):
+    bot = current_bot.get()
     self_info = await bot.get_login_info()
 
     msg_li = []
@@ -131,7 +126,7 @@ async def map_games_as_forward_msg(games: Iterable[GameOrm], bot: Bot,
 
     for g in games:
         with StringIO() as sio:
-            await map_game(sio, g, bot, map_promoter=True)
+            await map_game(sio, g, map_promoter=True)
 
             msg_li.append({
                 "type": "node",

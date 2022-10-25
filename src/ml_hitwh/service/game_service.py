@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from ml_hitwh.model.enums import GameState
 from ml_hitwh.model.orm import data_source
@@ -15,7 +16,7 @@ async def get_game_by_code(game_code: int, group: GroupOrm, *options) -> Optiona
 
     stmt = select(GameOrm).where(
         GameOrm.group == group, GameOrm.code == game_code, GameOrm.accessible
-    ).limit(1).options(*options)
+    ).limit(1).options(selectinload(GameOrm.records), *options)
     game: GameOrm = (await session.execute(stmt)).scalar_one_or_none()
     return game
 
