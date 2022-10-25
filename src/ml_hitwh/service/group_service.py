@@ -1,3 +1,4 @@
+from nonebot.adapters.onebot.v11 import ActionFailed
 from nonebot.internal.matcher import current_bot
 from sqlalchemy import select
 
@@ -30,5 +31,8 @@ async def get_user_nickname(user: UserOrm, group: GroupOrm) -> str:
         return user.nickname
 
     bot = current_bot.get()
-    user_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
-    return user_info["card"] or user_info["nickname"]
+    try:
+        user_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
+        return user_info["card"] or user_info["nickname"]
+    except ActionFailed as e:
+        raise RuntimeError(e.info["wording"])

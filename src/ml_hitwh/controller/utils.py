@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 
-from nonebot.adapters.onebot.v11 import Message, MessageSegment, MessageEvent
-from nonebot.internal.matcher import Matcher
+from nonebot.adapters.onebot.v11 import Message, MessageSegment, MessageEvent, ActionFailed
+from nonebot.internal.matcher import Matcher, current_bot
 
 from ml_hitwh.errors import BadRequestError
 
@@ -26,6 +26,18 @@ def split_message(message: Message) -> List[MessageSegment]:
             result.append(seg)
 
     return result
+
+
+async def get_group_info(group_binding_qq: int):
+    bot = current_bot.get()
+    try:
+        group_info = await bot.get_group_info(group_id=group_binding_qq)
+        # 如果机器人尚未加入群, group_create_time, group_level, max_member_count 和 member_count 将会为0
+        if group_info["member_count"] == 0:
+            raise BadRequestError("机器人尚未加入群")
+        return group_info
+    except ActionFailed as e:
+        raise BadRequestError(e.info["wording"])
 
 
 def parse_int_or_error(raw: Union[int, str, None], desc: str) -> int:

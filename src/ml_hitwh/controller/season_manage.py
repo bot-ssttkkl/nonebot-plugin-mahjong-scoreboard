@@ -1,84 +1,18 @@
 from io import StringIO
 
 from nonebot import on_command, Bot
-from nonebot.adapters.onebot.v11 import MessageEvent, Message, GroupMessageEvent, ActionFailed
+from nonebot.adapters.onebot.v11 import MessageEvent, Message, GroupMessageEvent
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
 from ml_hitwh.controller.interceptor import workflow_interceptor
 from ml_hitwh.controller.mapper.season_mapper import map_season
-from ml_hitwh.controller.utils import parse_int_or_reject, split_message
+from ml_hitwh.controller.utils import parse_int_or_reject, get_group_info
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.orm.season import SeasonOrm
 from ml_hitwh.service import season_service
-from ml_hitwh.service.group_service import get_group_by_binding_qq
-
-
-async def get_group_info(bot: Bot, matcher: Matcher,
-                         group_binding_qq: int, user_binding_qq: int,
-                         ensure_permission: bool = False):
-    try:
-        group_info = await bot.get_group_info(group_id=group_binding_qq)
-        # 如果机器人尚未加入群, group_create_time, group_level, max_member_count 和 member_count 将会为0
-        if group_info["member_count"] == 0:
-            raise BadRequestError("机器人尚未加入群")
-        else:
-            if ensure_permission:
-                member_info = await bot.get_group_member_info(group_id=group_binding_qq, user_id=user_binding_qq)
-                if member_info["role"] == 'member':
-                    raise BadRequestError("没有权限")
-            return group_info
-    except ActionFailed as e:
-        raise BadRequestError(e.info["wording"])
-
-
-# ========== 赛季信息 ==========
-query_running_season_matcher = on_command("赛季信息", aliases={"查询赛季", "赛季"}, priority=5)
-
-
-@query_running_season_matcher.handle()
-@workflow_interceptor(query_running_season_matcher)
-async def query_running_season_begin(bot: Bot, event: MessageEvent, matcher: Matcher):
-    if isinstance(event, GroupMessageEvent):
-        matcher.set_arg("binding_qq", Message(str(event.group_id)))
-
-    args = split_message(event.message)
-    if len(args) > 1 and args[1].type == 'text':
-        matcher.state["season_code"] = args[1].data["text"]
-
-
-@query_running_season_matcher.got("binding_qq", "群号？")
-@workflow_interceptor(query_running_season_matcher)
-async def query_running_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matcher: Matcher,
-                                                    raw_arg=ArgPlainText("binding_qq")):
-    binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
-
-    matcher.state["group_info"] = await get_group_info(bot, matcher, binding_qq, event.user_id)
-    matcher.state["binding_qq"] = binding_qq
-
-
-@query_running_season_matcher.handle()
-@workflow_interceptor(query_running_season_matcher)
-async def query_running_season_handle(bot: Bot, event: MessageEvent, matcher: Matcher):
-    group = await get_group_by_binding_qq(matcher.state["binding_qq"])
-
-    season_code = matcher.state.get("season_code", None)
-    if season_code:
-        season = await season_service.get_season_by_code(season_code, group)
-        if season is None:
-            raise BadRequestError("找不到赛季")
-    else:
-        if group.running_season_id:
-            season = await season_service.get_season_by_id(group.running_season_id)
-        else:
-            raise BadRequestError("当前没有运行中的赛季")
-
-    with StringIO() as sio:
-        map_season(sio, season, group_info=matcher.state["group_info"])
-        msg = sio.getvalue()
-
-    await matcher.send(msg)
-
+from ml_hitwh.service.group_service import get_group_by_binding_qq, is_group_admin
+from ml_hitwh.service.user_service import get_user_by_binding_qq
 
 # ========== 新赛季 ==========
 new_season_matcher = on_command("新赛季", priority=5)
@@ -86,24 +20,30 @@ new_season_matcher = on_command("新赛季", priority=5)
 
 @new_season_matcher.handle()
 @workflow_interceptor(new_season_matcher)
-async def new_season_begin(bot: Bot, event: MessageEvent, matcher: Matcher):
+async def new_season_begin(event: MessageEvent, matcher: Matcher):
     if isinstance(event, GroupMessageEvent):
         matcher.set_arg("binding_qq", Message(str(event.group_id)))
 
 
 @new_season_matcher.got("binding_qq", "群号？")
 @workflow_interceptor(new_season_matcher)
-async def new_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def new_season_got_group_binding_qq(event: MessageEvent, matcher: Matcher,
                                           raw_arg=ArgPlainText("binding_qq")):
     binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
 
-    matcher.state["group_info"] = await get_group_info(bot, matcher, binding_qq, event.user_id, True)
     matcher.state["binding_qq"] = binding_qq
+    matcher.state["group_info"] = await get_group_info(binding_qq)
+
+    group = await get_group_by_binding_qq(binding_qq)
+    user = await get_user_by_binding_qq(event.user_id)
+
+    if not is_group_admin(user, group):
+        raise BadRequestError("没有权限")
 
 
 @new_season_matcher.got("code", "赛季代号？")
 @workflow_interceptor(new_season_matcher)
-async def new_season_got_code(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def new_season_got_code(matcher: Matcher,
                               raw_arg=ArgPlainText("code")):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
     season = await season_service.get_season_by_code(raw_arg, group)
@@ -115,13 +55,13 @@ async def new_season_got_code(bot: Bot, event: MessageEvent, matcher: Matcher,
 
 @new_season_matcher.got("name", "赛季名称？")
 @workflow_interceptor(new_season_matcher)
-async def new_season_got_name(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def new_season_got_name(matcher: Matcher,
                               raw_arg=ArgPlainText("name")):
     matcher.state["name"] = raw_arg
 
 
 @new_season_matcher.got("south_game_enabled", "是否开启半庄战？(y/n)")
-async def new_season_got_east_game_enabled(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def new_season_got_east_game_enabled(matcher: Matcher,
                                            raw_arg=ArgPlainText("south_game_enabled")):
     if raw_arg == 'y':
         matcher.state["south_game_enabled"] = True
@@ -132,7 +72,7 @@ async def new_season_got_east_game_enabled(bot: Bot, event: MessageEvent, matche
 
 @new_season_matcher.got("south_game_horse_point", "半庄战马点？通过空格分割")
 @workflow_interceptor(new_season_matcher)
-async def new_season_got_south_game_horse_point(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def new_season_got_south_game_horse_point(matcher: Matcher,
                                                 raw_arg=ArgPlainText("south_game_horse_point")):
     if not matcher.state["south_game_enabled"]:
         return
@@ -149,7 +89,7 @@ async def new_season_got_south_game_horse_point(bot: Bot, event: MessageEvent, m
 
 
 @new_season_matcher.got("east_game_enabled", "是否开启东风战？(y/n)")
-async def new_season_got_east_game_enabled(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def new_season_got_east_game_enabled(matcher: Matcher,
                                            raw_arg=ArgPlainText("east_game_enabled")):
     if raw_arg == 'y':
         matcher.state["east_game_enabled"] = True
@@ -163,7 +103,7 @@ async def new_season_got_east_game_enabled(bot: Bot, event: MessageEvent, matche
 
 @new_season_matcher.got("east_game_horse_point", "东风战马点？通过空格分割")
 @workflow_interceptor(new_season_matcher)
-async def new_season_got_east_game_horse_point(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def new_season_got_east_game_horse_point(matcher: Matcher,
                                                raw_arg=ArgPlainText("east_game_horse_point")):
     if not matcher.state["east_game_enabled"]:
         return
@@ -181,7 +121,7 @@ async def new_season_got_east_game_horse_point(bot: Bot, event: MessageEvent, ma
 
 @new_season_matcher.handle()
 @workflow_interceptor(new_season_matcher)
-async def new_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
+async def new_season_confirm(matcher: Matcher):
     season = SeasonOrm(code=matcher.state["code"],
                        name=matcher.state["name"],
                        south_game_enabled=matcher.state["south_game_enabled"],
@@ -201,7 +141,7 @@ async def new_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
 
 @new_season_matcher.handle()
 @workflow_interceptor(new_season_matcher)
-async def new_season_handle(bot: Bot, event: MessageEvent, matcher: Matcher):
+async def new_season_handle(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         season = matcher.state["season"]
         season.group = await get_group_by_binding_qq(matcher.state["binding_qq"])
@@ -214,7 +154,7 @@ async def new_season_handle(bot: Bot, event: MessageEvent, matcher: Matcher):
 
 @new_season_matcher.handle()
 @workflow_interceptor(new_season_matcher)
-async def new_season_start(bot: Bot, event: MessageEvent, matcher: Matcher):
+async def new_season_start(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
         season = await season_service.get_season_by_id(matcher.state["season_id"])
@@ -237,17 +177,23 @@ async def start_season_begin(bot: Bot, event: MessageEvent, matcher: Matcher):
 
 @start_season_matcher.got("binding_qq", "群号？")
 @workflow_interceptor(start_season_matcher)
-async def start_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def start_season_got_group_binding_qq(event: MessageEvent, matcher: Matcher,
                                             raw_arg=ArgPlainText("binding_qq")):
     binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
 
-    matcher.state["group_info"] = await get_group_info(bot, matcher, binding_qq, event.user_id, True)
     matcher.state["binding_qq"] = binding_qq
+    matcher.state["group_info"] = await get_group_info(binding_qq)
+
+    group = await get_group_by_binding_qq(binding_qq)
+    user = await get_user_by_binding_qq(event.user_id)
+
+    if not is_group_admin(user, group):
+        raise BadRequestError("没有权限")
 
 
 @start_season_matcher.got("code", "赛季代号？")
 @workflow_interceptor(start_season_matcher)
-async def start_season_matcher_got_code(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def start_season_matcher_got_code(matcher: Matcher,
                                         raw_arg=ArgPlainText("code")):
     season = await season_service.get_season_by_code(raw_arg, matcher.state["group"])
     if season is None:
@@ -259,7 +205,7 @@ async def start_season_matcher_got_code(bot: Bot, event: MessageEvent, matcher: 
 
 @start_season_matcher.handle()
 @workflow_interceptor(start_season_matcher)
-async def start_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
+async def start_season_confirm(matcher: Matcher):
     season = matcher.state["season"]
 
     with StringIO() as sio:
@@ -273,7 +219,7 @@ async def start_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
 
 @start_season_matcher.handle()
 @workflow_interceptor(start_season_matcher)
-async def start_season_end(bot: Bot, event: MessageEvent, matcher: Matcher):
+async def start_season_end(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
         season = await season_service.get_season_by_id(matcher.state["season_id"])
@@ -289,24 +235,30 @@ finish_season_matcher = on_command("结束赛季", priority=5)
 
 @finish_season_matcher.handle()
 @workflow_interceptor(finish_season_matcher)
-async def finish_season_begin(bot: Bot, event: MessageEvent, matcher: Matcher):
+async def finish_season_begin(event: MessageEvent, matcher: Matcher):
     if isinstance(event, GroupMessageEvent):
         matcher.set_arg("binding_qq", Message(str(event.group_id)))
 
 
 @finish_season_matcher.got("binding_qq", "群号？")
 @workflow_interceptor(finish_season_matcher)
-async def finish_season_got_group_binding_qq(bot: Bot, event: MessageEvent, matcher: Matcher,
+async def finish_season_got_group_binding_qq(event: MessageEvent, matcher: Matcher,
                                              raw_arg=ArgPlainText("binding_qq")):
     binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
 
-    matcher.state["group_info"] = await get_group_info(bot, matcher, binding_qq, event.user_id, True)
     matcher.state["binding_qq"] = binding_qq
+    matcher.state["group_info"] = await get_group_info(binding_qq)
+
+    group = await get_group_by_binding_qq(binding_qq)
+    user = await get_user_by_binding_qq(event.user_id)
+
+    if not is_group_admin(user, group):
+        raise BadRequestError("没有权限")
 
 
 @finish_season_matcher.handle()
 @workflow_interceptor(finish_season_matcher)
-async def finish_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher):
+async def finish_season_confirm(matcher: Matcher):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
     season = await season_service.get_season_by_id(group.running_season_id)
     matcher.state["season_id"] = season.id
@@ -325,7 +277,7 @@ async def finish_season_confirm(bot: Bot, event: MessageEvent, matcher: Matcher)
 
 @finish_season_matcher.handle()
 @workflow_interceptor(finish_season_matcher)
-async def finish_season_end(bot: Bot, event: MessageEvent, matcher: Matcher):
+async def finish_season_end(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
         season = await season_service.get_season_by_id(matcher.state["season_id"])

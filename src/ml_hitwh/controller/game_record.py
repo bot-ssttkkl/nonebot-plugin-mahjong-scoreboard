@@ -3,7 +3,7 @@ from collections import OrderedDict
 from io import StringIO
 
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
+from nonebot.adapters.onebot.v11 import GroupMessageEvent
 from pydantic import BaseModel
 
 from ml_hitwh.controller.interceptor import general_interceptor
@@ -65,7 +65,7 @@ new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
 
 @new_game_matcher.handle()
 @general_interceptor(new_game_matcher)
-async def new_game(bot: Bot, event: GroupMessageEvent):
+async def new_game(event: GroupMessageEvent):
     player_and_wind = None
 
     args = split_message(event.message)
@@ -98,7 +98,7 @@ record_matcher = on_command("结算", priority=5)
 
 @record_matcher.handle()
 @general_interceptor(record_matcher)
-async def record(bot: Bot, event: GroupMessageEvent):
+async def record(event: GroupMessageEvent):
     user_id = event.user_id
     game_code = None
     score = None
@@ -109,34 +109,14 @@ async def record(bot: Bot, event: GroupMessageEvent):
 
     args = split_message(event.message)
 
-    if len(args) <= 1:
-        raise BadRequestError("指令格式不合法")
-
-    if args[1].type == "text":
-        if args[1].data["text"].startswith("对局"):
-            # 以下两种格式：
-            # 结算 对局<编号> <成绩>
-            # 结算 对局<编号> @<用户> <成绩>
-            game_code = args[1].data["text"][len("对局"):]
-
-            if args[2].type == "text":
-                # 结算 对局<编号> <成绩>
-                score = args[2].data["text"]
-            elif args[2].type == "at":
-                # 结算 对局<编号> @<用户> <成绩>
-                user_id = int(args[2].data["qq"])
-                score = args[3].data["text"]
+    for arg in args:
+        if arg.is_text:
+            if arg.data["text"].startswith("对局"):
+                game_code = arg.data["text"][len("对局"):]
             else:
-                raise BadRequestError("指令格式不合法")
-        else:
-            # 结算 <成绩>
-            score = args[1].data["text"]
-    elif args[1].type == "at":
-        # 结算 @<用户> <成绩>
-        user_id = int(args[1].data["qq"])
-        score = args[2].data["text"]
-    else:
-        raise BadRequestError("指令格式不合法")
+                score = arg.data["text"]
+        elif arg.type == 'at':
+            user_id = int(args[2].data["qq"])
 
     game_code = parse_int_or_error(game_code, '对局编号')
     score = parse_int_or_error(score, '成绩')
@@ -169,7 +149,7 @@ revert_record_matcher = on_command("撤销结算", priority=5)
 
 @revert_record_matcher.handle()
 @general_interceptor(revert_record_matcher)
-async def revert_record(bot: Bot, event: GroupMessageEvent):
+async def revert_record(event: GroupMessageEvent):
     user_id = event.user_id
     game_code = None
 
@@ -180,24 +160,12 @@ async def revert_record(bot: Bot, event: GroupMessageEvent):
 
     args = split_message(event.message)
 
-    if len(args) > 1:
-        if args[1].type == "text":
-            if args[1].data["text"].startswith("对局"):
-                # 以下两种格式：
-                # 撤销结算 对局<编号>
-                # 撤销结算 对局<编号> @<用户>
-                game_code = args[1].data["text"][len("对局"):]
-
-                if len(args) > 2 and args[2].type == "at":
-                    # 撤销结算 对局<编号> @<用户>
-                    user_id = int(args[2].data["qq"])
-                # else:
-                # 撤销结算 对局<编号>
-        else:
-            # 撤销结算 @<用户>
-            user_id = int(args[1].data["qq"])
-    # else:
-    # 撤销结算
+    for arg in args:
+        if arg.is_text:
+            if arg.data["text"].startswith("对局"):
+                game_code = arg.data["text"][len("对局"):]
+        elif arg.type == 'at':
+            user_id = int(args[2].data["qq"])
 
     game_code = parse_int_or_error(game_code, '对局编号')
 
@@ -289,7 +257,7 @@ query_by_code_matcher = on_command("查询对局", priority=5)
 
 @query_by_code_matcher.handle()
 @general_interceptor(query_by_code_matcher)
-async def query_by_code(bot: Bot, event: GroupMessageEvent):
+async def query_by_code(event: GroupMessageEvent):
     game_code = None
 
     context = await get_context(event)
@@ -297,8 +265,9 @@ async def query_by_code(bot: Bot, event: GroupMessageEvent):
         game_code = context.game_code
 
     args = split_message(event.message)
-    if len(args) >= 2 and args[1].type == 'text':
-        game_code = args[1].data["text"]
+    for arg in args:
+        if arg.is_text:
+            game_code = arg.data["text"]
 
     game_code = parse_int_or_error(game_code, '对局编号')
 
@@ -321,7 +290,7 @@ delete_game_matcher = on_command("删除对局", priority=5)
 
 @delete_game_matcher.handle()
 @general_interceptor(delete_game_matcher)
-async def delete_game(bot: Bot, event: GroupMessageEvent):
+async def delete_game(event: GroupMessageEvent):
     game_code = None
 
     context = await get_context(event)
@@ -329,8 +298,9 @@ async def delete_game(bot: Bot, event: GroupMessageEvent):
         game_code = context.game_code
 
     args = split_message(event.message)
-    if len(args) >= 2:
-        game_code = int(args[1].data["text"])
+    for arg in args:
+        if arg.is_text:
+            game_code = arg.data["text"]
 
     game_code = parse_int_or_error(game_code, '对局编号')
 
@@ -341,27 +311,31 @@ async def delete_game(bot: Bot, event: GroupMessageEvent):
     await query_by_code_matcher.send(f'成功删除对局{game_code}')
 
 
-# =============== 记录对局进度 ===============
-make_game_progress_matcher = on_command("记录对局进度", aliases={"记录进度"}, priority=5)
-
-
-@make_game_progress_matcher.handle()
-@general_interceptor(make_game_progress_matcher)
-async def make_game_progress(bot: Bot, event: GroupMessageEvent):
-    game_code = None
-
-    context = await get_context(event)
-    if context:
-        game_code = context.game_code
-
-    args = split_message(event.message)
-    if len(args) >= 2:
-        game_code = int(args[1].data["text"])
-
-    game_code = parse_int_or_error(game_code, '对局编号')
-
-    group = await group_service.get_group_by_binding_qq(event.group_id)
-    operator = await user_service.get_user_by_binding_qq(event.user_id)
-    await game_record_service.delete_game(game_code, group, operator)
-
-    await query_by_code_matcher.send(f'成功删除对局{game_code}')
+# # =============== 记录对局进度 ===============
+# make_game_progress_matcher = on_command("记录对局进度", aliases={"记录进度"}, priority=5)
+#
+# round_honba = r"([东南])([一二三四1234])局([1-9][0-9]*)本场"
+#
+# @make_game_progress_matcher.handle()
+# @general_interceptor(make_game_progress_matcher)
+# async def make_game_progress(event: GroupMessageEvent):
+#     game_code = None
+#
+#     context = await get_context(event)
+#     if context:
+#         game_code = context.game_code
+#
+#     args = split_message(event.message)
+#     for arg in args:
+#         if arg.is_text:
+#             if arg.data["text"].startswith("对局"):
+#                 game_code = arg.data["text"][len("对局"):]
+#             elif arg.data["text"]
+#
+#     game_code = parse_int_or_error(game_code, '对局编号')
+#
+#     group = await group_service.get_group_by_binding_qq(event.group_id)
+#     operator = await user_service.get_user_by_binding_qq(event.user_id)
+#     await game_record_service.delete_game(game_code, group, operator)
+#
+#     await query_by_code_matcher.send(f'成功删除对局{game_code}')
