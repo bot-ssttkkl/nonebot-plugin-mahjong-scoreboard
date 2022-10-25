@@ -12,6 +12,7 @@ from ml_hitwh.service.season_service import get_season_by_id
 from ml_hitwh.service.season_user_point_service import get_season_user_point_rank, count_season_user_point
 from ml_hitwh.service.user_service import get_user_by_binding_qq
 
+# ========== 查询PT ==========
 query_season_point = on_command("查询PT", aliases={"PT", "pt"}, priority=5)
 
 
@@ -42,6 +43,7 @@ async def query_season_point(event: GroupMessageEvent, matcher: Matcher):
         raise BadRequestError("当前没有运行中的赛季")
 
 
+# ========== 查询榜单 ==========
 query_season_ranking = on_command("查询榜单", aliases={"查询排行", "榜单", "排行"}, priority=5)
 
 

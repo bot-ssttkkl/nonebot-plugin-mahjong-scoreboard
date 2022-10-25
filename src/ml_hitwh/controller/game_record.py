@@ -1,9 +1,8 @@
 import time
 from collections import OrderedDict
-from io import StringIO
 
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import GroupMessageEvent
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
 from pydantic import BaseModel
 
 from ml_hitwh.controller.interceptor import general_interceptor
@@ -83,12 +82,8 @@ async def new_game(event: GroupMessageEvent):
     group = await group_service.get_group_by_binding_qq(event.group_id)
     game = await game_service.new_game(user, group, player_and_wind)
 
-    with StringIO() as sio:
-        await map_game(sio, game)
-        sio.write('\n')
-        sio.write('新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩')
-        msg = sio.getvalue()
-
+    msg = await map_game(game)
+    msg.append(MessageSegment.text('\n新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩'))
     send_result = await new_game_matcher.send(msg)
     await save_context(game_code=game.code, message_id=send_result["message_id"])
 
@@ -131,15 +126,11 @@ async def record(event: GroupMessageEvent):
 
     game = await game_record_service.record_game(game, user, score)
 
-    with StringIO() as sio:
-        await map_game(sio, game)
-        sio.write('\n')
-        if game.state == GameState.uncompleted:
-            sio.write('结算成功')
-        elif game.state == GameState.invalid_total_point:
-            sio.write("警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩")
-        msg = sio.getvalue()
-
+    msg = await map_game(game)
+    if game.state == GameState.uncompleted:
+        msg.append(MessageSegment.text('\n结算成功'))
+    elif game.state == GameState.invalid_total_point:
+        msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
     send_result = await record_matcher.send(msg)
     await save_context(game_code=game.code, message_id=send_result["message_id"], user_id=user_id)
 
@@ -175,12 +166,8 @@ async def revert_record(event: GroupMessageEvent):
     group = await group_service.get_group_by_binding_qq(event.group_id)
     game = await game_record_service.revert_record(game_code, group, user, operator)
 
-    with StringIO() as sio:
-        await map_game(sio, game)
-        sio.write('\n')
-        sio.write('撤销结算成功')
-        msg = sio.getvalue()
-
+    msg = await map_game(game)
+    msg.append(MessageSegment.text('\n撤销结算成功'))
     send_result = await record_matcher.send(msg)
     await save_context(game_code=game.code, message_id=send_result["message_id"], user_id=user_id)
 
@@ -277,10 +264,7 @@ async def query_by_code(event: GroupMessageEvent):
     if game is None:
         raise BadRequestError("未找到对局")
 
-    with StringIO() as sio:
-        await map_game(sio, game, map_promoter=True)
-        msg = sio.getvalue()
-
+    msg = await map_game(game)
     send_result = await query_by_code_matcher.send(msg)
     await save_context(game_code=game.code, message_id=send_result["message_id"])
 

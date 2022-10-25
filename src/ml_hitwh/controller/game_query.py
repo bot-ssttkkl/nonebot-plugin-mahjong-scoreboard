@@ -1,12 +1,10 @@
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent
+from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageSegment
 from nonebot.internal.matcher import Matcher
 
 from ml_hitwh.controller.interceptor import general_interceptor
-from ml_hitwh.controller.mapper.game_mapper import map_user_recent_games_as_forward_msg, \
-    map_group_recent_games_as_forward_msg, map_user_uncompleted_games_as_forward_msg, \
-    map_group_uncompleted_games_as_forward_msg
-from ml_hitwh.controller.utils import split_message
+from ml_hitwh.controller.mapper.game_mapper import map_game
+from ml_hitwh.controller.utils import split_message, send_group_forward_msg
 from ml_hitwh.service.game_service import get_user_games, get_group_games
 from ml_hitwh.service.group_service import get_group_by_binding_qq
 from ml_hitwh.service.user_service import get_user_by_binding_qq
@@ -29,8 +27,16 @@ async def query_user_recent_games(bot: Bot, event: GroupMessageEvent, matcher: M
 
     games = await get_user_games(group, user, limit=30, reverse_order=True)
     if len(games) != 0:
-        msg = await map_user_recent_games_as_forward_msg(games, group, user)
-        await bot.send_group_forward_msg(group_id=event.group_id, messages=msg)
+        member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
+        header = Message([
+            MessageSegment.text("以下是"),
+            MessageSegment("at", {"qq": user.binding_qq, "name": member_info["nickname"]}),
+            MessageSegment.text("的最近对局")
+        ])
+        messages = [header]
+        for g in games:
+            messages.append(await map_game(g, map_promoter=True))
+        await send_group_forward_msg(bot, event.group_id, messages)
     else:
         await matcher.send("你还没有进行过对局")
 
@@ -46,8 +52,11 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
 
     games = await get_group_games(group, limit=30, reverse_order=True)
     if len(games) != 0:
-        msg = await map_group_recent_games_as_forward_msg(games)
-        await bot.send_group_forward_msg(group_id=event.group_id, messages=msg)
+        header = Message(MessageSegment.text("以下是本群的最近对局"))
+        messages = [header]
+        for g in games:
+            messages.append(await map_game(g, map_promoter=True))
+        await send_group_forward_msg(bot, event.group_id, messages)
     else:
         await matcher.send("本群还没有进行过对局")
 
@@ -70,8 +79,17 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
 
     games = await get_user_games(group, user, True, limit=30, reverse_order=True)
     if len(games) != 0:
-        msg = await map_user_uncompleted_games_as_forward_msg(games, group, user)
-        await bot.send_group_forward_msg(group_id=event.group_id, messages=msg)
+        member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
+        header = Message([
+            MessageSegment.text("以下是"),
+            MessageSegment("at", {"qq": user.binding_qq, "name": member_info["nickname"]}),
+            MessageSegment.text("的未完成对局")
+        ])
+
+        messages = [header]
+        for g in games:
+            messages.append(await map_game(g, map_promoter=True))
+        await send_group_forward_msg(bot, event.group_id, messages)
     else:
         await matcher.send("你还没有未完成的对局")
 
@@ -87,7 +105,10 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
 
     games = await get_group_games(group, True, limit=30, reverse_order=True)
     if len(games) != 0:
-        msg = await map_group_uncompleted_games_as_forward_msg(games)
-        await bot.send_group_forward_msg(group_id=event.group_id, messages=msg)
+        header = Message(MessageSegment.text("以下是本群的未完成对局"))
+        messages = [header]
+        for g in games:
+            messages.append(await map_game(g, map_promoter=True))
+        await send_group_forward_msg(bot, event.group_id, messages)
     else:
         await matcher.send("本群还没有未完成的对局")

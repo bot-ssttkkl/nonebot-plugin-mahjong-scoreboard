@@ -1,7 +1,5 @@
-from io import StringIO
-
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import MessageEvent, Message
+from nonebot.adapters.onebot.v11 import MessageEvent, Message, MessageSegment
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
@@ -108,12 +106,8 @@ async def new_season_confirm(matcher: Matcher):
                        east_game_horse_point=matcher.state["east_game_horse_point"])
     matcher.state["season"] = season
 
-    with StringIO() as sio:
-        map_season(sio, season, group_info=matcher.state["group_info"])
-        sio.write("\n确定创建赛季吗？(y/n)")
-
-        msg = sio.getvalue()
-
+    msg = map_season(season, group_info=matcher.state["group_info"])
+    msg.append(MessageSegment.text("\n确定创建赛季吗？(y/n)"))
     await matcher.pause(msg)
 
 
@@ -165,12 +159,8 @@ async def start_season_matcher_got_code(matcher: Matcher,
 async def start_season_confirm(matcher: Matcher):
     season = matcher.state["season"]
 
-    with StringIO() as sio:
-        map_season(sio, season, group_info=matcher.state["group_info"])
-        sio.write("\n确定开启赛季吗？(y/n)")
-
-        msg = sio.getvalue()
-
+    msg = map_season(season, group_info=matcher.state["group_info"])
+    msg.append(MessageSegment.text("\n确定开启赛季吗？(y/n)"))
     await matcher.pause(msg)
 
 
@@ -202,12 +192,8 @@ async def finish_season_confirm(matcher: Matcher):
     if season is None:
         raise BadRequestError("当前没有运行中的赛季")
 
-    with StringIO() as sio:
-        map_season(sio, season, group_info=matcher.state["group_info"])
-        sio.write("\n确定结束赛季吗？(y/n)")
-
-        msg = sio.getvalue()
-
+    msg = map_season(season, group_info=matcher.state["group_info"])
+    msg.append(MessageSegment.text("\n确定结束赛季吗？(y/n)"))
     await matcher.pause(msg)
 
 

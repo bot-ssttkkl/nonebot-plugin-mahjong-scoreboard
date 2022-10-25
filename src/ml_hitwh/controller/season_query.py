@@ -1,5 +1,3 @@
-from io import StringIO
-
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import MessageEvent
 from nonebot.internal.matcher import Matcher
@@ -43,8 +41,5 @@ async def query_running_season_handle(matcher: Matcher):
         else:
             raise BadRequestError("当前没有运行中的赛季")
 
-    with StringIO() as sio:
-        map_season(sio, season, group_info=matcher.state["group_info"])
-        msg = sio.getvalue()
-
+    msg = map_season(season, group_info=matcher.state["group_info"])
     await matcher.send(msg)

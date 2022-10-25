@@ -81,7 +81,7 @@ async def send_group_forward_msg(bot: Bot, group_id: int, messages: List[Message
             "data": {
                 "uin": bot.self_id,
                 "name": self_info["nickname"],
-                "content": [x.data for x in msg]
+                "content": msg
             }
         })
 
