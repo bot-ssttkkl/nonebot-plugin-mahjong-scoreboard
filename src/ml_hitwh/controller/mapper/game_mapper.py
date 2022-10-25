@@ -38,8 +38,7 @@ async def map_game(io: TextIO, game: GameOrm, *, map_promoter: bool = False):
     if map_promoter:
         promoter = await session.get(UserOrm, game.promoter_user_id)
         io.write('创建者：')
-        io.write(promoter.nickname or
-                 await get_user_nickname(promoter, group))
+        io.write(await get_user_nickname(promoter, group))
         io.write('\n')
 
     # 状态：未完成

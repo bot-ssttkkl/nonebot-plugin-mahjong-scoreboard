@@ -29,7 +29,7 @@ async def query_user_recent_games(bot: Bot, event: GroupMessageEvent, matcher: M
 
     games = await get_user_games(group, user, limit=30, reverse_order=True)
     if len(games) != 0:
-        msg = await map_user_recent_games_as_forward_msg(games, group, user, bot)
+        msg = await map_user_recent_games_as_forward_msg(games, group, user)
         await bot.send_group_forward_msg(group_id=event.group_id, messages=msg)
     else:
         await matcher.send("你还没有进行过对局")
@@ -46,7 +46,7 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
 
     games = await get_group_games(group, limit=30, reverse_order=True)
     if len(games) != 0:
-        msg = await map_group_recent_games_as_forward_msg(games, bot)
+        msg = await map_group_recent_games_as_forward_msg(games)
         await bot.send_group_forward_msg(group_id=event.group_id, messages=msg)
     else:
         await matcher.send("本群还没有进行过对局")
@@ -70,7 +70,7 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
 
     games = await get_user_games(group, user, True, limit=30, reverse_order=True)
     if len(games) != 0:
-        msg = await map_user_uncompleted_games_as_forward_msg(games, group, user, bot)
+        msg = await map_user_uncompleted_games_as_forward_msg(games, group, user)
         await bot.send_group_forward_msg(group_id=event.group_id, messages=msg)
     else:
         await matcher.send("你还没有未完成的对局")
@@ -87,7 +87,7 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
 
     games = await get_group_games(group, True, limit=30, reverse_order=True)
     if len(games) != 0:
-        msg = await map_group_uncompleted_games_as_forward_msg(games, bot)
+        msg = await map_group_uncompleted_games_as_forward_msg(games)
         await bot.send_group_forward_msg(group_id=event.group_id, messages=msg)
     else:
         await matcher.send("本群还没有未完成的对局")

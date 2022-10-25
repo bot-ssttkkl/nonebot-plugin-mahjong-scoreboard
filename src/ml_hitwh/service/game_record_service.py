@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta
 from math import ceil
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
-import tzlocal
-from nonebot import logger, require
-from sqlalchemy import select, and_, delete
-from sqlalchemy.orm import selectinload
+from nonebot import require
+from sqlalchemy import select, and_
 
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState, SeasonUserPointChangeType
@@ -16,70 +14,10 @@ from ml_hitwh.model.orm.season import SeasonUserPointOrm, SeasonUserPointChangeL
 from ml_hitwh.model.orm.user import UserOrm
 from ml_hitwh.service.game_service import get_game_by_code
 from ml_hitwh.service.group_service import is_group_admin
-from ml_hitwh.utils import encode_date, count_digit
 
 require("nonebot_plugin_apscheduler")
 
-from nonebot_plugin_apscheduler import scheduler
-
-__all__ = ("new_game", "record_game", "revert_record", "delete_game")
-
-
-@scheduler.scheduled_job("cron", hour="*/2", id="delete_all_uncompleted_game")
-async def _delete_all_uncompleted_game():
-    session = data_source.session()
-
-    now = datetime.utcnow()
-    one_day_ago = now - timedelta(days=1)
-    stmt = delete(GameOrm).where(GameOrm.state != GameState.completed,
-                                 GameOrm.create_time > one_day_ago,
-                                 GameOrm.progress_id == None)
-    result = await session.execute(stmt)
-    logger.success(f"deleted {result.rowcount} outdated uncompleted game(s)")
-
-
-async def new_game(promoter: UserOrm,
-                   group: GroupOrm,
-                   player_and_wind: Optional[PlayerAndWind]) -> GameOrm:
-    session = data_source.session()
-
-    now = datetime.now(tzlocal.get_localzone())
-    game_code_base = encode_date(now)
-    if game_code_base != group.prev_game_code_base:
-        group.prev_game_code_base = game_code_base
-        group.prev_game_code_identifier = 0
-
-    group.prev_game_code_identifier += 1
-
-    digit = max(2, count_digit(group.prev_game_code_identifier))
-    game_code = group.prev_game_code_base * (10 ** digit) + group.prev_game_code_identifier
-
-    # 未指定player_and_wind时，若赛季启用了半庄则默认为半庄，否则为东风
-    if player_and_wind is None:
-        if group.running_season_id is not None:
-            season = await session.get(SeasonOrm, group.running_season_id)
-            if season.south_game_enabled:
-                player_and_wind = PlayerAndWind.four_men_south
-            else:
-                player_and_wind = PlayerAndWind.four_men_east
-        else:
-            player_and_wind = PlayerAndWind.four_men_south
-    else:
-        if group.running_season_id is not None:
-            season = await session.get(SeasonOrm, group.running_season_id)
-            if player_and_wind == PlayerAndWind.four_men_south and not season.south_game_enabled \
-                    or player_and_wind == PlayerAndWind.four_men_east and not season.east_game_enabled:
-                raise BadRequestError("当前赛季未开放此类型对局")
-
-    game = GameOrm(code=game_code,
-                   group_id=group.id,
-                   promoter_user_id=promoter.id,
-                   player_and_wind=player_and_wind,
-                   season_id=group.running_season_id)
-
-    session.add(game)
-    await session.commit()
-    return game
+__all__ = ("record_game", "revert_record", "delete_game")
 
 
 async def record_game(game: GameOrm,
@@ -225,7 +163,7 @@ async def revert_record(game_code: int,
                         operator: UserOrm) -> GameOrm:
     session = data_source.session()
 
-    game = await get_game_by_code(game_code, group, selectinload(GameOrm.records))
+    game = await get_game_by_code(game_code, group)
     if game is None:
         raise BadRequestError("未找到对局")
 
@@ -238,7 +176,7 @@ async def revert_record(game_code: int,
 
     if game.state == GameState.completed:
         # 超过24小时后，只有群管理能够修改对局
-        if datetime.now() - game.complete_time >= timedelta(days=1) and not is_group_admin(operator, group):
+        if datetime.now() - game.complete_time >= timedelta(days=1) and not await is_group_admin(operator, group):
             raise BadRequestError("没有权限")
 
         if game.season_id:

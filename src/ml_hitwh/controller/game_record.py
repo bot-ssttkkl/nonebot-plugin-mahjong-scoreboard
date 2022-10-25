@@ -68,19 +68,20 @@ new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
 async def new_game(event: GroupMessageEvent):
     player_and_wind = None
 
-    args = split_message(event.message)
-    if len(args) > 1:
-        game_type = str(args[1])
-        if game_type == "四人东":
-            player_and_wind = PlayerAndWind.four_men_east
-        elif game_type == "四人南":
-            player_and_wind = PlayerAndWind.four_men_south
-        else:
-            raise BadRequestError("对局类型不合法")
+    args = split_message(event.message)[1:]
+    for arg in args:
+        if arg.type == 'text':
+            game_type = arg.data["text"]
+            if game_type == "四人东":
+                player_and_wind = PlayerAndWind.four_men_east
+            elif game_type == "四人南":
+                player_and_wind = PlayerAndWind.four_men_south
+            else:
+                raise BadRequestError("对局类型不合法")
 
     user = await user_service.get_user_by_binding_qq(event.user_id)
     group = await group_service.get_group_by_binding_qq(event.group_id)
-    game = await game_record_service.new_game(user, group, player_and_wind)
+    game = await game_service.new_game(user, group, player_and_wind)
 
     with StringIO() as sio:
         await map_game(sio, game)
@@ -107,16 +108,16 @@ async def record(event: GroupMessageEvent):
     if context:
         game_code = context.game_code
 
-    args = split_message(event.message)
+    args = split_message(event.message)[1:]
 
     for arg in args:
-        if arg.is_text:
+        if arg.type == "text":
             if arg.data["text"].startswith("对局"):
                 game_code = arg.data["text"][len("对局"):]
             else:
                 score = arg.data["text"]
         elif arg.type == 'at':
-            user_id = int(args[2].data["qq"])
+            user_id = int(arg.data["qq"])
 
     game_code = parse_int_or_error(game_code, '对局编号')
     score = parse_int_or_error(score, '成绩')
@@ -126,7 +127,7 @@ async def record(event: GroupMessageEvent):
 
     game = await game_service.get_game_by_code(game_code, group)
     if game is None:
-        raise BadRequestError("未找到对局")
+        raise BadRequestError("未找到指定对局")
 
     game = await game_record_service.record_game(game, user, score)
 
@@ -158,14 +159,14 @@ async def revert_record(event: GroupMessageEvent):
         user_id = context.extra.get("user_id", None)
         game_code = context.game_code
 
-    args = split_message(event.message)
+    args = split_message(event.message)[1:]
 
     for arg in args:
-        if arg.is_text:
+        if arg.type == "text":
             if arg.data["text"].startswith("对局"):
                 game_code = arg.data["text"][len("对局"):]
         elif arg.type == 'at':
-            user_id = int(args[2].data["qq"])
+            user_id = int(arg.data["qq"])
 
     game_code = parse_int_or_error(game_code, '对局编号')
 
@@ -264,9 +265,9 @@ async def query_by_code(event: GroupMessageEvent):
     if context:
         game_code = context.game_code
 
-    args = split_message(event.message)
+    args = split_message(event.message)[1:]
     for arg in args:
-        if arg.is_text:
+        if arg.type == "text":
             game_code = arg.data["text"]
 
     game_code = parse_int_or_error(game_code, '对局编号')
@@ -297,9 +298,9 @@ async def delete_game(event: GroupMessageEvent):
     if context:
         game_code = context.game_code
 
-    args = split_message(event.message)
+    args = split_message(event.message)[1:]
     for arg in args:
-        if arg.is_text:
+        if arg.type == "text":
             game_code = arg.data["text"]
 
     game_code = parse_int_or_error(game_code, '对局编号')
@@ -309,7 +310,6 @@ async def delete_game(event: GroupMessageEvent):
     await game_record_service.delete_game(game_code, group, operator)
 
     await query_by_code_matcher.send(f'成功删除对局{game_code}')
-
 
 # # =============== 记录对局进度 ===============
 # make_game_progress_matcher = on_command("记录对局进度", aliases={"记录进度"}, priority=5)

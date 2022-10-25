@@ -1,44 +1,22 @@
 from io import StringIO
 
-from nonebot import on_command, Bot
-from nonebot.adapters.onebot.v11 import MessageEvent, Message, GroupMessageEvent
+from nonebot import on_command
+from nonebot.adapters.onebot.v11 import MessageEvent, Message
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
 from ml_hitwh.controller.interceptor import workflow_interceptor
 from ml_hitwh.controller.mapper.season_mapper import map_season
-from ml_hitwh.controller.utils import parse_int_or_reject, get_group_info
+from ml_hitwh.controller.workflow_general import require_group_binding_qq
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.orm.season import SeasonOrm
 from ml_hitwh.service import season_service
-from ml_hitwh.service.group_service import get_group_by_binding_qq, is_group_admin
-from ml_hitwh.service.user_service import get_user_by_binding_qq
+from ml_hitwh.service.group_service import get_group_by_binding_qq
 
 # ========== 新赛季 ==========
 new_season_matcher = on_command("新赛季", priority=5)
 
-
-@new_season_matcher.handle()
-@workflow_interceptor(new_season_matcher)
-async def new_season_begin(event: MessageEvent, matcher: Matcher):
-    if isinstance(event, GroupMessageEvent):
-        matcher.set_arg("binding_qq", Message(str(event.group_id)))
-
-
-@new_season_matcher.got("binding_qq", "群号？")
-@workflow_interceptor(new_season_matcher)
-async def new_season_got_group_binding_qq(event: MessageEvent, matcher: Matcher,
-                                          raw_arg=ArgPlainText("binding_qq")):
-    binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
-
-    matcher.state["binding_qq"] = binding_qq
-    matcher.state["group_info"] = await get_group_info(binding_qq)
-
-    group = await get_group_by_binding_qq(binding_qq)
-    user = await get_user_by_binding_qq(event.user_id)
-
-    if not is_group_admin(user, group):
-        raise BadRequestError("没有权限")
+require_group_binding_qq(new_season_matcher, True)
 
 
 @new_season_matcher.got("code", "赛季代号？")
@@ -167,28 +145,7 @@ async def new_season_start(event: MessageEvent, matcher: Matcher):
 # ========== 开启赛季 ==========
 start_season_matcher = on_command("开启赛季", priority=5)
 
-
-@start_season_matcher.handle()
-@workflow_interceptor(start_season_matcher)
-async def start_season_begin(bot: Bot, event: MessageEvent, matcher: Matcher):
-    if isinstance(event, GroupMessageEvent):
-        matcher.set_arg("binding_qq", Message(str(event.group_id)))
-
-
-@start_season_matcher.got("binding_qq", "群号？")
-@workflow_interceptor(start_season_matcher)
-async def start_season_got_group_binding_qq(event: MessageEvent, matcher: Matcher,
-                                            raw_arg=ArgPlainText("binding_qq")):
-    binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
-
-    matcher.state["binding_qq"] = binding_qq
-    matcher.state["group_info"] = await get_group_info(binding_qq)
-
-    group = await get_group_by_binding_qq(binding_qq)
-    user = await get_user_by_binding_qq(event.user_id)
-
-    if not is_group_admin(user, group):
-        raise BadRequestError("没有权限")
+require_group_binding_qq(start_season_matcher, True)
 
 
 @start_season_matcher.got("code", "赛季代号？")
@@ -232,28 +189,7 @@ async def start_season_end(event: MessageEvent, matcher: Matcher):
 # ========== 结束赛季 ==========
 finish_season_matcher = on_command("结束赛季", priority=5)
 
-
-@finish_season_matcher.handle()
-@workflow_interceptor(finish_season_matcher)
-async def finish_season_begin(event: MessageEvent, matcher: Matcher):
-    if isinstance(event, GroupMessageEvent):
-        matcher.set_arg("binding_qq", Message(str(event.group_id)))
-
-
-@finish_season_matcher.got("binding_qq", "群号？")
-@workflow_interceptor(finish_season_matcher)
-async def finish_season_got_group_binding_qq(event: MessageEvent, matcher: Matcher,
-                                             raw_arg=ArgPlainText("binding_qq")):
-    binding_qq = await parse_int_or_reject(raw_arg, "群号", matcher)
-
-    matcher.state["binding_qq"] = binding_qq
-    matcher.state["group_info"] = await get_group_info(binding_qq)
-
-    group = await get_group_by_binding_qq(binding_qq)
-    user = await get_user_by_binding_qq(event.user_id)
-
-    if not is_group_admin(user, group):
-        raise BadRequestError("没有权限")
+require_group_binding_qq(finish_season_matcher, True)
 
 
 @finish_season_matcher.handle()
