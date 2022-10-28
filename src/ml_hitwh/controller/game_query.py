@@ -4,13 +4,46 @@ from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageSegment
 from nonebot.internal.matcher import Matcher
 
+from ml_hitwh.controller.context import get_context, save_context
+from ml_hitwh.controller.general_handlers import require_unary_at, require_unary_text
 from ml_hitwh.controller.interceptor import general_interceptor
 from ml_hitwh.controller.mapper.game_mapper import map_game
-from ml_hitwh.controller.utils import send_group_forward_msg
-from ml_hitwh.controller.general_handlers import require_unary_at
+from ml_hitwh.controller.utils import send_group_forward_msg, parse_int_or_error
+from ml_hitwh.errors import BadRequestError
+from ml_hitwh.service import group_service, game_service
 from ml_hitwh.service.game_service import get_user_games, get_group_games
 from ml_hitwh.service.group_service import get_group_by_binding_qq
 from ml_hitwh.service.user_service import get_user_by_binding_qq
+
+# =============== 查询对局 ===============
+query_by_code_matcher = on_command("查询对局", aliases={"对局"}, priority=5)
+
+require_unary_text(query_by_code_matcher, "game_code",
+                   decorator=general_interceptor(query_by_code_matcher))
+
+
+@query_by_code_matcher.handle()
+@general_interceptor(query_by_code_matcher)
+async def query_by_code(event: GroupMessageEvent, matcher: Matcher):
+    game_code = None
+
+    context = get_context(event)
+    if context:
+        game_code = context["game_code"]
+
+    game_code = matcher.state.get("game_code", game_code)
+
+    game_code = parse_int_or_error(game_code, '对局编号')
+
+    group = await group_service.get_group_by_binding_qq(event.group_id)
+    game = await game_service.get_game_by_code(game_code, group)
+    if game is None:
+        raise BadRequestError("未找到指定对局")
+
+    msg = await map_game(game)
+    send_result = await matcher.send(msg)
+    save_context(send_result["message_id"], game_code=game.code)
+
 
 # ========== 个人最近对局 ==========
 query_user_recent_games_matcher = on_command("个人最近对局", aliases={"最近对局"}, priority=5)

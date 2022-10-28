@@ -1,35 +1,17 @@
 import re
 
-from cachetools import TTLCache
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment, MessageEvent
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
 from nonebot.internal.matcher import Matcher
 
+from ml_hitwh.controller.context import save_context, get_context
 from ml_hitwh.controller.general_handlers import require_unary_text
 from ml_hitwh.controller.interceptor import general_interceptor
 from ml_hitwh.controller.mapper.game_mapper import map_game
 from ml_hitwh.controller.utils import split_message, parse_int_or_error, try_parse_wind
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState
-from ml_hitwh.service import game_record_service, game_service, group_service, user_service
-
-context = TTLCache(maxsize=2 ** 31 - 1, ttl=7200)
-
-
-def get_context(event: MessageEvent):
-    message_id = None
-    for seg in event.original_message:
-        if seg.type == "reply":
-            message_id = int(seg.data["id"])
-            break
-
-    if message_id:
-        return context.get(message_id, None)
-
-
-def save_context(message_id: int, **kwargs):
-    context[message_id] = kwargs
-
+from ml_hitwh.service import game_service, group_service, user_service
 
 # =============== 新建对局 ===============
 new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
@@ -56,7 +38,7 @@ async def new_game(event: GroupMessageEvent, matcher: Matcher):
 
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩'))
-    send_result = await new_game_matcher.send(msg)
+    send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code)
 
 
@@ -66,7 +48,7 @@ record_matcher = on_command("结算对局", aliases={"结算"}, priority=5)
 
 @record_matcher.handle()
 @general_interceptor(record_matcher)
-async def record(event: GroupMessageEvent):
+async def record(event: GroupMessageEvent, matcher: Matcher):
     user_id = event.user_id
     game_code = None
     score = None
@@ -106,13 +88,13 @@ async def record(event: GroupMessageEvent):
     if game is None:
         raise BadRequestError("未找到指定对局")
 
-    game = await game_record_service.record_game(game, user, score, wind)
+    game = await game_service.record_game(game, user, score, wind)
 
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n结算成功'))
     if game.state == GameState.invalid_total_point:
         msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
-    send_result = await record_matcher.send(msg)
+    send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
 
 
@@ -122,7 +104,7 @@ revert_record_matcher = on_command("撤销结算对局", aliases={"撤销结算"
 
 @revert_record_matcher.handle()
 @general_interceptor(revert_record_matcher)
-async def revert_record(event: GroupMessageEvent):
+async def revert_record(event: GroupMessageEvent, matcher: Matcher):
     user_id = event.user_id
     game_code = None
 
@@ -145,11 +127,11 @@ async def revert_record(event: GroupMessageEvent):
     user = await user_service.get_user_by_binding_qq(user_id)
     operator = await user_service.get_user_by_binding_qq(event.user_id)
     group = await group_service.get_group_by_binding_qq(event.group_id)
-    game = await game_record_service.revert_record(game_code, group, user, operator)
+    game = await game_service.revert_record(game_code, group, user, operator)
 
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n撤销结算成功'))
-    send_result = await record_matcher.send(msg)
+    send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
 
 
@@ -159,7 +141,7 @@ set_record_point_matcher = on_command("设置对局PT", aliases={"对局PT"}, pr
 
 @set_record_point_matcher.handle()
 @general_interceptor(set_record_point_matcher)
-async def set_record_point(event: GroupMessageEvent):
+async def set_record_point(event: GroupMessageEvent, matcher: Matcher):
     user_id = event.user_id
     game_code = None
     point = None
@@ -187,44 +169,14 @@ async def set_record_point(event: GroupMessageEvent):
     group = await group_service.get_group_by_binding_qq(event.group_id)
     operator = await user_service.get_user_by_binding_qq(event.user_id)
 
-    game = await game_record_service.set_record_point(game_code, group, user, point, operator)
+    game = await game_service.set_record_point(game_code, group, user, point, operator)
 
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n设置PT成功'))
     if game.state == GameState.invalid_total_point:
         msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
-    send_result = await record_matcher.send(msg)
+    send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
-
-
-# =============== 查询对局 ===============
-query_by_code_matcher = on_command("查询对局", aliases={"对局"}, priority=5)
-
-require_unary_text(query_by_code_matcher, "game_code",
-                   decorator=general_interceptor(query_by_code_matcher))
-
-
-@query_by_code_matcher.handle()
-@general_interceptor(query_by_code_matcher)
-async def query_by_code(event: GroupMessageEvent, matcher: Matcher):
-    game_code = None
-
-    context = get_context(event)
-    if context:
-        game_code = context["game_code"]
-
-    game_code = matcher.state.get("game_code", game_code)
-
-    game_code = parse_int_or_error(game_code, '对局编号')
-
-    group = await group_service.get_group_by_binding_qq(event.group_id)
-    game = await game_record_service.get_game_by_code(game_code, group)
-    if game is None:
-        raise BadRequestError("未找到指定对局")
-
-    msg = await map_game(game)
-    send_result = await query_by_code_matcher.send(msg)
-    save_context(send_result["message_id"], game_code=game.code)
 
 
 # =============== 删除对局 ===============
@@ -249,9 +201,9 @@ async def delete_game(event: GroupMessageEvent, matcher: Matcher):
 
     group = await group_service.get_group_by_binding_qq(event.group_id)
     operator = await user_service.get_user_by_binding_qq(event.user_id)
-    await game_record_service.delete_game(game_code, group, operator)
+    await game_service.delete_game(game_code, group, operator)
 
-    await query_by_code_matcher.send(f'成功删除对局{game_code}')
+    await matcher.send(f'成功删除对局{game_code}')
 
 
 # =============== 设置对局进度 ===============
@@ -262,7 +214,7 @@ round_honba_pattern = r"([东南])([一二三四1234])局([0123456789零一两�
 
 @make_game_progress_matcher.handle()
 @general_interceptor(make_game_progress_matcher)
-async def make_game_progress(event: GroupMessageEvent):
+async def make_game_progress(event: GroupMessageEvent, matcher: Matcher):
     game_code = None
     completed = False
     round = None
@@ -296,13 +248,13 @@ async def make_game_progress(event: GroupMessageEvent):
     group = await group_service.get_group_by_binding_qq(event.group_id)
     operator = await user_service.get_user_by_binding_qq(event.user_id)
     if not completed:
-        game = await game_record_service.make_game_progress(game_code, round, honba, group, operator)
+        game = await game_service.make_game_progress(game_code, round, honba, group, operator)
     else:
-        game = await game_record_service.remove_game_progress(game_code, group)
+        game = await game_service.remove_game_progress(game_code, group)
 
     msg = await map_game(game)
     msg.append(MessageSegment.text("\n\n成功设置对局进度"))
     if game.state == GameState.invalid_total_point:
         msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
-    send_result = await query_by_code_matcher.send(msg)
+    send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code)
