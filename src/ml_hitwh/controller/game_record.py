@@ -85,11 +85,7 @@ async def record(event: GroupMessageEvent, matcher: Matcher):
     user = await user_service.get_user_by_binding_qq(user_id)
     group = await group_service.get_group_by_binding_qq(event.group_id)
 
-    game = await game_service.get_game_by_code(game_code, group)
-    if game is None:
-        raise BadRequestError("未找到指定对局")
-
-    game = await game_service.record_game(game, user, score, wind)
+    game = await game_service.record_game(game_code, group, user, score, wind)
 
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n结算成功'))

@@ -123,8 +123,8 @@ async def revert_season_user_point_by_game(game: GameOrm):
 
     stmt = select(SeasonUserPointChangeLogOrm, SeasonUserPointOrm).join_from(
         SeasonUserPointChangeLogOrm, SeasonUserPointOrm, and_(
-            SeasonUserPointChangeLogOrm.user_id == SeasonUserPointOrm.user_id,
             SeasonUserPointChangeLogOrm.season_id == SeasonUserPointOrm.season_id,
+            SeasonUserPointChangeLogOrm.user_id == SeasonUserPointOrm.user_id,
         )
     ).where(
         SeasonUserPointChangeLogOrm.related_game_id == game.id

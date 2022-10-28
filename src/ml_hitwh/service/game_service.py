@@ -204,11 +204,16 @@ async def _ensure_permission(game: GameOrm, group: GroupOrm, operator: UserOrm):
     raise BadRequestError("没有权限")
 
 
-async def record_game(game: GameOrm,
+async def record_game(game_code: int,
+                      group: GroupOrm,
                       user: UserOrm,
                       score: int,
                       wind: Optional[Wind]) -> GameOrm:
     session = data_source.session()
+
+    game = await get_game_by_code(game_code, group)
+    if game is None:
+        raise BadRequestError("未找到指定对局")
 
     await _ensure_updatable(game)
 

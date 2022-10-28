@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Column, Integer, DateTime, String, Enum, func, ARRAY, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, DateTime, String, Enum, func, ARRAY, ForeignKey, Boolean, Index
 from sqlalchemy.orm import relationship
 
 from . import data_source
@@ -41,16 +41,20 @@ class SeasonOrm:
     update_time: datetime = Column('update_time', DateTime, nullable=False, server_default=func.now())
     delete_time: Optional[datetime] = Column('delete_time', DateTime)
 
+    __table_args__ = (
+        Index("seasons_group_id_code_idx", "group_id", "code"),
+    )
+
 
 @data_source.registry.mapped
 class SeasonUserPointOrm:
     __tablename__ = 'season_user_points'
 
-    user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False, primary_key=True)
-    user: 'UserOrm' = relationship('UserOrm', foreign_keys='SeasonUserPointOrm.user_id')
-
     season_id: int = Column(Integer, ForeignKey('seasons.id'), nullable=False, primary_key=True)
     season: 'SeasonOrm' = relationship('SeasonOrm', foreign_keys='SeasonUserPointOrm.season_id')
+
+    user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False, primary_key=True)
+    user: 'UserOrm' = relationship('UserOrm', foreign_keys='SeasonUserPointOrm.user_id')
 
     point: int = Column(Integer, nullable=False, default=0)
 
@@ -64,11 +68,11 @@ class SeasonUserPointChangeLogOrm:
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
 
-    user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user: 'UserOrm' = relationship('UserOrm', foreign_keys='SeasonUserPointChangeLogOrm.user_id')
-
     season_id: int = Column(Integer, ForeignKey('seasons.id'), nullable=False)
     season: 'SeasonOrm' = relationship('SeasonOrm', foreign_keys='SeasonUserPointChangeLogOrm.season_id')
+
+    user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user: 'UserOrm' = relationship('UserOrm', foreign_keys='SeasonUserPointChangeLogOrm.user_id')
 
     change_type: SeasonUserPointChangeType = Column(Enum(SeasonUserPointChangeType), nullable=False)
     change_point: int = Column(Integer, nullable=False)
@@ -78,6 +82,10 @@ class SeasonUserPointChangeLogOrm:
                                                      foreign_keys='SeasonUserPointChangeLogOrm.related_game_id')
 
     create_time: datetime = Column('create_time', DateTime, nullable=False, server_default=func.now())
+
+    __table_args__ = (
+        Index("seasons_related_game_id_idx", "related_game_id"),
+    )
 
 
 __all__ = ("SeasonOrm", "SeasonUserPointOrm", "SeasonUserPointChangeLogOrm")

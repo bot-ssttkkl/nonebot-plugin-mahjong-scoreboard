@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, BigInteger, Integer
+from sqlalchemy import Column, BigInteger, Integer, Index
 
 from . import data_source
 
@@ -8,10 +8,11 @@ class UserOrm:
     __tablename__ = 'users'
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
-    username: str = Column(String)
-    password: str = Column(String)
-    nickname: str = Column(String)
     binding_qq: int = Column(BigInteger)
+
+    __table_args__ = (
+        Index("users_binding_qq_idx", "binding_qq"),
+    )
 
 
 __all__ = ("UserOrm",)

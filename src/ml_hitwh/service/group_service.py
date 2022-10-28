@@ -33,9 +33,6 @@ async def ensure_group_admin(user: UserOrm, group: GroupOrm):
 
 
 async def get_user_nickname(user: UserOrm, group: GroupOrm) -> str:
-    if user.nickname:
-        return user.nickname
-
     bot = current_bot.get()
     try:
         user_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)

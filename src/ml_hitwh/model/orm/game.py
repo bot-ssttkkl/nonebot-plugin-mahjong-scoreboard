@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, TYPE_CHECKING, Optional
 
-from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey, Text
+from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey, Text, Index
 from sqlalchemy.orm import relationship
 
 from ml_hitwh.model.enums import Wind
@@ -52,6 +52,11 @@ class GameOrm:
     create_time: datetime = Column(DateTime, nullable=False, server_default=func.now())
     update_time: datetime = Column(DateTime, nullable=False, server_default=func.now())
     delete_time: Optional[datetime] = Column(DateTime)
+
+    __table_args__ = (
+        Index("games_season_id_idx", "season_id"),
+        Index("games_group_id_code_idx", "group_id", "code")
+    )
 
 
 @data_source.registry.mapped
