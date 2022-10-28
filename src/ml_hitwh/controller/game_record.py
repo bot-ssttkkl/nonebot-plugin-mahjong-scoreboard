@@ -5,10 +5,10 @@ from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment, MessageEvent
 from nonebot.internal.matcher import Matcher
 
+from ml_hitwh.controller.general_handlers import require_unary_text
 from ml_hitwh.controller.interceptor import general_interceptor
 from ml_hitwh.controller.mapper.game_mapper import map_game
 from ml_hitwh.controller.utils import split_message, parse_int_or_error, try_parse_wind
-from ml_hitwh.controller.general_handlers import require_unary_text
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState
 from ml_hitwh.service import game_record_service, game_service, group_service, user_service
@@ -153,73 +153,50 @@ async def revert_record(event: GroupMessageEvent):
     save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
 
 
-#
-#
-# # =============== 设置对局PT ===============
-# set_point_matcher = on_command("设置对局PT", aliases={"设置对局分数"}, priority=5)
-#
-#
-# @set_point_matcher.handle()
-# @handle_error(set_point_matcher)
-# async def set_point(bot: Bot, event: GroupMessageEvent):
-#     user_id = event.user_id
-#     game_code = None
-#     point = None
-#
-#     context = get_context(event)
-#     if context:
-#         game_code = context["game_code"]
-#
-#     args = split_message(event.message)
-#
-#     if len(args) <= 1:
-#         raise BadRequestError("指令格式不合法")
-#
-#     if args[1].type == "text":
-#         if args[1].data["text"].startswith("对局"):
-#             # 以下两种格式：
-#             # 设置PT 对局<编号> <PT>
-#             # 设置PT 对局<编号> @<用户> <PT>
-#             game_code = args[1].data["text"][len("对局"):]
-#
-#             if args[2].type == "text":
-#                 # 设置PT 对局<编号> <PT>
-#                 point = args[2].data["text"]
-#             elif args[2].type == "at":
-#                 # 设置PT 对局<编号> @<用户> <PT>
-#                 user_id = int(args[2].data["qq"])
-#                 point = args[3].data["text"]
-#             else:
-#                 raise BadRequestError("指令格式不合法")
-#         else:
-#             # 设置PT <PT>
-#             point = args[1].data["text"]
-#     elif args[1].type == "at":
-#         # 设置PT @<用户> <PT>
-#         user_id = int(args[1].data["qq"])
-#         point = args[2].data["text"]
-#     else:
-#         raise BadRequestError("指令格式不合法")
-#
-#     game_code = parse_int_or_error(game_code, '对局编号')
-#     point = parse_int_or_error(game_code, 'PT')
-#
-#     game = await game_client.set_point(sender=build_sender_params(bot, event),
-#                                        code=game_code,
-#                                        user_binding_qq=user_id,
-#                                        point=point)
-#
-#     with StringIO() as sio:
-#         await map_game(sio, game, bot, event)
-#         sio.write('\n')
-#         sio.write('设置对局PT成功')
-#
-#         msg = sio.getvalue()
-#
-#     send_result = await record_matcher.send(msg)
-#     await save_context(game_code=game['code'], message_id=send_result["message_id"], user_id=user_id)
-#
-#
+# =============== 设置对局PT ===============
+set_record_point_matcher = on_command("设置对局PT", aliases={"对局PT"}, priority=5)
+
+
+@set_record_point_matcher.handle()
+@general_interceptor(set_record_point_matcher)
+async def set_record_point(event: GroupMessageEvent):
+    user_id = event.user_id
+    game_code = None
+    point = None
+
+    context = get_context(event)
+    if context:
+        game_code = context["game_code"]
+
+    args = split_message(event.message)[1:]
+
+    for arg in args:
+        if arg.type == "text":
+            text = arg.data["text"]
+            if text.startswith("对局"):
+                game_code = text[len("对局"):]
+            else:
+                point = text
+        elif arg.type == 'at':
+            user_id = int(arg.data["qq"])
+
+    game_code = parse_int_or_error(game_code, '对局编号')
+    point = parse_int_or_error(point, 'PT')
+
+    user = await user_service.get_user_by_binding_qq(user_id)
+    group = await group_service.get_group_by_binding_qq(event.group_id)
+    operator = await user_service.get_user_by_binding_qq(event.user_id)
+
+    game = await game_record_service.set_record_point(game_code, group, user, point, operator)
+
+    msg = await map_game(game)
+    msg.append(MessageSegment.text('\n\n设置PT成功'))
+    if game.state == GameState.invalid_total_point:
+        msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
+    send_result = await record_matcher.send(msg)
+    save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
+
+
 # =============== 查询对局 ===============
 query_by_code_matcher = on_command("查询对局", aliases={"对局"}, priority=5)
 

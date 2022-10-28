@@ -61,7 +61,7 @@ async def export_season_games(bot: Bot, event: MessageEvent, matcher: Matcher):
 
 
 # ========== 导出所有对局 ==========
-export_group_games_matcher = on_command("导出所有对局", aliases={"导出群对局"}, priority=5)
+export_group_games_matcher = on_command("导出所有对局", priority=5)
 
 require_group_binding_qq(export_group_games_matcher)
 

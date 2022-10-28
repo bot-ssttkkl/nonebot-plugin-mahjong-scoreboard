@@ -127,7 +127,9 @@ async def _handle_full_recorded_game(game: GameOrm):
     for i, (r, j) in enumerate(indexed_record):
         # 30000返，1000点=1pt
         # TODO: 动态配置
-        r.point = horse_point[i] + ceil((r.score - 30000) / 1000)
+        if r.point is None:
+            # 已经设置过PT的直接忽略
+            r.point = horse_point[i] + ceil((r.score - 30000) / 1000)
 
     await _make_season_user_point_change(game)
 
@@ -292,6 +294,34 @@ async def remove_game_progress(game_code: int, group: GroupOrm):
 
         if len(game.records) == 4:
             await _handle_full_recorded_game(game)
+
+    await session.commit()
+    return game
+
+
+async def set_record_point(game_code: int, group: GroupOrm, user: UserOrm, point: int, operator: UserOrm):
+    session = data_source.session()
+
+    game = await get_game_by_code(game_code, group)
+    if game is None:
+        raise BadRequestError("未找到指定对局")
+
+    await _ensure_permission(game, group, operator)
+
+    for r in game.records:
+        if r.user_id == user.id:
+            record = r
+            break
+    else:
+        raise BadRequestError("你还没有记录过这场对局")
+
+    if game.state == GameState.completed and game.season_id is not None:
+        await _revert_season_user_point_change(game)
+
+    record.point = point
+
+    if len(game.records) == 4:
+        await _handle_full_recorded_game(game)
 
     await session.commit()
     return game
