@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy import select
 
@@ -45,6 +45,16 @@ async def get_season_by_id(season_id: int) -> Optional[SeasonOrm]:
     ).limit(1)
     season = (await session.execute(stmt)).scalar_one_or_none()
     return season
+
+
+async def get_all_seasons(group: GroupOrm) -> List[SeasonOrm]:
+    session = data_source.session()
+    stmt = select(SeasonOrm).where(
+        SeasonOrm.group == group,
+        SeasonOrm.accessible
+    )
+    result = await session.execute(stmt)
+    return [row[0] for row in result]
 
 
 async def start_season(season: SeasonOrm, operator: UserOrm):

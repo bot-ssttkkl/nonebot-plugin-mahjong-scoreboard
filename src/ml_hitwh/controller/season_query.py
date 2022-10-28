@@ -1,24 +1,26 @@
 from nonebot import on_command
+from nonebot.adapters.onebot.v11 import Bot, Message, MessageSegment, MessageEvent, GroupMessageEvent
 from nonebot.internal.matcher import Matcher
 
+from ml_hitwh.controller.general_handlers import require_group_binding_qq, require_unary_text
 from ml_hitwh.controller.interceptor import general_interceptor
 from ml_hitwh.controller.mapper.season_mapper import map_season
-from ml_hitwh.controller.general_handlers import require_group_binding_qq, require_unary_text
+from ml_hitwh.controller.utils import send_group_forward_msg, send_private_forward_msg
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.service import season_service
 from ml_hitwh.service.group_service import get_group_by_binding_qq
 
-# ========== 赛季信息 ==========
-query_running_season_matcher = on_command("查询赛季", aliases={"赛季"}, priority=5)
+# ========== 查询赛季 ==========
+query_season_matcher = on_command("查询赛季", aliases={"赛季", "当前赛季"}, priority=5)
 
-require_unary_text(query_running_season_matcher, "season_code",
-                   decorator=general_interceptor(query_running_season_matcher))
-require_group_binding_qq(query_running_season_matcher)
+require_unary_text(query_season_matcher, "season_code",
+                   decorator=general_interceptor(query_season_matcher))
+require_group_binding_qq(query_season_matcher)
 
 
-@query_running_season_matcher.handle()
-@general_interceptor(query_running_season_matcher)
-async def query_running_season_handle(matcher: Matcher):
+@query_season_matcher.handle()
+@general_interceptor(query_season_matcher)
+async def query_running_season(matcher: Matcher):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
 
     season_code = matcher.state.get("season_code", None)
@@ -34,3 +36,31 @@ async def query_running_season_handle(matcher: Matcher):
 
     msg = map_season(season, group_info=matcher.state["group_info"])
     await matcher.send(msg)
+
+
+# ========== 查询所有赛季 ==========
+query_all_seasons_matcher = on_command("查询所有赛季", aliases={"所有赛季"}, priority=5)
+require_group_binding_qq(query_all_seasons_matcher)
+
+
+@query_all_seasons_matcher.handle()
+@general_interceptor(query_all_seasons_matcher)
+async def query_all_seasons(bot: Bot, event: MessageEvent, matcher: Matcher):
+    group = await get_group_by_binding_qq(matcher.state["binding_qq"])
+    seasons = await season_service.get_all_seasons(group)
+
+    if len(seasons) != 0:
+        group_info = await bot.get_group_info(group_id=group.binding_qq)
+        header = Message([
+            MessageSegment.text(f"以下是群组{group_info['group_name']}({group_info['group_id']})的最近对局")
+        ])
+        messages = [header]
+        for s in seasons:
+            messages.append(map_season(s))
+
+        if isinstance(event, GroupMessageEvent):
+            await send_group_forward_msg(bot, event.group_id, messages)
+        else:
+            await send_private_forward_msg(bot, event.user_id, messages)
+    else:
+        await matcher.send("你还没有进行过对局")
