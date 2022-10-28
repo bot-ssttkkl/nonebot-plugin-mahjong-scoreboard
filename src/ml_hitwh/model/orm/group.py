@@ -3,13 +3,14 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Column, Integer, BigInteger, ForeignKey
 from sqlalchemy.orm import relationship
 
-from . import OrmBase
+from . import data_source
 
 if TYPE_CHECKING:
     from .season import SeasonOrm
 
 
-class GroupOrm(OrmBase):
+@data_source.registry.mapped
+class GroupOrm:
     __tablename__ = 'groups'
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)

@@ -56,7 +56,7 @@ async def query_season_ranking(bot: Bot, event: GroupMessageEvent, matcher: Matc
         season = await get_season_by_id(group.running_season_id)
         sups = await season_user_point_service.get_season_user_points(season)
 
-        msgs = await map_season_user_points(sups)
+        msgs = await map_season_user_points(season, sups)
         if len(msgs) == 1:
             await matcher.send(msgs[0])
         else:

@@ -47,7 +47,7 @@ async def map_season_user_point_change_logs_as_csv(f: TextIO, logs: Iterable[Sea
 
             user_point[user.id] = user_point.get(user.id, 0) + log.change_point
         elif log.change_type == SeasonUserPointChangeType.manually:
-            header.append([f"手动设置 （{log.create_time.strftime(datetime_format)}）"])
+            header.append(f"手动设置 （{log.create_time.strftime(datetime_format)}）")
 
             _ensure_size(table[user_idx[user.id]], len(header), '')
             table[user_idx[user.id]][-1] = str(log.change_point)
@@ -65,11 +65,11 @@ async def map_season_user_point_change_logs_as_csv(f: TextIO, logs: Iterable[Sea
         new_table.append(table[idx])
         table[idx][1] = str(point)
 
-    # 交换行列
-    table = [[''] * len(new_table) for i in range(len(new_table[0]))]
-    for i in range(len(new_table)):
-        for j in range(len(new_table[i])):
-            table[j][i] = new_table[i][j]
+    # # 交换行列
+    # table = [[''] * len(new_table) for i in range(len(new_table[0]))]
+    # for i in range(len(new_table)):
+    #     for j in range(len(new_table[i])):
+    #         table[j][i] = new_table[i][j]
 
     writer = csv.writer(f)
-    writer.writerows(table)
+    writer.writerows(new_table)

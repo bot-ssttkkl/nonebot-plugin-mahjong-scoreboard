@@ -54,13 +54,13 @@ async def new_game(event: GroupMessageEvent):
     game = await game_service.new_game(user, group, player_and_wind)
 
     msg = await map_game(game)
-    msg.append(MessageSegment.text('\n新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩'))
+    msg.append(MessageSegment.text('\n\n新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩'))
     send_result = await new_game_matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code)
 
 
 # =============== 结算 ===============
-record_matcher = on_command("结算", priority=5)
+record_matcher = on_command("结算对局", aliases={"结算"}, priority=5)
 
 
 @record_matcher.handle()
@@ -108,16 +108,15 @@ async def record(event: GroupMessageEvent):
     game = await game_record_service.record_game(game, user, score, wind)
 
     msg = await map_game(game)
-    if game.state == GameState.uncompleted:
-        msg.append(MessageSegment.text('\n结算成功'))
-    elif game.state == GameState.invalid_total_point:
+    msg.append(MessageSegment.text('\n\n结算成功'))
+    if game.state == GameState.invalid_total_point:
         msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
     send_result = await record_matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
 
 
 # =============== 撤销结算 ===============
-revert_record_matcher = on_command("撤销结算", priority=5)
+revert_record_matcher = on_command("撤销结算对局", aliases={"撤销结算"}, priority=5)
 
 
 @revert_record_matcher.handle()
@@ -148,7 +147,7 @@ async def revert_record(event: GroupMessageEvent):
     game = await game_record_service.revert_record(game_code, group, user, operator)
 
     msg = await map_game(game)
-    msg.append(MessageSegment.text('\n撤销结算成功'))
+    msg.append(MessageSegment.text('\n\n撤销结算成功'))
     send_result = await record_matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
 
@@ -324,7 +323,7 @@ async def make_game_progress(event: GroupMessageEvent):
         game = await game_record_service.remove_game_progress(game_code, group)
 
     msg = await map_game(game)
-    msg.append(MessageSegment.text("\n成功设置对局进度"))
+    msg.append(MessageSegment.text("\n\n成功设置对局进度"))
     if game.state == GameState.invalid_total_point:
         msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
     send_result = await query_by_code_matcher.send(msg)

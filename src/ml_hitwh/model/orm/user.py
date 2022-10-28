@@ -1,9 +1,10 @@
 from sqlalchemy import Column, String, BigInteger, Integer
 
-from . import OrmBase
+from . import data_source
 
 
-class UserOrm(OrmBase):
+@data_source.registry.mapped
+class UserOrm:
     __tablename__ = 'users'
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)

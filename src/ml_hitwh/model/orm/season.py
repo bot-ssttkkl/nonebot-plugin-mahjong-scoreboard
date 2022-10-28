@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import Column, Integer, DateTime, String, Enum, func, ARRAY, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 
-from . import OrmBase
+from . import data_source
 from ..enums import SeasonState, SeasonUserPointChangeType
 
 if TYPE_CHECKING:
@@ -13,7 +13,8 @@ if TYPE_CHECKING:
     from .user import UserOrm
 
 
-class SeasonOrm(OrmBase):
+@data_source.registry.mapped
+class SeasonOrm:
     __tablename__ = 'seasons'
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
@@ -41,7 +42,8 @@ class SeasonOrm(OrmBase):
     delete_time: Optional[datetime] = Column('delete_time', DateTime)
 
 
-class SeasonUserPointOrm(OrmBase):
+@data_source.registry.mapped
+class SeasonUserPointOrm:
     __tablename__ = 'season_user_points'
 
     user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False, primary_key=True)
@@ -53,7 +55,8 @@ class SeasonUserPointOrm(OrmBase):
     point: int = Column(Integer, nullable=False, default=0)
 
 
-class SeasonUserPointChangeLogOrm(OrmBase):
+@data_source.registry.mapped
+class SeasonUserPointChangeLogOrm:
     __tablename__ = 'season_user_point_change_logs'
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)

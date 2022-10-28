@@ -95,4 +95,4 @@ async def map_game(game: GameOrm, *, map_promoter: bool = False) -> Message:
 
                 io.write('\n')
 
-        return Message(MessageSegment.text(io.getvalue()))
+        return Message(MessageSegment.text(io.getvalue().strip()))

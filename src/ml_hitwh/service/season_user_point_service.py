@@ -3,9 +3,13 @@ from typing import Optional, List
 from sqlalchemy.future import select
 from sqlalchemy.sql.functions import count
 
+from ml_hitwh.errors import BadRequestError
+from ml_hitwh.model.enums import SeasonUserPointChangeType
 from ml_hitwh.model.orm import data_source
+from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.season import SeasonOrm, SeasonUserPointOrm, SeasonUserPointChangeLogOrm
 from ml_hitwh.model.orm.user import UserOrm
+from ml_hitwh.service.group_service import is_group_admin
 
 
 async def get_season_user_points(season: SeasonOrm) -> List[SeasonUserPointOrm]:
@@ -55,3 +59,25 @@ async def count_season_user_point(season: SeasonOrm) -> Optional[SeasonUserPoint
     )
     result = (await session.execute(stmt)).scalar_one_or_none()
     return result
+
+
+async def set_season_user_point(season: SeasonOrm, user: UserOrm, point: int, operator: UserOrm) -> SeasonUserPointOrm:
+    session = data_source.session()
+    group = await session.get(GroupOrm, season.group_id)
+    if not await is_group_admin(operator, group):
+        raise BadRequestError("没有权限")
+
+    sup = await get_season_user_point(season, user)
+    if sup is None:
+        sup = SeasonUserPointOrm(season=season, user=user)
+        session.add(sup)
+
+    sup.point = point
+
+    log = SeasonUserPointChangeLogOrm(season=season, user=user,
+                                      change_type=SeasonUserPointChangeType.manually,
+                                      change_point=point)
+    session.add(log)
+
+    await session.commit()
+    return sup

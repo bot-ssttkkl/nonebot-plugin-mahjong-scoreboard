@@ -5,7 +5,7 @@ from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKe
 from sqlalchemy.orm import relationship
 
 from ml_hitwh.model.enums import Wind
-from . import OrmBase
+from . import data_source
 from ..enums import PlayerAndWind, GameState
 
 if TYPE_CHECKING:
@@ -14,7 +14,8 @@ if TYPE_CHECKING:
     from .user import UserOrm
 
 
-class GameOrm(OrmBase):
+@data_source.registry.mapped
+class GameOrm:
     __tablename__ = 'games'
 
     # 应用使用的ID（全局唯一）
@@ -51,7 +52,8 @@ class GameOrm(OrmBase):
     delete_time: Optional[datetime] = Column(DateTime)
 
 
-class GameRecordOrm(OrmBase):
+@data_source.registry.mapped
+class GameRecordOrm:
     __tablename__ = 'game_records'
 
     game_id: int = Column(Integer, ForeignKey('games.id'), primary_key=True, nullable=False)
@@ -66,7 +68,8 @@ class GameRecordOrm(OrmBase):
     point: int = Column(Integer, nullable=False, default=0)  # pt
 
 
-class GameProgressOrm(OrmBase):
+@data_source.registry.mapped
+class GameProgressOrm:
     __tablename__ = 'game_progresses'
 
     game_id: int = Column(Integer, ForeignKey('games.id'), primary_key=True, nullable=False)

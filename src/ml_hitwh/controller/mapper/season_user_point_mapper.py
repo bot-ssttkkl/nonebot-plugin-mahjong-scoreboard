@@ -1,8 +1,9 @@
 from io import StringIO
-from typing import List
+from typing import List, Optional
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
+from ml_hitwh.controller.mapper import season_state_mapping
 from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.season import SeasonUserPointOrm, SeasonOrm
@@ -10,7 +11,9 @@ from ml_hitwh.model.orm.user import UserOrm
 from ml_hitwh.service.group_service import get_user_nickname
 
 
-async def map_season_user_point(sup: SeasonUserPointOrm, rank: int, total: int) -> Message:
+async def map_season_user_point(sup: SeasonUserPointOrm,
+                                rank: Optional[int] = None,
+                                total: Optional[int] = None) -> Message:
     session = data_source.session()
 
     user = await session.get(UserOrm, sup.user_id)
@@ -34,30 +37,36 @@ async def map_season_user_point(sup: SeasonUserPointOrm, rank: int, total: int) 
             io.write('±')
         io.write(str(sup.point))
 
-        # 位次：+114
-        io.write('\n位次：')
-        io.write(str(rank))
-        io.write('/')
-        io.write(str(total))
+        if rank is not None:
+            # 位次：+114
+            io.write('\n位次：')
+            io.write(str(rank))
+            if total is not None:
+                io.write('/')
+                io.write(str(total))
 
         return Message(MessageSegment.text(io.getvalue()))
 
 
-async def map_season_user_points(sups: List[SeasonUserPointOrm]) -> List[Message]:
+async def map_season_user_points(season: SeasonOrm, sups: List[SeasonUserPointOrm]) -> List[Message]:
     session = data_source.session()
 
     messages = []
-    pending_message = Message()
 
-    group = None
-    season = None
+    pending = 0
+    pending_message = StringIO()
+
+    # 赛季：[赛季名]
+    # 状态：进行中
+    pending_message.write("赛季：")
+    pending_message.write(season.name)
+    pending_message.write("\n状态：")
+    pending_message.write(season_state_mapping[season.state])
+    pending_message.write("\n\n")
+
+    group = await session.get(GroupOrm, season.group_id)
 
     for i, sup in enumerate(sups):
-        if season is None:
-            season = await session.get(SeasonOrm, sup.season_id)
-        if group is None:
-            group = await session.get(GroupOrm, season.group_id)
-
         user = await session.get(UserOrm, sup.user_id)
         name = await get_user_nickname(user, group)
 
@@ -68,14 +77,16 @@ async def map_season_user_points(sups: List[SeasonUserPointOrm]) -> List[Message
             point_text = '±'
         point_text += str(sup.point)
 
-        line = f"#{i + 1}\t{name}\t{point_text}\n"
-        pending_message.append(MessageSegment.text(line))
+        line = f"#{i + 1}  {name}    {point_text}\n"
+        pending_message.write(line)
+        pending += 1
 
-        if len(pending_message) >= 10:
-            messages.append(pending_message)
-            pending_message = Message()
+        if pending >= 10:
+            messages.append(Message(MessageSegment.text(pending_message.getvalue().strip())))
+            pending = 0
+            pending_message = StringIO()
 
-    if len(pending_message) > 0:
-        messages.append(pending_message)
+    if pending > 0:
+        messages.append(Message(MessageSegment.text(pending_message.getvalue().strip())))
 
     return messages
