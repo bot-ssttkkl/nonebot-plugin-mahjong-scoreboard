@@ -289,7 +289,7 @@ async def _handle_full_recorded_game(game: GameOrm):
         _divide_horse_point(indexed_record, horse_point, 2, 3)
 
     for i, (r, j) in enumerate(indexed_record):
-        # 30000返，1000点=1pt
+        # 30000返，1000点=1pt，切上
         # TODO: 动态配置
         if r.point is None:
             # 已经设置过PT的直接忽略
@@ -490,6 +490,20 @@ async def set_record_point(game_code: int, group: GroupOrm, user: UserOrm, point
 
     if len(game.records) == 4:
         await _handle_full_recorded_game(game)
+
+    game.update_time = datetime.utcnow()
+    await session.commit()
+    return game
+
+
+async def set_game_comment(game_code: int, group: GroupOrm, comment: str):
+    session = data_source.session()
+
+    game = await get_game_by_code(game_code, group)
+    if game is None:
+        raise BadRequestError("未找到指定对局")
+
+    game.comment = comment
 
     game.update_time = datetime.utcnow()
     await session.commit()

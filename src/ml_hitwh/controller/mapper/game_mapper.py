@@ -95,4 +95,10 @@ async def map_game(game: GameOrm, *, map_promoter: bool = False) -> Message:
 
                 io.write('\n')
 
+        if game.comment:
+            io.write('\n')
+            io.write("备注：")
+            io.write(game.comment)
+            io.write('\n')
+
         return Message(MessageSegment.text(io.getvalue().strip()))

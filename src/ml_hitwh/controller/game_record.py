@@ -1,4 +1,5 @@
 import re
+from io import StringIO
 
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
@@ -117,8 +118,9 @@ async def revert_record(event: GroupMessageEvent, matcher: Matcher):
 
     for arg in args:
         if arg.type == "text":
-            if arg.data["text"].startswith("对局"):
-                game_code = arg.data["text"][len("对局"):]
+            text = arg.data["text"]
+            if text.startswith("对局"):
+                game_code = text[len("对局"):]
         elif arg.type == 'at':
             user_id = int(arg.data["qq"])
 
@@ -173,8 +175,6 @@ async def set_record_point(event: GroupMessageEvent, matcher: Matcher):
 
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n设置PT成功'))
-    if game.state == GameState.invalid_total_point:
-        msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
     send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
 
@@ -224,12 +224,12 @@ async def make_game_progress(event: GroupMessageEvent, matcher: Matcher):
     if context:
         game_code = context["game_code"]
 
-    args = split_message(event.message)
+    args = split_message(event.message)[1:]
     for arg in args:
         if arg.type == 'text':
             text = arg.data["text"]
             if text.startswith("对局"):
-                game_code = arg.data["text"][len("对局"):]
+                game_code = text[len("对局"):]
             elif text == '完成':
                 completed = True
             else:
@@ -254,7 +254,44 @@ async def make_game_progress(event: GroupMessageEvent, matcher: Matcher):
 
     msg = await map_game(game)
     msg.append(MessageSegment.text("\n\n成功设置对局进度"))
-    if game.state == GameState.invalid_total_point:
-        msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
+    send_result = await matcher.send(msg)
+    save_context(send_result["message_id"], game_code=game.code)
+
+
+# ========== 设置对局备注 ===========
+set_game_comment_matcher = on_command("设置对局备注", aliases={"对局备注"}, priority=5)
+
+
+@set_game_comment_matcher.handle()
+@general_interceptor(set_game_comment_matcher)
+async def set_game_comment(event: GroupMessageEvent, matcher: Matcher):
+    game_code = None
+    comment = StringIO()
+
+    context = get_context(event)
+    if context:
+        game_code = context["game_code"]
+
+    args = split_message(event.message, False)[1:]
+    for arg in args:
+        if arg.type == 'text':
+            text = arg.data["text"]
+            if game_code is None and text.startswith("对局"):
+                game_code = text[len("对局"):]
+            else:
+                comment.write(text)
+                comment.write(" ")
+
+    game_code = parse_int_or_error(game_code, '对局编号')
+
+    comment = comment.getvalue()
+    if not comment:
+        raise BadRequestError("请输入备注")
+
+    group = await group_service.get_group_by_binding_qq(event.group_id)
+    game = await game_service.set_game_comment(game_code, group, comment)
+
+    msg = await map_game(game)
+    msg.append(MessageSegment.text("\n\n成功设置对局备注"))
     send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code)

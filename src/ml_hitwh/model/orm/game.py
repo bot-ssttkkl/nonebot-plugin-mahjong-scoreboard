@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, TYPE_CHECKING, Optional
 
-from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey, Text
 from sqlalchemy.orm import relationship
 
 from ml_hitwh.model.enums import Wind
@@ -45,6 +45,8 @@ class GameOrm:
                                                          uselist=False)
 
     complete_time: Optional[datetime] = Column(DateTime)
+
+    comment: Optional[str] = Column(Text)
 
     accessible: bool = Column(Boolean, nullable=False, default=True)
     create_time: datetime = Column(DateTime, nullable=False, server_default=func.now())
