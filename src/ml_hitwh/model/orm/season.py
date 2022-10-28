@@ -54,6 +54,9 @@ class SeasonUserPointOrm:
 
     point: int = Column(Integer, nullable=False, default=0)
 
+    create_time: datetime = Column('create_time', DateTime, nullable=False, server_default=func.now())
+    update_time: datetime = Column('update_time', DateTime, nullable=False, server_default=func.now())
+
 
 @data_source.registry.mapped
 class SeasonUserPointChangeLogOrm:

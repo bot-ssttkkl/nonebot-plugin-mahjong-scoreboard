@@ -4,22 +4,20 @@ from typing import List, Optional, Tuple, overload
 
 import tzlocal
 from nonebot import logger, require
-from sqlalchemy import and_
 from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 
 from ml_hitwh.errors import BadRequestError
-from ml_hitwh.model.enums import GameState, PlayerAndWind
-from ml_hitwh.model.enums import SeasonUserPointChangeType, Wind
+from ml_hitwh.model.enums import GameState, PlayerAndWind, Wind
 from ml_hitwh.model.orm import data_source
-from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm
-from ml_hitwh.model.orm.game import GameProgressOrm
+from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm, GameProgressOrm
 from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.season import SeasonOrm
-from ml_hitwh.model.orm.season import SeasonUserPointOrm, SeasonUserPointChangeLogOrm
 from ml_hitwh.model.orm.user import UserOrm
 from ml_hitwh.service.group_service import is_group_admin
+from ml_hitwh.service.season_user_point_service import revert_season_user_point_by_game, \
+    change_season_user_point_by_game
 from ml_hitwh.utils.date import encode_date
 from ml_hitwh.utils.integer import count_digit
 
@@ -291,11 +289,9 @@ async def _handle_full_recorded_game(game: GameOrm):
     for i, (r, j) in enumerate(indexed_record):
         # 30000返，1000点=1pt，切上
         # TODO: 动态配置
-        if r.point is None:
-            # 已经设置过PT的直接忽略
-            r.point = horse_point[i] + ceil((r.score - 30000) / 1000)
+        r.point = horse_point[i] + ceil((r.score - 30000) / 1000)
 
-    await _make_season_user_point_change(game)
+    await change_season_user_point_by_game(game)
 
 
 def _divide_horse_point(indexed_record: List[Tuple[GameRecordOrm, int]], horse_point: List[int], start: int, end: int):
@@ -311,34 +307,6 @@ def _divide_horse_point(indexed_record: List[Tuple[GameRecordOrm, int]], horse_p
             if indexed_record[i][1] < indexed_record[min_index][1]:
                 min_index = i
         horse_point[min_index] += sum_horse_point - divided_horse_point * (end - start + 1)
-
-
-async def _make_season_user_point_change(game: GameOrm):
-    session = data_source.session()
-
-    for r in game.records:
-        # 记录SeasonUserPoint
-        stmt = select(SeasonUserPointOrm).where(
-            SeasonUserPointOrm.season_id == game.season_id,
-            SeasonUserPointOrm.user_id == r.user_id
-        ).limit(1)
-        user_point = (await session.execute(stmt)).scalar_one_or_none()
-
-        if user_point is None:
-            user_point = SeasonUserPointOrm(season_id=game.season_id, user_id=r.user_id, point=0)
-            session.add(user_point)
-
-        user_point.point += r.point
-
-        # 记录SeasonUserPointChangeLog
-        change_log = SeasonUserPointChangeLogOrm(user_id=r.user_id,
-                                                 season_id=game.season_id,
-                                                 change_type=SeasonUserPointChangeType.game,
-                                                 change_point=r.point,
-                                                 related_game_id=game.id)
-        session.add(change_log)
-
-    # 这里不需要commit
 
 
 async def revert_record(game_code: int,
@@ -362,7 +330,7 @@ async def revert_record(game_code: int,
         await _ensure_permission(game, group, operator)
 
         if game.season_id:
-            await _revert_season_user_point_change(game)
+            await revert_season_user_point_by_game(game)
 
     game.state = GameState.uncompleted
     game.records.remove(record)
@@ -371,29 +339,6 @@ async def revert_record(game_code: int,
     game.update_time = datetime.utcnow()
     await session.commit()
     return game
-
-
-async def _revert_season_user_point_change(game: GameOrm):
-    session = data_source.session()
-
-    stmt = select(SeasonUserPointChangeLogOrm, SeasonUserPointOrm).join_from(
-        SeasonUserPointChangeLogOrm, SeasonUserPointOrm, and_(
-            SeasonUserPointChangeLogOrm.user_id == SeasonUserPointOrm.user_id,
-            SeasonUserPointChangeLogOrm.season_id == SeasonUserPointOrm.season_id,
-        )
-    ).where(
-        SeasonUserPointChangeLogOrm.related_game_id == game.id
-    )
-
-    for change_log, user_point in await session.execute(stmt):
-        change_log: SeasonUserPointChangeLogOrm
-        user_point: SeasonUserPointOrm
-
-        user_point.point -= change_log.change_point
-
-        await session.delete(change_log)
-
-    # 这里不需要commit
 
 
 async def delete_game(game_code: int,
@@ -408,11 +353,11 @@ async def delete_game(game_code: int,
     await _ensure_permission(game, group, operator)
 
     if game.state == GameState.completed and game.season_id:
-        await _revert_season_user_point_change(game)
+        await revert_season_user_point_by_game(game)
 
     game.accessible = False
     game.delete_time = datetime.now()
-
+    game.update_time = datetime.now()
     await session.commit()
 
 
@@ -428,7 +373,7 @@ async def make_game_progress(game_code: int, round: int, honba: int,
         await _ensure_permission(game, group, operator)
 
         if game.season_id:
-            await _revert_season_user_point_change(game)
+            await revert_season_user_point_by_game(game)
 
         game.state = GameState.uncompleted
 
@@ -483,13 +428,12 @@ async def set_record_point(game_code: int, group: GroupOrm, user: UserOrm, point
     else:
         raise BadRequestError("你还没有记录过这场对局")
 
-    if game.state == GameState.completed and game.season_id is not None:
-        await _revert_season_user_point_change(game)
+    if game.state != GameState.completed:
+        raise BadRequestError("这场对局未处于完成状态")
 
+    await revert_season_user_point_by_game(game)
     record.point = point
-
-    if len(game.records) == 4:
-        await _handle_full_recorded_game(game)
+    await change_season_user_point_by_game(game)
 
     game.update_time = datetime.utcnow()
     await session.commit()

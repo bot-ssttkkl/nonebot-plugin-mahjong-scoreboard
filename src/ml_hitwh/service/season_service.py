@@ -4,10 +4,11 @@ from typing import Optional, List
 from sqlalchemy import select
 
 from ml_hitwh.errors import BadRequestError
-from ml_hitwh.model.enums import SeasonState
+from ml_hitwh.model.enums import SeasonState, SeasonUserPointChangeType
 from ml_hitwh.model.orm import data_source
+from ml_hitwh.model.orm.game import GameOrm
 from ml_hitwh.model.orm.group import GroupOrm
-from ml_hitwh.model.orm.season import SeasonOrm
+from ml_hitwh.model.orm.season import SeasonOrm, SeasonUserPointOrm, SeasonUserPointChangeLogOrm
 from ml_hitwh.model.orm.user import UserOrm
 from ml_hitwh.service.group_service import ensure_group_admin
 
@@ -72,6 +73,7 @@ async def start_season(season: SeasonOrm, operator: UserOrm):
     season.start_time = datetime.utcnow()
     group.running_season_id = season.id
 
+    season.update_time = datetime.utcnow()
     await session.commit()
 
 
@@ -88,6 +90,7 @@ async def finish_season(season: SeasonOrm, operator: UserOrm):
     season.finish_time = datetime.utcnow()
     group.running_season_id = None
 
+    season.update_time = datetime.utcnow()
     await session.commit()
 
 
@@ -101,5 +104,5 @@ async def remove_season(season: SeasonOrm, operator: UserOrm):
 
     season.accessible = False
     season.delete_time = datetime.utcnow()
-
+    season.update_time = datetime.utcnow()
     await session.commit()

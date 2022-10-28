@@ -35,7 +35,7 @@ async def set_season_user_point(event: GroupMessageEvent, matcher: Matcher):
 
     if group.running_season_id is not None:
         season = await get_season_by_id(group.running_season_id)
-        sup = await season_user_point_service.set_season_user_point(season, user, point, operator)
+        sup = await season_user_point_service.change_season_user_point_manually(season, user, point, operator)
         msg = await map_season_user_point(sup)
         msg.append(MessageSegment.text("\n\n设置赛季PT成功"))
         await matcher.send(msg)

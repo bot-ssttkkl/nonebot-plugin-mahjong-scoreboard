@@ -1,3 +1,5 @@
+from datetime import datetime
+from operator import and_
 from typing import Optional, List
 
 from sqlalchemy.future import select
@@ -6,6 +8,7 @@ from sqlalchemy.sql.functions import count
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import SeasonUserPointChangeType
 from ml_hitwh.model.orm import data_source
+from ml_hitwh.model.orm.game import GameOrm
 from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.season import SeasonOrm, SeasonUserPointOrm, SeasonUserPointChangeLogOrm
 from ml_hitwh.model.orm.user import UserOrm
@@ -61,7 +64,10 @@ async def count_season_user_point(season: SeasonOrm) -> Optional[SeasonUserPoint
     return result
 
 
-async def set_season_user_point(season: SeasonOrm, user: UserOrm, point: int, operator: UserOrm) -> SeasonUserPointOrm:
+async def change_season_user_point_manually(season: SeasonOrm,
+                                            user: UserOrm,
+                                            point: int,
+                                            operator: UserOrm) -> SeasonUserPointOrm:
     session = data_source.session()
     group = await session.get(GroupOrm, season.group_id)
     if not await is_group_admin(operator, group):
@@ -79,5 +85,57 @@ async def set_season_user_point(season: SeasonOrm, user: UserOrm, point: int, op
                                       change_point=point)
     session.add(log)
 
+    sup.update_time = datetime.utcnow()
     await session.commit()
     return sup
+
+
+async def change_season_user_point_by_game(game: GameOrm):
+    session = data_source.session()
+
+    for r in game.records:
+        # 记录SeasonUserPoint
+        stmt = select(SeasonUserPointOrm).where(
+            SeasonUserPointOrm.season_id == game.season_id,
+            SeasonUserPointOrm.user_id == r.user_id
+        ).limit(1)
+        user_point = (await session.execute(stmt)).scalar_one_or_none()
+
+        if user_point is None:
+            user_point = SeasonUserPointOrm(season_id=game.season_id, user_id=r.user_id, point=0)
+            session.add(user_point)
+
+        user_point.point += r.point
+
+        # 记录SeasonUserPointChangeLog
+        change_log = SeasonUserPointChangeLogOrm(user_id=r.user_id,
+                                                 season_id=game.season_id,
+                                                 change_type=SeasonUserPointChangeType.game,
+                                                 change_point=r.point,
+                                                 related_game_id=game.id)
+        session.add(change_log)
+
+    await session.commit()
+
+
+async def revert_season_user_point_by_game(game: GameOrm):
+    session = data_source.session()
+
+    stmt = select(SeasonUserPointChangeLogOrm, SeasonUserPointOrm).join_from(
+        SeasonUserPointChangeLogOrm, SeasonUserPointOrm, and_(
+            SeasonUserPointChangeLogOrm.user_id == SeasonUserPointOrm.user_id,
+            SeasonUserPointChangeLogOrm.season_id == SeasonUserPointOrm.season_id,
+        )
+    ).where(
+        SeasonUserPointChangeLogOrm.related_game_id == game.id
+    )
+
+    for change_log, user_point in await session.execute(stmt):
+        change_log: SeasonUserPointChangeLogOrm
+        user_point: SeasonUserPointOrm
+
+        user_point.point -= change_log.change_point
+
+        await session.delete(change_log)
+
+    await session.commit()
