@@ -196,7 +196,7 @@ async def finish_season_confirm(matcher: Matcher):
         raise BadRequestError("当前没有运行中的赛季")
 
     msg = map_season(season, group_info=matcher.state["group_info"])
-    msg.append(MessageSegment.text("\n\n确定结束赛季吗？(y/n)"))
+    msg.append(MessageSegment.text("\n\n结束赛季将删除赛季的所有未完成对局，并且无法再修改赛季的已完成对局。\n确定结束赛季吗？(y/n)"))
     await matcher.pause(msg)
 
 

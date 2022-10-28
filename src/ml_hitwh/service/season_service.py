@@ -4,12 +4,12 @@ from typing import Optional, List
 from sqlalchemy import select
 
 from ml_hitwh.errors import BadRequestError
-from ml_hitwh.model.enums import SeasonState, SeasonUserPointChangeType
+from ml_hitwh.model.enums import SeasonState
 from ml_hitwh.model.orm import data_source
-from ml_hitwh.model.orm.game import GameOrm
 from ml_hitwh.model.orm.group import GroupOrm
-from ml_hitwh.model.orm.season import SeasonOrm, SeasonUserPointOrm, SeasonUserPointChangeLogOrm
+from ml_hitwh.model.orm.season import SeasonOrm
 from ml_hitwh.model.orm.user import UserOrm
+from ml_hitwh.service.game_service import delete_uncompleted_season_games
 from ml_hitwh.service.group_service import ensure_group_admin
 
 
@@ -85,6 +85,8 @@ async def finish_season(season: SeasonOrm, operator: UserOrm):
 
     if season.state != SeasonState.running:
         raise BadRequestError("该赛季尚未开启或已经结束")
+
+    await delete_uncompleted_season_games(season)
 
     season.state = SeasonState.finished
     season.finish_time = datetime.utcnow()

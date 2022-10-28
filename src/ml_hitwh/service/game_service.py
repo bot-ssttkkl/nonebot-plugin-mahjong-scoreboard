@@ -4,12 +4,12 @@ from typing import List, Optional, Tuple, overload
 
 import tzlocal
 from nonebot import logger, require
-from sqlalchemy import select, delete
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 
 from ml_hitwh.errors import BadRequestError
-from ml_hitwh.model.enums import GameState, PlayerAndWind, Wind
+from ml_hitwh.model.enums import GameState, PlayerAndWind, Wind, SeasonState
 from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.game import GameOrm, GameRecordOrm, GameProgressOrm
 from ml_hitwh.model.orm.group import GroupOrm
@@ -31,10 +31,13 @@ async def _delete_all_uncompleted_game():
 
     now = datetime.utcnow()
     one_day_ago = now - timedelta(days=1)
-    stmt = delete(GameOrm).where(GameOrm.state != GameState.completed,
-                                 GameOrm.create_time > one_day_ago,
-                                 GameOrm.progress == None)
+    stmt = (update(GameOrm)
+            .where(GameOrm.state != GameState.completed,
+                   GameOrm.create_time > one_day_ago,
+                   GameOrm.progress == None)
+            .values(accesible=False, delete_time=now, update_time=now))
     result = await session.execute(stmt)
+    await session.commit()
     logger.success(f"deleted {result.rowcount} outdated uncompleted game(s)")
 
 
@@ -181,6 +184,14 @@ async def get_season_games(season: SeasonOrm, **kwargs) -> List[GameOrm]:
     return [row[0] for row in result]
 
 
+async def _ensure_updatable(game: GameOrm):
+    session = data_source.session()
+    if game.season_id is not None:
+        season = await session.get(SeasonOrm, game.season_id)
+        if season.state != SeasonState.running:
+            raise BadRequestError("赛季已经结束，无法再修改对局")
+
+
 async def _ensure_permission(game: GameOrm, group: GroupOrm, operator: UserOrm):
     completed_before_24h = (game.state == GameState.completed and
                             datetime.now() - game.complete_time >= timedelta(days=1))
@@ -198,6 +209,8 @@ async def record_game(game: GameOrm,
                       score: int,
                       wind: Optional[Wind]) -> GameOrm:
     session = data_source.session()
+
+    await _ensure_updatable(game)
 
     if game.state == GameState.completed:
         raise BadRequestError("这场对局已经处于完成状态")
@@ -319,6 +332,8 @@ async def revert_record(game_code: int,
     if game is None:
         raise BadRequestError("未找到指定对局")
 
+    await _ensure_updatable(game)
+
     for r in game.records:
         if r.user_id == user.id:
             record = r
@@ -350,6 +365,7 @@ async def delete_game(game_code: int,
     if game is None:
         raise BadRequestError("未找到指定对局")
 
+    await _ensure_updatable(game)
     await _ensure_permission(game, group, operator)
 
     if game.state == GameState.completed and game.season_id:
@@ -361,6 +377,16 @@ async def delete_game(game_code: int,
     await session.commit()
 
 
+async def delete_uncompleted_season_games(season: SeasonOrm):
+    session = data_source.session()
+    now = datetime.utcnow()
+    stmt = (update(GameOrm)
+            .where(GameOrm.season == season, GameOrm.state != GameState.completed)
+            .values(accesible=False, delete_time=now, update_time=now))
+    await session.execute(stmt)
+    await session.commit()
+
+
 async def make_game_progress(game_code: int, round: int, honba: int,
                              group: GroupOrm, operator: UserOrm):
     session = data_source.session()
@@ -368,6 +394,8 @@ async def make_game_progress(game_code: int, round: int, honba: int,
     game = await get_game_by_code(game_code, group)
     if game is None:
         raise BadRequestError("未找到指定对局")
+
+    await _ensure_updatable(game)
 
     if game.state == GameState.completed:
         await _ensure_permission(game, group, operator)
@@ -398,11 +426,12 @@ async def remove_game_progress(game_code: int, group: GroupOrm):
     if game is None:
         raise BadRequestError("未找到指定对局")
 
+    await _ensure_updatable(game)
+
     progress = await session.get(GameProgressOrm, game.id)
 
     if progress is not None:
-        stmt = delete(GameProgressOrm).where(GameProgressOrm.game_id == game.id)
-        await session.execute(stmt)
+        await session.delete(progress)
 
         if len(game.records) == 4:
             await _handle_full_recorded_game(game)
@@ -419,6 +448,7 @@ async def set_record_point(game_code: int, group: GroupOrm, user: UserOrm, point
     if game is None:
         raise BadRequestError("未找到指定对局")
 
+    await _ensure_updatable(game)
     await _ensure_permission(game, group, operator)
 
     for r in game.records:
