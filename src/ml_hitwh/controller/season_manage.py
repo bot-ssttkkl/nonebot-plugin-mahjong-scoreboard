@@ -3,13 +3,15 @@ from nonebot.adapters.onebot.v11 import MessageEvent, Message, MessageSegment
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
+from ml_hitwh.controller.general_handlers import require_group_binding_qq, require_unary_text
 from ml_hitwh.controller.interceptor import workflow_interceptor
 from ml_hitwh.controller.mapper.season_mapper import map_season
-from ml_hitwh.controller.workflow_general import require_group_binding_qq
 from ml_hitwh.errors import BadRequestError
+from ml_hitwh.model.enums import SeasonState
 from ml_hitwh.model.orm.season import SeasonOrm
 from ml_hitwh.service import season_service
 from ml_hitwh.service.group_service import get_group_by_binding_qq
+from ml_hitwh.service.user_service import get_user_by_binding_qq
 
 # ========== 新赛季 ==========
 new_season_matcher = on_command("新建赛季", aliases={"新赛季"}, priority=5)
@@ -107,7 +109,7 @@ async def new_season_confirm(matcher: Matcher):
     matcher.state["season"] = season
 
     msg = map_season(season, group_info=matcher.state["group_info"])
-    msg.append(MessageSegment.text("\n确定创建赛季吗？(y/n)"))
+    msg.append(MessageSegment.text("\n\n确定创建赛季吗？(y/n)"))
     await matcher.pause(msg)
 
 
@@ -118,7 +120,7 @@ async def new_season_handle(event: MessageEvent, matcher: Matcher):
         season = matcher.state["season"]
         season.group = await get_group_by_binding_qq(matcher.state["binding_qq"])
         season = await season_service.new_season(season)
-        matcher.state["season_id"] = season.id
+        matcher.state["season_id"] = season
         await matcher.pause("赛季创建成功。是否立刻开启该赛季？(y/n)")
     else:
         await matcher.finish("取消赛季创建")
@@ -129,38 +131,38 @@ async def new_season_handle(event: MessageEvent, matcher: Matcher):
 async def new_season_start(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
-        season = await season_service.get_season_by_id(matcher.state["season_id"])
-        await season_service.start_season(season)
+        season = await season_service.get_season_by_id(matcher.state["season"].id)
+        operator = await get_user_by_binding_qq(event.user_id)
+        await season_service.start_season(season, operator)
         await matcher.send("赛季开启成功")
     else:
-        await matcher.send("稍后可以使用“/开启赛季”命令开启赛季")
+        await matcher.send(f"稍后可以使用“/开启赛季 {matcher.state['season'].code}”命令开启赛季")
 
 
 # ========== 开启赛季 ==========
 start_season_matcher = on_command("开启赛季", priority=5)
 
+require_unary_text(start_season_matcher, "season_code",
+                   decorator=workflow_interceptor(start_season_matcher))
 require_group_binding_qq(start_season_matcher, True)
-
-
-@start_season_matcher.got("code", "赛季代号？")
-@workflow_interceptor(start_season_matcher)
-async def start_season_matcher_got_code(matcher: Matcher,
-                                        raw_arg=ArgPlainText("code")):
-    season = await season_service.get_season_by_code(raw_arg, matcher.state["group"])
-    if season is None:
-        raise BadRequestError("找不到赛季。使用“/新赛季”指令创建赛季")
-
-    matcher.state["season"] = season
-    matcher.state["season_id"] = season.id
 
 
 @start_season_matcher.handle()
 @workflow_interceptor(start_season_matcher)
-async def start_season_confirm(matcher: Matcher):
-    season = matcher.state["season"]
+async def start_season_matcher_confirm(matcher: Matcher):
+    season_code = matcher.state.get("season_code", None)
+    if season_code is None:
+        raise BadRequestError("请指定赛季代号")
+
+    group = await get_group_by_binding_qq(matcher.state["binding_qq"])
+    season = await season_service.get_season_by_code(season_code, group)
+    if season is None:
+        raise BadRequestError("找不到赛季。使用“/新赛季”指令创建赛季")
+
+    matcher.state["season_id"] = season.id
 
     msg = map_season(season, group_info=matcher.state["group_info"])
-    msg.append(MessageSegment.text("\n确定开启赛季吗？(y/n)"))
+    msg.append(MessageSegment.text("\n\n确定开启赛季吗？(y/n)"))
     await matcher.pause(msg)
 
 
@@ -170,7 +172,8 @@ async def start_season_end(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
         season = await season_service.get_season_by_id(matcher.state["season_id"])
-        await season_service.start_season(season)
+        operator = await get_user_by_binding_qq(event.user_id)
+        await season_service.start_season(season, operator)
         await matcher.send("赛季开启成功")
     else:
         await matcher.send("取消开启赛季")
@@ -193,7 +196,7 @@ async def finish_season_confirm(matcher: Matcher):
         raise BadRequestError("当前没有运行中的赛季")
 
     msg = map_season(season, group_info=matcher.state["group_info"])
-    msg.append(MessageSegment.text("\n确定结束赛季吗？(y/n)"))
+    msg.append(MessageSegment.text("\n\n确定结束赛季吗？(y/n)"))
     await matcher.pause(msg)
 
 
@@ -203,7 +206,52 @@ async def finish_season_end(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
         season = await season_service.get_season_by_id(matcher.state["season_id"])
-        await season_service.finish_season(season)
+        operator = await get_user_by_binding_qq(event.user_id)
+        await season_service.finish_season(season, operator)
         await matcher.send("赛季结束成功")
     else:
         await matcher.send("取消结束赛季")
+
+
+# ========== 删除赛季 ==========
+remove_season_matcher = on_command("删除赛季", priority=5)
+
+require_unary_text(remove_season_matcher, "season_code",
+                   decorator=workflow_interceptor(remove_season_matcher))
+require_group_binding_qq(remove_season_matcher, True)
+
+
+@remove_season_matcher.handle()
+@workflow_interceptor(remove_season_matcher)
+async def remove_season_confirm(matcher: Matcher):
+    season_code = matcher.state.get("season_code", None)
+    if season_code is None:
+        raise BadRequestError("请指定赛季代号")
+
+    group = await get_group_by_binding_qq(matcher.state["binding_qq"])
+    season = await season_service.get_season_by_code(season_code, group)
+    if season is None:
+        raise BadRequestError("找不到赛季。使用“/新赛季”指令创建赛季")
+
+    matcher.state["season_id"] = season.id
+
+    msg = map_season(season, group_info=matcher.state["group_info"])
+    if season.state != SeasonState.initial:
+        msg.append(MessageSegment.text("\n\n赛季未处于初始状态，操作失败"))
+        await matcher.finish(msg)
+    else:
+        msg.append(MessageSegment.text("\n\n确定删除赛季吗？(y/n)"))
+        await matcher.pause(msg)
+
+
+@remove_season_matcher.handle()
+@workflow_interceptor(remove_season_matcher)
+async def remove_season_end(event: MessageEvent, matcher: Matcher):
+    if event.message.extract_plain_text() == 'y':
+        # 因为session不同，所以需要重新获取season
+        season = await season_service.get_season_by_id(matcher.state["season_id"])
+        operator = await get_user_by_binding_qq(event.user_id)
+        await season_service.remove_season(season, operator)
+        await matcher.send("赛季删除成功")
+    else:
+        await matcher.send("取消删除赛季")

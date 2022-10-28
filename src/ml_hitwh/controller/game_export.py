@@ -6,10 +6,9 @@ from nonebot.adapters.onebot.v11 import Bot, MessageEvent, GroupMessageEvent
 from nonebot.internal.matcher import Matcher
 
 from ml_hitwh.controller.file_center import send_group_file, send_private_file
-from ml_hitwh.controller.interceptor import general_interceptor, workflow_interceptor
+from ml_hitwh.controller.interceptor import workflow_interceptor, general_interceptor
 from ml_hitwh.controller.mapper.game_csv_mapper import map_games_as_csv
-from ml_hitwh.controller.utils import split_message
-from ml_hitwh.controller.workflow_general import require_group_binding_qq
+from ml_hitwh.controller.general_handlers import require_group_binding_qq, require_unary_text
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import SeasonState
 from ml_hitwh.service import season_service
@@ -20,15 +19,8 @@ from ml_hitwh.utils.date import encode_date
 # ========== 导出赛季对局 ==========
 export_season_games_matcher = on_command("导出赛季对局", aliases={"导出对局"}, priority=5)
 
-
-@export_season_games_matcher.handle()
-@workflow_interceptor(export_season_games_matcher)
-async def export_season_games_begin(event: MessageEvent, matcher: Matcher):
-    args = split_message(event.message)
-    if len(args) > 1 and args[1].type == 'text':
-        matcher.state["season_code"] = args[1].data["text"]
-
-
+require_unary_text(export_season_games_matcher, "season_code",
+                   decorator=general_interceptor(export_season_games_matcher))
 require_group_binding_qq(export_season_games_matcher)
 
 
@@ -70,15 +62,6 @@ async def export_season_games(bot: Bot, event: MessageEvent, matcher: Matcher):
 
 # ========== 导出所有对局 ==========
 export_group_games_matcher = on_command("导出所有对局", aliases={"导出群对局"}, priority=5)
-
-
-@export_group_games_matcher.handle()
-@workflow_interceptor(export_group_games_matcher)
-async def export_group_games_begin(event: MessageEvent, matcher: Matcher):
-    args = split_message(event.message)
-    if len(args) > 1 and args[1].type == 'text':
-        matcher.state["season_code"] = args[1].data["text"]
-
 
 require_group_binding_qq(export_group_games_matcher)
 

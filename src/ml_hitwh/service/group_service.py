@@ -2,6 +2,7 @@ from nonebot.adapters.onebot.v11 import ActionFailed
 from nonebot.internal.matcher import current_bot
 from sqlalchemy import select
 
+from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.orm import data_source
 from ml_hitwh.model.orm.group import GroupOrm
 from ml_hitwh.model.orm.user import UserOrm
@@ -24,6 +25,11 @@ async def is_group_admin(user: UserOrm, group: GroupOrm) -> bool:
     bot = current_bot.get()
     member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
     return member_info["role"] != "member"
+
+
+async def ensure_group_admin(user: UserOrm, group: GroupOrm):
+    if not await is_group_admin(user, group):
+        raise BadRequestError("没有权限")
 
 
 async def get_user_nickname(user: UserOrm, group: GroupOrm) -> str:

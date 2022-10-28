@@ -73,4 +73,4 @@ def map_season(season: SeasonOrm, *, group_info: Optional[dict] = None) -> Messa
                 io.write(' ')
             io.write('\n')
 
-        return Message(MessageSegment.text(io.getvalue()))
+        return Message(MessageSegment.text(io.getvalue().strip()))

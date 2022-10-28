@@ -3,10 +3,12 @@ import re
 from cachetools import TTLCache
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment, MessageEvent
+from nonebot.internal.matcher import Matcher
 
 from ml_hitwh.controller.interceptor import general_interceptor
 from ml_hitwh.controller.mapper.game_mapper import map_game
 from ml_hitwh.controller.utils import split_message, parse_int_or_error, try_parse_wind
+from ml_hitwh.controller.general_handlers import require_unary_text
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.model.enums import PlayerAndWind, GameState
 from ml_hitwh.service import game_record_service, game_service, group_service, user_service
@@ -32,22 +34,21 @@ def save_context(message_id: int, **kwargs):
 # =============== 新建对局 ===============
 new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
 
+require_unary_text(new_game_matcher, "player_and_wind",
+                   decorator=general_interceptor(new_game_matcher))
+
 
 @new_game_matcher.handle()
 @general_interceptor(new_game_matcher)
-async def new_game(event: GroupMessageEvent):
-    player_and_wind = None
+async def new_game(event: GroupMessageEvent, matcher: Matcher):
+    player_and_wind = matcher.state.get("player_and_wind", None)
 
-    args = split_message(event.message)[1:]
-    for arg in args:
-        if arg.type == 'text':
-            game_type = arg.data["text"]
-            if game_type == "四人东":
-                player_and_wind = PlayerAndWind.four_men_east
-            elif game_type == "四人南":
-                player_and_wind = PlayerAndWind.four_men_south
-            else:
-                raise BadRequestError("对局类型不合法")
+    if player_and_wind == "四人东":
+        player_and_wind = PlayerAndWind.four_men_east
+    elif player_and_wind == "四人南":
+        player_and_wind = PlayerAndWind.four_men_south
+    elif player_and_wind is not None:
+        raise BadRequestError("对局类型不合法")
 
     user = await user_service.get_user_by_binding_qq(event.user_id)
     group = await group_service.get_group_by_binding_qq(event.group_id)
@@ -222,20 +223,20 @@ async def revert_record(event: GroupMessageEvent):
 # =============== 查询对局 ===============
 query_by_code_matcher = on_command("查询对局", aliases={"对局"}, priority=5)
 
+require_unary_text(query_by_code_matcher, "game_code",
+                   decorator=general_interceptor(query_by_code_matcher))
+
 
 @query_by_code_matcher.handle()
 @general_interceptor(query_by_code_matcher)
-async def query_by_code(event: GroupMessageEvent):
+async def query_by_code(event: GroupMessageEvent, matcher: Matcher):
     game_code = None
 
     context = get_context(event)
     if context:
         game_code = context["game_code"]
 
-    args = split_message(event.message)[1:]
-    for arg in args:
-        if arg.type == "text":
-            game_code = arg.data["text"]
+    game_code = matcher.state.get("game_code", game_code)
 
     game_code = parse_int_or_error(game_code, '对局编号')
 
@@ -252,20 +253,20 @@ async def query_by_code(event: GroupMessageEvent):
 # =============== 删除对局 ===============
 delete_game_matcher = on_command("删除对局", priority=5)
 
+require_unary_text(delete_game_matcher, "game_code",
+                   decorator=general_interceptor(delete_game_matcher))
+
 
 @delete_game_matcher.handle()
 @general_interceptor(delete_game_matcher)
-async def delete_game(event: GroupMessageEvent):
+async def delete_game(event: GroupMessageEvent, matcher: Matcher):
     game_code = None
 
     context = get_context(event)
     if context:
         game_code = context["game_code"]
 
-    args = split_message(event.message)[1:]
-    for arg in args:
-        if arg.type == "text":
-            game_code = arg.data["text"]
+    game_code = matcher.state.get("game_code", game_code)
 
     game_code = parse_int_or_error(game_code, '对局编号')
 

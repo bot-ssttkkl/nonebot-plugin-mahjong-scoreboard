@@ -4,7 +4,8 @@ from nonebot.internal.matcher import Matcher
 
 from ml_hitwh.controller.interceptor import general_interceptor
 from ml_hitwh.controller.mapper.season_user_point_mapper import map_season_user_point, map_season_user_points
-from ml_hitwh.controller.utils import split_message, send_group_forward_msg
+from ml_hitwh.controller.utils import send_group_forward_msg
+from ml_hitwh.controller.general_handlers import require_unary_at
 from ml_hitwh.errors import BadRequestError
 from ml_hitwh.service import season_user_point_service
 from ml_hitwh.service.group_service import get_group_by_binding_qq
@@ -15,15 +16,14 @@ from ml_hitwh.service.user_service import get_user_by_binding_qq
 # ========== 查询PT ==========
 query_season_point = on_command("查询PT", aliases={"查询pt", "PT", "pt"}, priority=5)
 
+require_unary_at(query_season_point, "user_id",
+                 decorator=general_interceptor(query_season_point))
+
 
 @query_season_point.handle()
 @general_interceptor(query_season_point)
 async def query_season_point(event: GroupMessageEvent, matcher: Matcher):
-    user_id = event.user_id
-
-    args = split_message(event.message)
-    if len(args) > 1 and args[1].type == 'at':
-        user_id = int(args[1].data["qq"])
+    user_id = matcher.state.get("user_id", event.user_id)
 
     group = await get_group_by_binding_qq(event.group_id)
     user = await get_user_by_binding_qq(user_id)
