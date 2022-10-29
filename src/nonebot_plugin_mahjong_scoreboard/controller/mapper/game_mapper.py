@@ -27,16 +27,16 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
         io.write(player_and_wind_mapping[game.player_and_wind])
         io.write('\n')
 
-        # 所属赛季：Season Name
-        io.write('所属赛季：')
-        if game.season_id is None:
-            io.write('无')
-        else:
-            season = await session.get(SeasonOrm, game.season_id)
-            io.write(season.name)
-        io.write('\n')
-
         if detailed:
+            # 所属赛季：Season Name
+            io.write('所属赛季：')
+            if game.season_id is None:
+                io.write('无')
+            else:
+                season = await session.get(SeasonOrm, game.season_id)
+                io.write(season.name)
+            io.write('\n')
+
             promoter = await session.get(UserOrm, game.promoter_user_id)
             io.write('创建者：')
             io.write(await get_user_nickname(promoter, group))
