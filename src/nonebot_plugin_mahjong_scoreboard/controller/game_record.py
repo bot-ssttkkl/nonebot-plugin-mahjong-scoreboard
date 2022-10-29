@@ -1,7 +1,7 @@
 import re
 from io import StringIO
 
-from nonebot import on_command, get_driver
+from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
 from nonebot.internal.matcher import Matcher
 
@@ -13,7 +13,6 @@ from nonebot_plugin_mahjong_scoreboard.controller.utils import split_message, pa
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import PlayerAndWind, GameState
 from nonebot_plugin_mahjong_scoreboard.service import game_service, group_service, user_service
-
 # =============== 新建对局 ===============
 from nonebot_plugin_mahjong_scoreboard.utils.onebot import default_cmd_start
 
@@ -59,7 +58,7 @@ async def record(event: GroupMessageEvent, matcher: Matcher):
 
     context = get_context(event)
     if context:
-        game_code = context["game_code"]
+        game_code = context.get("game_code", None)
 
     args = split_message(event.message)[1:]
 
@@ -94,7 +93,7 @@ async def record(event: GroupMessageEvent, matcher: Matcher):
     if game.state == GameState.invalid_total_point:
         msg.append(MessageSegment.text(f"\n警告：对局的成绩之和不正确，对此消息回复“{default_cmd_start}结算 <成绩>”指令重新记录你的成绩"))
     send_result = await matcher.send(msg)
-    save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
+    save_context(send_result["message_id"], game_code=game.code)
 
 
 # =============== 撤销结算 ===============
@@ -109,8 +108,7 @@ async def revert_record(event: GroupMessageEvent, matcher: Matcher):
 
     context = get_context(event)
     if context:
-        user_id = context.get("user_id", None)
-        game_code = context["game_code"]
+        game_code = context.get("game_code", None)
 
     args = split_message(event.message)[1:]
 
@@ -132,7 +130,7 @@ async def revert_record(event: GroupMessageEvent, matcher: Matcher):
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n撤销结算成功'))
     send_result = await matcher.send(msg)
-    save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
+    save_context(send_result["message_id"], game_code=game.code)
 
 
 # =============== 设置对局PT ===============
@@ -148,7 +146,7 @@ async def set_record_point(event: GroupMessageEvent, matcher: Matcher):
 
     context = get_context(event)
     if context:
-        game_code = context["game_code"]
+        game_code = context.get("game_code", None)
 
     args = split_message(event.message)[1:]
 
@@ -174,7 +172,7 @@ async def set_record_point(event: GroupMessageEvent, matcher: Matcher):
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n设置PT成功'))
     send_result = await matcher.send(msg)
-    save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
+    save_context(send_result["message_id"], game_code=game.code)
 
 
 # =============== 删除对局 ===============
@@ -191,7 +189,7 @@ async def delete_game(event: GroupMessageEvent, matcher: Matcher):
 
     context = get_context(event)
     if context:
-        game_code = context["game_code"]
+        game_code = context.get("game_code", None)
 
     game_code = matcher.state.get("game_code", game_code)
 
@@ -220,7 +218,7 @@ async def make_game_progress(event: GroupMessageEvent, matcher: Matcher):
 
     context = get_context(event)
     if context:
-        game_code = context["game_code"]
+        game_code = context.get("game_code", None)
 
     args = split_message(event.message)[1:]
     for arg in args:
@@ -268,7 +266,7 @@ async def set_game_comment(event: GroupMessageEvent, matcher: Matcher):
 
     context = get_context(event)
     if context:
-        game_code = context["game_code"]
+        game_code = context.get("game_code", None)
 
     args = split_message(event.message, False)[1:]
     for arg in args:
