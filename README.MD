@@ -1,6 +1,10 @@
 日麻寄分器
 ============
 
+支持适配器：[OneBot V11](https://onebot.adapters.nonebot.dev/)
+
+支持驱动器：[FastAPI](https://v2.nonebot.dev/docs/tutorial/choose-driver)
+
 ## 配置
 
 ### mahjong_scoreboard_database_conn_url
@@ -8,6 +12,14 @@
 数据库连接URL，必须为postgresql+asyncpg
 
 举例：postgresql+asyncpg://username:password@host:5432/database
+
+### mahjong_scoreboard_callback_host
+
+回调HOST，若为非容器环境部署（go-cqhttp与nonebot均运行在同一环境）则无需设置。若为Docker环境部署则设置为Docker容器名。用于上传文件时让go-cqhttp下载本机文件。
+
+### mahjong_scoreboard_callback_port
+
+回调端口，与PORT保持一致即可。
 
 ## 指令
 
