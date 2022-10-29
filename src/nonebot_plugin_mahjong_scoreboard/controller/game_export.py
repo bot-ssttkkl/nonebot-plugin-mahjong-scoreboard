@@ -7,7 +7,7 @@ from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.file_center import send_group_file, send_private_file
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
-    require_unary_text_arg
+    require_parse_unary_text_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_csv_mapper import map_games_as_csv
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
@@ -20,8 +20,7 @@ from nonebot_plugin_mahjong_scoreboard.utils.date import encode_date
 # ========== 导出赛季对局 ==========
 export_season_games_matcher = on_command("导出赛季对局", aliases={"导出对局"}, priority=5)
 
-require_unary_text_arg(export_season_games_matcher, "season_code",
-                       decorator=general_interceptor(export_season_games_matcher))
+require_parse_unary_text_arg(export_season_games_matcher, "season_code")
 require_group_binding_qq(export_season_games_matcher)
 
 

@@ -4,7 +4,7 @@ from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
-    require_parse_single_str_arg, require_str
+    require_parse_unary_text_arg, require_str
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_mapper import map_season
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
@@ -145,7 +145,7 @@ async def new_season_start(event: MessageEvent, matcher: Matcher):
 # ========== 开启赛季 ==========
 start_season_matcher = on_command("开启赛季", priority=5)
 
-require_parse_single_str_arg(start_season_matcher, "season_code")
+require_parse_unary_text_arg(start_season_matcher, "season_code")
 require_group_binding_qq(start_season_matcher, True)
 require_str(start_season_matcher, "season_code", "赛季代号")
 
@@ -217,7 +217,7 @@ async def finish_season_end(event: MessageEvent, matcher: Matcher):
 # ========== 删除赛季 ==========
 remove_season_matcher = on_command("删除赛季", priority=5)
 
-require_parse_single_str_arg(remove_season_matcher, "season_code")
+require_parse_unary_text_arg(remove_season_matcher, "season_code")
 require_group_binding_qq(remove_season_matcher, True)
 require_str(remove_season_matcher, "season_code", "赛季代号")
 

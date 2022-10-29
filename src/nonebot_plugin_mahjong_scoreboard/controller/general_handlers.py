@@ -3,6 +3,7 @@ from typing import Type
 from nonebot.adapters.onebot.v11 import MessageEvent, GroupMessageEvent, Bot, ActionFailed
 from nonebot.internal.matcher import Matcher
 
+from nonebot_plugin_mahjong_scoreboard.controller.context import get_context
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.utils import get_group_info, split_message, \
     parse_int_or_error
@@ -66,32 +67,6 @@ def require_user_binding_qq(matcher_type: Type[Matcher],
     return matcher_type
 
 
-def require_unary_text_arg(matcher_type: Type[Matcher], name: str, *, decorator=None):
-    async def handle(event: MessageEvent, matcher: Matcher):
-        args = split_message(event.message)
-        if len(args) > 1 and args[1].type == 'text':
-            matcher.state[name] = args[1].data["text"]
-
-    if decorator:
-        handle = decorator(handle)
-
-    matcher_type.append_handler(handle)
-    return matcher_type
-
-
-def require_unary_at_arg(matcher_type: Type[Matcher], name: str, *, decorator=None):
-    async def handle(event: MessageEvent, matcher: Matcher):
-        args = split_message(event.message)
-        if len(args) > 1 and args[1].type == 'at':
-            matcher.state[name] = int(args[1].data["qq"])
-
-    if decorator:
-        handle = decorator(handle)
-
-    matcher_type.append_handler(handle)
-    return matcher_type
-
-
 def require_integer(matcher_type: Type[Matcher], arg_name: str, desc: str):
     @matcher_type.handle()
     async def check(matcher: Matcher):
@@ -125,7 +100,7 @@ def require_str(matcher_type: Type[Matcher], arg_name: str, desc: str):
     return matcher_type
 
 
-def require_parse_single_str_arg(matcher_type: Type[Matcher], arg_name: str):
+def require_parse_unary_text_arg(matcher_type: Type[Matcher], arg_name: str):
     @matcher_type.handle()
     @general_interceptor(matcher_type)
     async def parse_args(event: MessageEvent, matcher: Matcher):
@@ -138,5 +113,44 @@ def require_parse_single_str_arg(matcher_type: Type[Matcher], arg_name: str):
 
         if text is not None:
             matcher.state[arg_name] = text
+
+    return matcher_type
+
+
+def require_parse_unary_integer_arg(matcher_type: Type[Matcher], arg_name: str):
+    @matcher_type.handle()
+    @general_interceptor(matcher_type)
+    async def parse_args(event: MessageEvent, matcher: Matcher):
+        text = None
+
+        args = split_message(event.message)[1:]
+        for arg in args:
+            if arg.type == "text":
+                text = arg.data["text"]
+
+        if text is not None:
+            matcher.state[arg_name] = parse_int_or_error(text, arg_name)
+
+    return matcher_type
+
+
+def require_parse_unary_at_arg(matcher_type: Type[Matcher], name: str):
+    @matcher_type.handle()
+    @general_interceptor(matcher_type)
+    async def handle(event: MessageEvent, matcher: Matcher):
+        args = split_message(event.message)
+        if len(args) > 1 and args[1].type == 'at':
+            matcher.state[name] = int(args[1].data["qq"])
+
+    return matcher_type
+
+
+def require_game_code_from_context(matcher_type: Type[Matcher]):
+    @matcher_type.handle()
+    @general_interceptor(matcher_type)
+    async def prepare(event: MessageEvent, matcher: Matcher):
+        context = get_context(event)
+        if context and "game_code" in context:
+            matcher.state["game_code"] = context["game_code"]
 
     return matcher_type

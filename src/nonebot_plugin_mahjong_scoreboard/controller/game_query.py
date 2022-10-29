@@ -4,11 +4,12 @@ from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageSegment
 from nonebot.internal.matcher import Matcher
 
-from nonebot_plugin_mahjong_scoreboard.controller.context import get_context, save_context
-from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_unary_at_arg, require_unary_text_arg
+from nonebot_plugin_mahjong_scoreboard.controller.context import save_context
+from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_parse_unary_at_arg, \
+    require_game_code_from_context, require_parse_unary_integer_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game
-from nonebot_plugin_mahjong_scoreboard.controller.utils import send_group_forward_msg, parse_int_or_error
+from nonebot_plugin_mahjong_scoreboard.controller.utils import send_group_forward_msg
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service import group_service, game_service
 from nonebot_plugin_mahjong_scoreboard.service.game_service import get_user_games, get_group_games
@@ -18,21 +19,16 @@ from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_b
 # =============== 查询对局 ===============
 query_by_code_matcher = on_command("查询对局", aliases={"对局"}, priority=5)
 
-require_unary_text_arg(query_by_code_matcher, "game_code", decorator=general_interceptor(query_by_code_matcher))
+require_game_code_from_context(query_by_code_matcher)
+require_parse_unary_integer_arg(query_by_code_matcher, "game_code")
 
 
 @query_by_code_matcher.handle()
 @general_interceptor(query_by_code_matcher)
 async def query_by_code(event: GroupMessageEvent, matcher: Matcher):
-    game_code = None
-
-    context = get_context(event)
-    if context:
-        game_code = context["game_code"]
-
-    game_code = matcher.state.get("game_code", game_code)
-
-    game_code = parse_int_or_error(game_code, '对局编号')
+    game_code = matcher.state.get("game_code", None)
+    if game_code is None:
+        raise BadRequestError("请指定对局编号")
 
     group = await group_service.get_group_by_binding_qq(event.group_id)
     game = await game_service.get_game_by_code(game_code, group)
@@ -47,8 +43,7 @@ async def query_by_code(event: GroupMessageEvent, matcher: Matcher):
 # ========== 个人最近对局 ==========
 query_user_recent_games_matcher = on_command("个人最近对局", aliases={"最近对局"}, priority=5)
 
-require_unary_at_arg(query_user_recent_games_matcher, "user_id",
-                     decorator=general_interceptor(query_user_recent_games_matcher))
+require_parse_unary_at_arg(query_user_recent_games_matcher, "user_id")
 
 
 @query_user_recent_games_matcher.handle()
@@ -104,8 +99,7 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
 # ========== 个人未完成对局 ==========
 query_user_uncompleted_games_matcher = on_command("个人未完成对局", aliases={"未完成对局"}, priority=5)
 
-require_unary_at_arg(query_user_uncompleted_games_matcher, "user_id",
-                     decorator=general_interceptor(query_user_uncompleted_games_matcher))
+require_parse_unary_at_arg(query_user_uncompleted_games_matcher, "user_id")
 
 
 @query_user_uncompleted_games_matcher.handle()

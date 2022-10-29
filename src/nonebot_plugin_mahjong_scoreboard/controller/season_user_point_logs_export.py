@@ -7,7 +7,7 @@ from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.file_center import send_group_file, send_private_file
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
-    require_parse_single_str_arg
+    require_parse_unary_text_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_logs_csv_mapper import \
     map_season_user_point_change_logs_as_csv
@@ -20,7 +20,7 @@ from nonebot_plugin_mahjong_scoreboard.utils.date import encode_date
 # ========== 导出榜单 ==========
 export_season_ranking_matcher = on_command("导出榜单", priority=5)
 
-require_parse_single_str_arg(export_season_ranking_matcher, "season_code")
+require_parse_unary_text_arg(export_season_ranking_matcher, "season_code")
 require_group_binding_qq(export_season_ranking_matcher)
 
 

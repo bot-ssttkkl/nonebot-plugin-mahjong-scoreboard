@@ -20,8 +20,8 @@ from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_b
 # ========== 查询PT ==========
 query_season_point = on_command("查询PT", aliases={"查询pt", "PT", "pt"}, priority=5)
 
-require_group_binding_qq(set_season_user_point_matcher)
-require_user_binding_qq(set_season_user_point_matcher)
+require_group_binding_qq(query_season_point)
+require_user_binding_qq(query_season_point)
 
 
 @query_season_point.handle()
