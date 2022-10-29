@@ -3,8 +3,9 @@ from nonebot.adapters.onebot.v11 import MessageEvent, Message, MessageSegment
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
-from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, require_unary_text
-from nonebot_plugin_mahjong_scoreboard.controller.interceptor import workflow_interceptor
+from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
+    require_parse_single_str_arg, require_str
+from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_mapper import map_season
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonState
@@ -20,7 +21,7 @@ require_group_binding_qq(new_season_matcher, True)
 
 
 @new_season_matcher.got("code", "赛季代号？")
-@workflow_interceptor(new_season_matcher)
+@general_interceptor(new_season_matcher)
 async def new_season_got_code(matcher: Matcher,
                               raw_arg=ArgPlainText("code")):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
@@ -32,7 +33,7 @@ async def new_season_got_code(matcher: Matcher,
 
 
 @new_season_matcher.got("name", "赛季名称？")
-@workflow_interceptor(new_season_matcher)
+@general_interceptor(new_season_matcher)
 async def new_season_got_name(matcher: Matcher,
                               raw_arg=ArgPlainText("name")):
     matcher.state["name"] = raw_arg
@@ -49,7 +50,7 @@ async def new_season_got_east_game_enabled(matcher: Matcher,
 
 
 @new_season_matcher.got("south_game_horse_point", "半庄战马点？通过空格分割")
-@workflow_interceptor(new_season_matcher)
+@general_interceptor(new_season_matcher)
 async def new_season_got_south_game_horse_point(matcher: Matcher,
                                                 raw_arg=ArgPlainText("south_game_horse_point")):
     if not matcher.state["south_game_enabled"]:
@@ -80,7 +81,7 @@ async def new_season_got_east_game_enabled(matcher: Matcher,
 
 
 @new_season_matcher.got("east_game_horse_point", "东风战马点？通过空格分割")
-@workflow_interceptor(new_season_matcher)
+@general_interceptor(new_season_matcher)
 async def new_season_got_east_game_horse_point(matcher: Matcher,
                                                raw_arg=ArgPlainText("east_game_horse_point")):
     if not matcher.state["east_game_enabled"]:
@@ -98,7 +99,7 @@ async def new_season_got_east_game_horse_point(matcher: Matcher,
 
 
 @new_season_matcher.handle()
-@workflow_interceptor(new_season_matcher)
+@general_interceptor(new_season_matcher)
 async def new_season_confirm(matcher: Matcher):
     season = SeasonOrm(code=matcher.state["code"],
                        name=matcher.state["name"],
@@ -116,7 +117,7 @@ async def new_season_confirm(matcher: Matcher):
 
 
 @new_season_matcher.handle()
-@workflow_interceptor(new_season_matcher)
+@general_interceptor(new_season_matcher)
 async def new_season_handle(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         season = matcher.state["season"]
@@ -129,7 +130,7 @@ async def new_season_handle(event: MessageEvent, matcher: Matcher):
 
 
 @new_season_matcher.handle()
-@workflow_interceptor(new_season_matcher)
+@general_interceptor(new_season_matcher)
 async def new_season_start(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
@@ -144,17 +145,15 @@ async def new_season_start(event: MessageEvent, matcher: Matcher):
 # ========== 开启赛季 ==========
 start_season_matcher = on_command("开启赛季", priority=5)
 
-require_unary_text(start_season_matcher, "season_code",
-                   decorator=workflow_interceptor(start_season_matcher))
+require_parse_single_str_arg(start_season_matcher, "season_code")
 require_group_binding_qq(start_season_matcher, True)
+require_str(start_season_matcher, "season_code", "赛季代号")
 
 
 @start_season_matcher.handle()
-@workflow_interceptor(start_season_matcher)
+@general_interceptor(start_season_matcher)
 async def start_season_matcher_confirm(matcher: Matcher):
-    season_code = matcher.state.get("season_code", None)
-    if season_code is None:
-        raise BadRequestError("请指定赛季代号")
+    season_code = matcher.state["season_code"]
 
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
     season = await season_service.get_season_by_code(season_code, group)
@@ -169,7 +168,7 @@ async def start_season_matcher_confirm(matcher: Matcher):
 
 
 @start_season_matcher.handle()
-@workflow_interceptor(start_season_matcher)
+@general_interceptor(start_season_matcher)
 async def start_season_end(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
@@ -188,7 +187,7 @@ require_group_binding_qq(finish_season_matcher, True)
 
 
 @finish_season_matcher.handle()
-@workflow_interceptor(finish_season_matcher)
+@general_interceptor(finish_season_matcher)
 async def finish_season_confirm(matcher: Matcher):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
     season = await season_service.get_season_by_id(group.running_season_id)
@@ -203,7 +202,7 @@ async def finish_season_confirm(matcher: Matcher):
 
 
 @finish_season_matcher.handle()
-@workflow_interceptor(finish_season_matcher)
+@general_interceptor(finish_season_matcher)
 async def finish_season_end(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season
@@ -218,17 +217,15 @@ async def finish_season_end(event: MessageEvent, matcher: Matcher):
 # ========== 删除赛季 ==========
 remove_season_matcher = on_command("删除赛季", priority=5)
 
-require_unary_text(remove_season_matcher, "season_code",
-                   decorator=workflow_interceptor(remove_season_matcher))
+require_parse_single_str_arg(remove_season_matcher, "season_code")
 require_group_binding_qq(remove_season_matcher, True)
+require_str(remove_season_matcher, "season_code", "赛季代号")
 
 
 @remove_season_matcher.handle()
-@workflow_interceptor(remove_season_matcher)
+@general_interceptor(remove_season_matcher)
 async def remove_season_confirm(matcher: Matcher):
-    season_code = matcher.state.get("season_code", None)
-    if season_code is None:
-        raise BadRequestError("请指定赛季代号")
+    season_code = matcher.state["season_code"]
 
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
     season = await season_service.get_season_by_code(season_code, group)
@@ -247,7 +244,7 @@ async def remove_season_confirm(matcher: Matcher):
 
 
 @remove_season_matcher.handle()
-@workflow_interceptor(remove_season_matcher)
+@general_interceptor(remove_season_matcher)
 async def remove_season_end(event: MessageEvent, matcher: Matcher):
     if event.message.extract_plain_text() == 'y':
         # 因为session不同，所以需要重新获取season

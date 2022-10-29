@@ -5,7 +5,7 @@ from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, Message
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.context import get_context, save_context
-from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_unary_at, require_unary_text
+from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_unary_at_arg, require_unary_text_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game
 from nonebot_plugin_mahjong_scoreboard.controller.utils import send_group_forward_msg, parse_int_or_error
@@ -18,8 +18,7 @@ from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_b
 # =============== 查询对局 ===============
 query_by_code_matcher = on_command("查询对局", aliases={"对局"}, priority=5)
 
-require_unary_text(query_by_code_matcher, "game_code",
-                   decorator=general_interceptor(query_by_code_matcher))
+require_unary_text_arg(query_by_code_matcher, "game_code", decorator=general_interceptor(query_by_code_matcher))
 
 
 @query_by_code_matcher.handle()
@@ -48,8 +47,8 @@ async def query_by_code(event: GroupMessageEvent, matcher: Matcher):
 # ========== 个人最近对局 ==========
 query_user_recent_games_matcher = on_command("个人最近对局", aliases={"最近对局"}, priority=5)
 
-require_unary_at(query_user_recent_games_matcher, "user_id",
-                 decorator=general_interceptor(query_user_recent_games_matcher))
+require_unary_at_arg(query_user_recent_games_matcher, "user_id",
+                     decorator=general_interceptor(query_user_recent_games_matcher))
 
 
 @query_user_recent_games_matcher.handle()
@@ -105,8 +104,8 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
 # ========== 个人未完成对局 ==========
 query_user_uncompleted_games_matcher = on_command("个人未完成对局", aliases={"未完成对局"}, priority=5)
 
-require_unary_at(query_user_uncompleted_games_matcher, "user_id",
-                 decorator=general_interceptor(query_user_uncompleted_games_matcher))
+require_unary_at_arg(query_user_uncompleted_games_matcher, "user_id",
+                     decorator=general_interceptor(query_user_uncompleted_games_matcher))
 
 
 @query_user_uncompleted_games_matcher.handle()

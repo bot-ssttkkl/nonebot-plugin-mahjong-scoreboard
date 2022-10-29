@@ -2,7 +2,8 @@ from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, Message, MessageSegment, MessageEvent, GroupMessageEvent
 from nonebot.internal.matcher import Matcher
 
-from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, require_unary_text
+from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
+    require_parse_single_str_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_mapper import map_season
 from nonebot_plugin_mahjong_scoreboard.controller.utils import send_group_forward_msg, send_private_forward_msg
@@ -13,8 +14,7 @@ from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by
 # ========== 查询赛季 ==========
 query_season_matcher = on_command("查询赛季", aliases={"赛季", "当前赛季"}, priority=5)
 
-require_unary_text(query_season_matcher, "season_code",
-                   decorator=general_interceptor(query_season_matcher))
+require_parse_single_str_arg(query_season_matcher, "season_code")
 require_group_binding_qq(query_season_matcher)
 
 
@@ -40,6 +40,7 @@ async def query_running_season(matcher: Matcher):
 
 # ========== 查询所有赛季 ==========
 query_all_seasons_matcher = on_command("查询所有赛季", aliases={"所有赛季"}, priority=5)
+
 require_group_binding_qq(query_all_seasons_matcher)
 
 

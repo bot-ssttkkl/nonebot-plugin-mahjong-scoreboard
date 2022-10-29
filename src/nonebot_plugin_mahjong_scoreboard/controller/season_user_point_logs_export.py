@@ -2,11 +2,12 @@ from datetime import datetime
 from io import StringIO
 
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot, MessageEvent
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.file_center import send_group_file, send_private_file
-from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, require_unary_text
+from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
+    require_parse_single_str_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_logs_csv_mapper import \
     map_season_user_point_change_logs_as_csv
@@ -19,14 +20,13 @@ from nonebot_plugin_mahjong_scoreboard.utils.date import encode_date
 # ========== 导出榜单 ==========
 export_season_ranking_matcher = on_command("导出榜单", priority=5)
 
-require_unary_text(export_season_ranking_matcher, "season_code",
-                   decorator=general_interceptor(export_season_ranking_matcher))
+require_parse_single_str_arg(export_season_ranking_matcher, "season_code")
 require_group_binding_qq(export_season_ranking_matcher)
 
 
 @export_season_ranking_matcher.handle()
 @general_interceptor(export_season_ranking_matcher)
-async def export_season_ranking(bot: Bot, event: GroupMessageEvent, matcher: Matcher):
+async def export_season_ranking(bot: Bot, event: MessageEvent, matcher: Matcher):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
 
     season_code = matcher.state.get("season_code", None)

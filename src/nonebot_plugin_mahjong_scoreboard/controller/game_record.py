@@ -7,7 +7,7 @@ from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.context import save_context, get_context
-from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_unary_text
+from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_unary_text_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game
 from nonebot_plugin_mahjong_scoreboard.controller.utils import split_message, parse_int_or_error, try_parse_wind
@@ -21,8 +21,7 @@ group_latest_game_code = TTLCache(4096, 7200)
 # =============== 新建对局 ===============
 new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
 
-require_unary_text(new_game_matcher, "player_and_wind",
-                   decorator=general_interceptor(new_game_matcher))
+require_unary_text_arg(new_game_matcher, "player_and_wind", decorator=general_interceptor(new_game_matcher))
 
 
 @new_game_matcher.handle()
@@ -183,8 +182,7 @@ async def set_record_point(event: GroupMessageEvent, matcher: Matcher):
 # =============== 删除对局 ===============
 delete_game_matcher = on_command("删除对局", priority=5)
 
-require_unary_text(delete_game_matcher, "game_code",
-                   decorator=general_interceptor(delete_game_matcher))
+require_unary_text_arg(delete_game_matcher, "game_code", decorator=general_interceptor(delete_game_matcher))
 
 
 @delete_game_matcher.handle()
