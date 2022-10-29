@@ -31,7 +31,7 @@ async def _delete_all_uncompleted_game():
 
     now = datetime.utcnow()
     one_day_ago = now - timedelta(days=1)
-    stmt = (update(GameOrm)
+    stmt = (update(GameOrm, synchronize_session=False)
             .where(GameOrm.state != GameState.completed,
                    GameOrm.create_time > one_day_ago,
                    GameOrm.progress == None)

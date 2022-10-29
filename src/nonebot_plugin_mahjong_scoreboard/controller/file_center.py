@@ -2,7 +2,7 @@ import time
 
 from cachetools import TTLCache
 from fastapi import FastAPI, Path
-from nonebot import get_driver, get_app
+from nonebot import get_app
 from nonebot.adapters.onebot.v11 import Bot
 from starlette.responses import Response
 
@@ -39,10 +39,8 @@ async def send_private_file(bot: Bot, user_id: int, filename: str, data: bytes):
     file_id = time.time_ns()
     files[file_id] = data
 
-    driver = get_driver()
-
     download_result = await bot.download_file(
-        url=f"http://{driver.config.host}:{driver.config.port}/file_center/{file_id}",
+        url=f"http://{conf.mahjong_scoreboard_callback_host}:{conf.mahjong_scoreboard_callback_port}/file_center/{file_id}",
         thread_count=1
     )
 
