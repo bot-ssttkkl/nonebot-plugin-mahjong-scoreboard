@@ -1,7 +1,7 @@
 import re
 from io import StringIO
 
-from nonebot import on_command
+from nonebot import on_command, get_driver
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
 from nonebot.internal.matcher import Matcher
 
@@ -15,6 +15,8 @@ from nonebot_plugin_mahjong_scoreboard.model.enums import PlayerAndWind, GameSta
 from nonebot_plugin_mahjong_scoreboard.service import game_service, group_service, user_service
 
 # =============== 新建对局 ===============
+from nonebot_plugin_mahjong_scoreboard.utils.onebot import default_cmd_start
+
 new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
 
 require_unary_text(new_game_matcher, "player_and_wind",
@@ -38,7 +40,7 @@ async def new_game(event: GroupMessageEvent, matcher: Matcher):
     game = await game_service.new_game(user, group, player_and_wind)
 
     msg = await map_game(game)
-    msg.append(MessageSegment.text('\n\n新建对局成功，对此消息回复“/结算 <成绩>”指令记录你的成绩'))
+    msg.append(MessageSegment.text(f'\n\n新建对局成功，对此消息回复“{default_cmd_start}结算 <成绩>”指令记录你的成绩'))
     send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code)
 
@@ -90,7 +92,7 @@ async def record(event: GroupMessageEvent, matcher: Matcher):
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n结算成功'))
     if game.state == GameState.invalid_total_point:
-        msg.append(MessageSegment.text("\n警告：对局的成绩之和不正确，对此消息回复“/结算 <成绩>”指令重新记录你的成绩"))
+        msg.append(MessageSegment.text(f"\n警告：对局的成绩之和不正确，对此消息回复“{default_cmd_start}结算 <成绩>”指令重新记录你的成绩"))
     send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code, user_id=user_id)
 
