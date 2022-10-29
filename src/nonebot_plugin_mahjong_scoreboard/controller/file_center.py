@@ -6,6 +6,8 @@ from nonebot import get_driver, get_app
 from nonebot.adapters.onebot.v11 import Bot
 from starlette.responses import Response
 
+from nonebot_plugin_mahjong_scoreboard.config import conf
+
 files = TTLCache(maxsize=2 ** 31 - 1, ttl=300)
 
 app: FastAPI = get_app()
@@ -23,10 +25,8 @@ async def send_group_file(bot: Bot, group_id: int, filename: str, data: bytes):
     file_id = time.time_ns()
     files[file_id] = data
 
-    driver = get_driver()
-
     download_result = await bot.download_file(
-        url=f"http://{driver.config.host}:{driver.config.port}/file_center/{file_id}",
+        url=f"http://{conf.mahjong_scoreboard_callback_host}:{conf.mahjong_scoreboard_callback_port}/file_center/{file_id}",
         thread_count=1
     )
 
