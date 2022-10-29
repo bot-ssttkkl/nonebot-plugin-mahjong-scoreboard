@@ -1,7 +1,7 @@
 from cachetools import TTLCache
 from nonebot.adapters.onebot.v11 import MessageEvent
 
-context = TTLCache(maxsize=2 ** 31 - 1, ttl=7200)
+context = TTLCache(maxsize=4096, ttl=7200)
 
 
 def get_context(event: MessageEvent):

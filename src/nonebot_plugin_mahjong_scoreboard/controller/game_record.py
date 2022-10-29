@@ -1,6 +1,7 @@
 import re
 from io import StringIO
 
+from cachetools import TTLCache
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
 from nonebot.internal.matcher import Matcher
@@ -13,9 +14,11 @@ from nonebot_plugin_mahjong_scoreboard.controller.utils import split_message, pa
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import PlayerAndWind, GameState
 from nonebot_plugin_mahjong_scoreboard.service import game_service, group_service, user_service
-# =============== 新建对局 ===============
 from nonebot_plugin_mahjong_scoreboard.utils.onebot import default_cmd_start
 
+group_latest_game_code = TTLCache(4096, 7200)
+
+# =============== 新建对局 ===============
 new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
 
 require_unary_text(new_game_matcher, "player_and_wind",
@@ -41,7 +44,9 @@ async def new_game(event: GroupMessageEvent, matcher: Matcher):
     msg = await map_game(game)
     msg.append(MessageSegment.text(f'\n\n新建对局成功，对此消息回复“{default_cmd_start}结算 <成绩>”指令记录你的成绩'))
     send_result = await matcher.send(msg)
+
     save_context(send_result["message_id"], game_code=game.code)
+    group_latest_game_code[event.group_id] = game.code
 
 
 # =============== 结算 ===============
@@ -52,7 +57,7 @@ record_matcher = on_command("结算对局", aliases={"结算"}, priority=5)
 @general_interceptor(record_matcher)
 async def record(event: GroupMessageEvent, matcher: Matcher):
     user_id = event.user_id
-    game_code = None
+    game_code = group_latest_game_code.get(event.group_id, None)
     score = None
     wind = None
 
@@ -104,7 +109,7 @@ revert_record_matcher = on_command("撤销结算对局", aliases={"撤销结算"
 @general_interceptor(revert_record_matcher)
 async def revert_record(event: GroupMessageEvent, matcher: Matcher):
     user_id = event.user_id
-    game_code = None
+    game_code = group_latest_game_code.get(event.group_id, None)
 
     context = get_context(event)
     if context:
@@ -141,7 +146,7 @@ set_record_point_matcher = on_command("设置对局PT", aliases={"对局PT"}, pr
 @general_interceptor(set_record_point_matcher)
 async def set_record_point(event: GroupMessageEvent, matcher: Matcher):
     user_id = event.user_id
-    game_code = None
+    game_code = group_latest_game_code.get(event.group_id, None)
     point = None
 
     context = get_context(event)
@@ -185,7 +190,7 @@ require_unary_text(delete_game_matcher, "game_code",
 @delete_game_matcher.handle()
 @general_interceptor(delete_game_matcher)
 async def delete_game(event: GroupMessageEvent, matcher: Matcher):
-    game_code = None
+    game_code = None  # 删除对局必须指定编号
 
     context = get_context(event)
     if context:
@@ -211,7 +216,7 @@ round_honba_pattern = r"([东南])([一二三四1234])局([0123456789零一两�
 @make_game_progress_matcher.handle()
 @general_interceptor(make_game_progress_matcher)
 async def make_game_progress(event: GroupMessageEvent, matcher: Matcher):
-    game_code = None
+    game_code = group_latest_game_code.get(event.group_id, None)
     completed = False
     round = None
     honba = None
@@ -261,7 +266,7 @@ set_game_comment_matcher = on_command("设置对局备注", aliases={"对局备�
 @set_game_comment_matcher.handle()
 @general_interceptor(set_game_comment_matcher)
 async def set_game_comment(event: GroupMessageEvent, matcher: Matcher):
-    game_code = None
+    game_code = group_latest_game_code.get(event.group_id, None)
     comment = StringIO()
 
     context = get_context(event)
