@@ -14,7 +14,7 @@ from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_user_nickname
 
 
-async def map_game(game: GameOrm, *, map_promoter: bool = False) -> Message:
+async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
     session = data_source.session()
 
     group = await session.get(GroupOrm, game.group_id)
@@ -36,7 +36,7 @@ async def map_game(game: GameOrm, *, map_promoter: bool = False) -> Message:
             io.write(season.name)
         io.write('\n')
 
-        if map_promoter:
+        if detailed:
             promoter = await session.get(UserOrm, game.promoter_user_id)
             io.write('创建者：')
             io.write(await get_user_nickname(promoter, group))
@@ -47,7 +47,7 @@ async def map_game(game: GameOrm, *, map_promoter: bool = False) -> Message:
         io.write(game_state_mapping[GameState(game.state)])
         io.write('\n')
 
-        if game.complete_time is not None:
+        if detailed and game.complete_time is not None:
             io.write('完成时间：')
             io.write(game.complete_time.strftime(datetime_format))
             io.write('\n')
@@ -71,7 +71,7 @@ async def map_game(game: GameOrm, *, map_promoter: bool = False) -> Message:
 
             # #1 [东]    Player Name    10000  (+5)
             # [...]
-            for i, r in enumerate(sorted(game.records, key=lambda r: r.point, reverse=True)):
+            for i, r in enumerate(sorted(game.records, key=lambda r: (r.point, r.score), reverse=True)):
                 user = await session.get(UserOrm, r.user_id)
                 name = await get_user_nickname(user, group)
                 io.write('#')

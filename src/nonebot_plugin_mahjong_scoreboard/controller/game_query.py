@@ -40,7 +40,7 @@ async def query_by_code(event: GroupMessageEvent, matcher: Matcher):
     if game is None:
         raise BadRequestError("未找到指定对局")
 
-    msg = await map_game(game)
+    msg = await map_game(game, detailed=True)
     send_result = await matcher.send(msg)
     save_context(send_result["message_id"], game_code=game.code)
 
@@ -73,7 +73,7 @@ async def query_user_recent_games(bot: Bot, event: GroupMessageEvent, matcher: M
         ])
         messages = [header]
         for g in games:
-            messages.append(await map_game(g, map_promoter=True))
+            messages.append(await map_game(g, detailed=True))
         await send_group_forward_msg(bot, event.group_id, messages)
     else:
         await matcher.send("你还没有进行过对局")
@@ -96,7 +96,7 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
         header = Message(MessageSegment.text("以下是本群的最近对局"))
         messages = [header]
         for g in games:
-            messages.append(await map_game(g, map_promoter=True))
+            messages.append(await map_game(g, detailed=True))
         await send_group_forward_msg(bot, event.group_id, messages)
     else:
         await matcher.send("本群还没有进行过对局")
@@ -128,7 +128,7 @@ async def query_user_uncompleted_games(bot: Bot, event: GroupMessageEvent, match
 
         messages = [header]
         for g in games:
-            messages.append(await map_game(g, map_promoter=True))
+            messages.append(await map_game(g, detailed=True))
         await send_group_forward_msg(bot, event.group_id, messages)
     else:
         await matcher.send("你还没有未完成的对局")
@@ -148,7 +148,7 @@ async def query_group_uncompleted_games(bot: Bot, event: GroupMessageEvent, matc
         header = Message(MessageSegment.text("以下是本群的未完成对局"))
         messages = [header]
         for g in games:
-            messages.append(await map_game(g, map_promoter=True))
+            messages.append(await map_game(g, detailed=True))
         await send_group_forward_msg(bot, event.group_id, messages)
     else:
         await matcher.send("本群还没有未完成的对局")
