@@ -43,32 +43,32 @@ def map_season(season: SeasonOrm, *, group_info: Optional[dict] = None) -> Messa
 
         # 半庄战：开启
         io.write('半庄战：')
-        if season.south_game_enabled:
+        if season.config["south_game_enabled"]:
             io.write('开启')
         else:
             io.write('关闭')
         io.write('\n')
 
-        if season.south_game_enabled:
+        if season.config["south_game_enabled"]:
             # 半庄战马点：50 30 -10 -30
             io.write('半庄战马点：')
-            for i in season.south_game_horse_point:
+            for i in season.config["south_game_horse_point"]:
                 io.write(str(i))
                 io.write(' ')
             io.write('\n')
 
         # 东风战：关闭
         io.write('东风战：')
-        if season.east_game_enabled:
+        if season.config["east_game_enabled"]:
             io.write('开启')
         else:
             io.write('关闭')
         io.write('\n')
 
-        if season.east_game_enabled:
+        if season.config["east_game_enabled"]:
             # 东风马点：25 15 -5 -15
             io.write('半庄战马点：')
-            for i in season.east_game_horse_point:
+            for i in season.config["east_game_horse_point"]:
                 io.write(str(i))
                 io.write(' ')
             io.write('\n')

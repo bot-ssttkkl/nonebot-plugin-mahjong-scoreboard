@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Column, Integer, DateTime, String, Enum, func, ARRAY, ForeignKey, Boolean, Index
+from sqlalchemy import Column, Integer, DateTime, String, Enum, func, ForeignKey, Boolean, Index, JSON
 from sqlalchemy.orm import relationship
 
 from . import data_source
@@ -30,11 +30,7 @@ class SeasonOrm:
     start_time: Optional[datetime] = Column(DateTime)
     finish_time: Optional[datetime] = Column(DateTime)
 
-    south_game_enabled: bool = Column(Boolean, nullable=False)
-    south_game_horse_point: Optional[List[int]] = Column(ARRAY(Integer, dimensions=1))
-
-    east_game_enabled: bool = Column(Boolean, nullable=False)
-    east_game_horse_point: Optional[List[int]] = Column(ARRAY(Integer, dimensions=1))
+    config: dict = Column(JSON, nullable=False)
 
     accessible: bool = Column(Boolean, nullable=False, default=True)
     create_time: datetime = Column('create_time', DateTime, nullable=False, server_default=func.now())

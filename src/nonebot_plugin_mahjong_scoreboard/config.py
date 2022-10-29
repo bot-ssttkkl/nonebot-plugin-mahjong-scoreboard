@@ -3,7 +3,7 @@ from pydantic import BaseSettings, root_validator
 
 
 class Config(BaseSettings):
-    mahjong_scoreboard_database_conn_url: str
+    mahjong_scoreboard_database_conn_url: str = "sqlite+aiosqlite:///mahjong_scoreboard.db"
 
     mahjong_scoreboard_callback_host: str = "127.0.0.1"
     mahjong_scoreboard_callback_port: int

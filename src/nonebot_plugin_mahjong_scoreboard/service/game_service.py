@@ -61,7 +61,7 @@ async def new_game(promoter: UserOrm,
     if player_and_wind is None:
         if group.running_season_id is not None:
             season = await session.get(SeasonOrm, group.running_season_id)
-            if season.south_game_enabled:
+            if season.config["south_game_enabled"]:
                 player_and_wind = PlayerAndWind.four_men_south
             else:
                 player_and_wind = PlayerAndWind.four_men_east
@@ -70,8 +70,8 @@ async def new_game(promoter: UserOrm,
     else:
         if group.running_season_id is not None:
             season = await session.get(SeasonOrm, group.running_season_id)
-            if player_and_wind == PlayerAndWind.four_men_south and not season.south_game_enabled \
-                    or player_and_wind == PlayerAndWind.four_men_east and not season.east_game_enabled:
+            if player_and_wind == PlayerAndWind.four_men_south and not season.config["south_game_enabled"] \
+                    or player_and_wind == PlayerAndWind.four_men_east and not season.config["east_game_enabled"]:
                 raise BadRequestError("当前赛季未开放此类型对局")
 
     game = GameOrm(code=game_code,
@@ -268,9 +268,9 @@ async def _handle_full_recorded_game(game: GameOrm):
 
     season = await session.get(SeasonOrm, game.season_id)
     if game.player_and_wind == PlayerAndWind.four_men_east:
-        horse_point = season.east_game_horse_point
+        horse_point = season.config["east_game_horse_point"]
     elif game.player_and_wind == PlayerAndWind.four_men_south:
-        horse_point = season.south_game_horse_point
+        horse_point = season.config["south_game_horse_point"]
     else:
         raise ValueError("invalid players and wind")
 

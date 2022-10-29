@@ -9,17 +9,21 @@
 
 ### mahjong_scoreboard_database_conn_url
 
-数据库连接URL，必须为postgresql+asyncpg
+数据库连接URL，必须使用异步SQLAlchemy驱动器。
 
-举例：postgresql+asyncpg://username:password@host:5432/database
+默认值：sqlite+aiosqlite:///mahjong_scoreboard.db
 
 ### mahjong_scoreboard_callback_host
 
-回调HOST，若为非容器环境部署（go-cqhttp与nonebot均运行在同一环境）则无需设置。若为Docker环境部署则设置为Docker容器名。用于上传文件时让go-cqhttp下载本机文件。
+回调HOST，若为非容器环境部署（go-cqhttp与nonebot均运行在同一环境）则保持默认值。若为Docker环境部署则设置为Docker容器名。用于上传文件时让go-cqhttp下载本机文件。
+
+默认值：127.0.0.1
 
 ### mahjong_scoreboard_callback_port
 
-回调端口，与PORT保持一致即可。
+回调端口，保持默认值即可。
+
+默认值：与PORT保持一致即可
 
 ## 指令
 

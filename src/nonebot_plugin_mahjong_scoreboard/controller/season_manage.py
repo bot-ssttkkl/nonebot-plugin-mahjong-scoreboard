@@ -102,10 +102,12 @@ async def new_season_got_east_game_horse_point(matcher: Matcher,
 async def new_season_confirm(matcher: Matcher):
     season = SeasonOrm(code=matcher.state["code"],
                        name=matcher.state["name"],
-                       south_game_enabled=matcher.state["south_game_enabled"],
-                       south_game_horse_point=matcher.state["south_game_horse_point"],
-                       east_game_enabled=matcher.state["east_game_enabled"],
-                       east_game_horse_point=matcher.state["east_game_horse_point"])
+                       config={
+                           "south_game_enabled": matcher.state["south_game_enabled"],
+                           "south_game_horse_point": matcher.state["south_game_horse_point"],
+                           "east_game_enabled": matcher.state["east_game_enabled"],
+                           "east_game_horse_point": matcher.state["east_game_horse_point"]
+                       })
     matcher.state["season"] = season
 
     msg = map_season(season, group_info=matcher.state["group_info"])
