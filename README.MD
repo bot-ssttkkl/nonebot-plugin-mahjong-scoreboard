@@ -1,6 +1,14 @@
 日麻寄分器
 ============
 
+## 配置
+
+### mahjong_scoreboard_database_conn_url
+
+数据库连接URL，必须为postgresql+asyncpg
+
+举例：postgresql+asyncpg://username:password@host:5432/database
+
 ## 指令
 
 ### 对局
