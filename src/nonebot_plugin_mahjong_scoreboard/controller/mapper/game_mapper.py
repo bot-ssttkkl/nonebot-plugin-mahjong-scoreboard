@@ -14,6 +14,21 @@ from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_user_nickname
 
 
+def map_game_progress(progress: GameProgressOrm) -> str:
+    with StringIO() as io:
+        if progress.round <= 4:
+            io.write('东')
+            io.write(digit_mapping[progress.round])
+        else:
+            io.write('南')
+            io.write(digit_mapping[progress.round - 4])
+        io.write('局')
+        io.write(str(progress.honba))
+        io.write('本场')
+
+        return io.getvalue()
+
+
 async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
     session = data_source.session()
 
@@ -59,15 +74,8 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
         progress = await session.get(GameProgressOrm, game.id)
         if progress is not None:
             io.write('进度：')
-            if progress.round <= 4:
-                io.write('东')
-                io.write(digit_mapping[progress.round])
-            else:
-                io.write('南')
-                io.write(digit_mapping[progress.round - 4])
-            io.write('局')
-            io.write(str(progress.honba))
-            io.write('本场\n')
+            io.write(map_game_progress(progress))
+            io.write('\n')
 
         if len(game.records) > 0:
             # [空行]
