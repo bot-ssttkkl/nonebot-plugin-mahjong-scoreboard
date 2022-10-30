@@ -115,9 +115,10 @@ async def parse_record_args(event: GroupMessageEvent, matcher: Matcher):
 async def record(event: GroupMessageEvent, matcher: Matcher):
     user = await user_service.get_user_by_binding_qq(matcher.state["user_binding_qq"])
     group = await group_service.get_group_by_binding_qq(event.group_id)
+    operator = await user_service.get_user_by_binding_qq(event.user_id)
 
     game = await game_service.record_game(matcher.state["game_code"], group, user,
-                                          matcher.state["score"], matcher.state["wind"])
+                                          matcher.state["score"], matcher.state["wind"], operator)
 
     msg = await map_game(game)
     msg.append(MessageSegment.text('\n\n结算成功'))
@@ -344,7 +345,8 @@ async def parse_set_game_comment_args(event: GroupMessageEvent, matcher: Matcher
 @general_interceptor(set_game_comment_matcher)
 async def set_game_comment(event: GroupMessageEvent, matcher: Matcher):
     group = await group_service.get_group_by_binding_qq(event.group_id)
-    game = await game_service.set_game_comment(matcher.state["game_code"], group, matcher.state["comment"])
+    operator = await user_service.get_user_by_binding_qq(event.user_id)
+    game = await game_service.set_game_comment(matcher.state["game_code"], group, matcher.state["comment"], operator)
 
     msg = await map_game(game)
     msg.append(MessageSegment.text("\n\n成功设置对局备注"))
