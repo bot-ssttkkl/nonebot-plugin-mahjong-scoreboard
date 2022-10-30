@@ -45,6 +45,10 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
         # 状态：未完成
         io.write('状态：')
         io.write(game_state_mapping[GameState(game.state)])
+        if game.state == GameState.invalid_total_point:
+            io.write("  （合计")
+            io.write(str(sum(map(lambda r: r.score, game.records))))
+            io.write("点）")
         io.write('\n')
 
         if detailed and game.complete_time is not None:
