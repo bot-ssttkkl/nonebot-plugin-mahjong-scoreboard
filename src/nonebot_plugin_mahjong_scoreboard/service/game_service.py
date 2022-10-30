@@ -461,6 +461,9 @@ async def set_record_point(game_code: int, group: GroupOrm, user: UserOrm, point
     if game.state != GameState.completed:
         raise BadRequestError("这场对局未处于完成状态")
 
+    if game.season_id is None:
+        raise BadRequestError("这场对局不属于赛季")
+
     await revert_season_user_point_by_game(game)
     record.point = point
     await change_season_user_point_by_game(game)
