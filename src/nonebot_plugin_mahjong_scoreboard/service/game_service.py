@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple, overload
 
 import tzlocal
 from nonebot import logger, require
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 
@@ -431,7 +431,9 @@ async def remove_game_progress(game_code: int, group: GroupOrm):
 
     progress = await session.get(GameProgressOrm, game.id)
     if progress is not None:
-        await session.delete(progress)
+        # 不能用session.delete，否则之后session.get还能获取到
+        stmt = delete(GameProgressOrm).where(GameProgressOrm.game_id == game.id)
+        await session.execute(stmt)
 
         if len(game.records) == 4:
             await _handle_full_recorded_game(game)
