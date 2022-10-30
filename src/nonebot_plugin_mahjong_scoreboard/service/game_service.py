@@ -268,8 +268,10 @@ async def _handle_full_recorded_game(game: GameOrm):
     season = await session.get(SeasonOrm, game.season_id)
     if game.player_and_wind == PlayerAndWind.four_men_east:
         horse_point = season.config["east_game_horse_point"]
+        origin_point = season.config["east_game_origin_point"]
     elif game.player_and_wind == PlayerAndWind.four_men_south:
         horse_point = season.config["south_game_horse_point"]
+        origin_point = season.config["south_game_origin_point"]
     else:
         raise ValueError("invalid players and wind")
 
@@ -278,7 +280,6 @@ async def _handle_full_recorded_game(game: GameOrm):
     indexed_record.sort(key=lambda tup: tup[0].score, reverse=True)
 
     # 处理同分
-    # TODO：动态配置
     # 四人幸终
     if indexed_record[0][0].score == indexed_record[1][0].score == \
             indexed_record[2][0].score == indexed_record[3][0].score:
@@ -304,9 +305,8 @@ async def _handle_full_recorded_game(game: GameOrm):
         _divide_horse_point(indexed_record, horse_point, 2, 3)
 
     for i, (r, j) in enumerate(indexed_record):
-        # 30000返，1000点=1pt，切上
-        # TODO: 动态配置
-        r.point = horse_point[i] + ceil((r.score - 30000) / 1000)
+        # （点数-返点+马点）/1000，切上
+        r.point = horse_point[i] + ceil((r.score - origin_point) / 1000)
 
     await change_season_user_point_by_game(game)
 

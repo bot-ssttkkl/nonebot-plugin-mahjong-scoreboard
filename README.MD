@@ -9,27 +9,27 @@
 
 为群友提供对局分数记录。根据赛季马点进行PT精算，并统计赛季榜单。
 
-PT精算算法为25000起，30000返，1000点=1pt，再根据赛季配置的马点进行额外增减。
+PT精算算法为（点数-返点+马点）/1000，返点和马点在创建赛季时进行设置。
 
 ## 指令
 
-以下指令格式中，以<>包裹的表示一个参数，以[]包裹的表示一个可选项。参数可通过任意顺序提供。
+为群友提供日麻对局分数记录。根据马点进行PT精算，统计PT增减，支持对局与榜单查询与导出。
 
 ### 对局
 
 - `/新建对局 [四人南|四人东]`
-  - 别名：`/新对局`
+    - 别名：`/新对局`
 - `/结算对局 <成绩> [对局<编号>] [@<用户>] [<自风>]`
-  - 别名：`/结算`
+    - 别名：`/结算`
 - `/撤销结算对局 [对局<编号>] [@<用户>]`
-  - 别名：`/撤销结算`
+    - 别名：`/撤销结算`
 - `/设置对局PT <PT> [对局<编号>] [@<用户>]`
-  - 别名：`/对局PT`
+    - 别名：`/对局PT`
 - `/删除对局 [对局<编号>]`
 - `/设置对局进度 <进度> [对局<编号>]`
-  - 别名：`/对局进度`
+    - 别名：`/对局进度`
 - `/设置对局备注 [对局<编号>] <对局备注>`
-  - 别名：`/对局备注`
+    - 别名：`/对局备注`
 
 与对局相关的指令可以省略对局编号，省略时默认对最近新建的对局进行操作。也可以通过回复Bot发出的对局消息来代替指定对局编号。
 
@@ -40,38 +40,37 @@ PT精算算法为25000起，30000返，1000点=1pt，再根据赛季配置的马
 ### 对局查询
 
 - `/查询对局 [<编号>]`
-  - 别名：`/对局`
+    - 别名：`/对局`
 - `/个人最近对局 [@<用户>]`
-  - 别名：`/最近对局`
+    - 别名：`/最近对局`
 - `/群最近对局`
 - `/个人未完成对局 [@<用户>]`
-  - 别名：`/未完成对局`
+    - 别名：`/未完成对局`
 - `/群未完成对局`
 - `/导出赛季对局 [<代号>]`
-  - 别名：`/导出对局`
+    - 别名：`/导出对局`
 - `/导出所有对局`
 
 ### 赛季
 
 - `/查询赛季 [<代号>]`
-  - 别名：`/赛季`，`/当前赛季`
+    - 别名：`/赛季`，`/当前赛季`
 - `/查询所有赛季`
-  - 别名：`/所有赛季`
+    - 别名：`/所有赛季`
 - `/新建赛季`
-  - 别名：`/新赛季`
+    - 别名：`/新赛季`
 - `/开启赛季 [<代号>]`
 - `/结束赛季`
 - `/删除赛季 [<代号>]`
 
-
 ### 赛季PT
 
 - `/设置赛季PT <PT> [@<用户>]`
-  - 别名：`/设置PT`，`/设置赛季pt`，`/设置pt`
+    - 别名：`/设置PT`，`/设置赛季pt`，`/设置pt`
 - `/查询PT [@<用户>]`
-  - 别名：`/PT`
+    - 别名：`/PT`
 - `/查询榜单`
-  - 别名：`/榜单`
+    - 别名：`/榜单`
 - `/导出榜单`
 
 与赛季/赛季PT相关的指令均可通过私聊/群聊两种方式使用。当未指定参数时进入问答模式，回复`/q`可退出问答模式。
@@ -101,19 +100,19 @@ PT精算算法为25000起，30000返，1000点=1pt，再根据赛季配置的马
 ## LICENSE
 
 > MIT License
-> 
+>
 > Copyright (c) 2022 ssttkkl
-> 
+>
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
 > in the Software without restriction, including without limitation the rights
 > to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 > copies of the Software, and to permit persons to whom the Software is
 > furnished to do so, subject to the following conditions:
-> 
+>
 > The above copyright notice and this permission notice shall be included in all
 > copies or substantial portions of the Software.
-> 
+>
 > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 > IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 > FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE

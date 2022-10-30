@@ -7,6 +7,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import requir
     require_parse_unary_text_arg, require_str
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_mapper import map_season
+from nonebot_plugin_mahjong_scoreboard.controller.utils import parse_int_or_reject
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonState
 from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm
@@ -40,13 +41,27 @@ async def new_season_got_name(matcher: Matcher,
 
 
 @new_season_matcher.got("south_game_enabled", "是否开启半庄战？(y/n)")
+@general_interceptor(new_season_matcher)
 async def new_season_got_east_game_enabled(matcher: Matcher,
                                            raw_arg=ArgPlainText("south_game_enabled")):
     if raw_arg == 'y':
         matcher.state["south_game_enabled"] = True
     else:
         matcher.state["south_game_enabled"] = False
+        matcher.set_arg("south_game_origin_point", Message())
         matcher.set_arg("south_game_horse_point", Message())
+
+
+@new_season_matcher.got("south_game_origin_point", "半庄战返点？")
+@general_interceptor(new_season_matcher)
+async def new_season_got_south_game_origin_point(matcher: Matcher,
+                                                 raw_arg=ArgPlainText("south_game_origin_point")):
+    if not matcher.state["south_game_enabled"]:
+        matcher.state["south_game_origin_point"] = None
+        return
+
+    pt = await parse_int_or_reject(raw_arg, "半庄战原点")
+    matcher.state["south_game_origin_point"] = pt
 
 
 @new_season_matcher.got("south_game_horse_point", "半庄战马点？通过空格分割")
@@ -68,16 +83,30 @@ async def new_season_got_south_game_horse_point(matcher: Matcher,
 
 
 @new_season_matcher.got("east_game_enabled", "是否开启东风战？(y/n)")
+@general_interceptor(new_season_matcher)
 async def new_season_got_east_game_enabled(matcher: Matcher,
                                            raw_arg=ArgPlainText("east_game_enabled")):
     if raw_arg == 'y':
         matcher.state["east_game_enabled"] = True
     else:
         matcher.state["east_game_enabled"] = False
+        matcher.set_arg("east_game_origin_point", Message())
         matcher.set_arg("east_game_horse_point", Message())
 
     if not matcher.state["south_game_enabled"] and not matcher.state["east_game_enabled"]:
         raise BadRequestError("半庄战、东风战至少需要开启一种")
+
+
+@new_season_matcher.got("east_game_origin_point", "东风战返点？")
+@general_interceptor(new_season_matcher)
+async def new_season_got_south_game_origin_point(matcher: Matcher,
+                                                 raw_arg=ArgPlainText("east_game_origin_point")):
+    if not matcher.state["east_game_enabled"]:
+        matcher.state["east_game_origin_point"] = None
+        return
+
+    pt = await parse_int_or_reject(raw_arg, "东风战原点")
+    matcher.state["east_game_origin_point"] = pt
 
 
 @new_season_matcher.got("east_game_horse_point", "东风战马点？通过空格分割")
@@ -105,9 +134,11 @@ async def new_season_confirm(matcher: Matcher):
                        name=matcher.state["name"],
                        config={
                            "south_game_enabled": matcher.state["south_game_enabled"],
-                           "south_game_horse_point": matcher.state["south_game_horse_point"],
+                           "south_game_origin_point": matcher.state.get("south_game_origin_point"),
+                           "south_game_horse_point": matcher.state.get("south_game_horse_point"),
                            "east_game_enabled": matcher.state["east_game_enabled"],
-                           "east_game_horse_point": matcher.state["east_game_horse_point"]
+                           "east_game_origin_point": matcher.state.get("east_game_origin_point"),
+                           "east_game_horse_point": matcher.state.get("east_game_horse_point")
                        })
     matcher.state["season"] = season
 

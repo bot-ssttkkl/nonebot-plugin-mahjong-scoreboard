@@ -41,36 +41,30 @@ def map_season(season: SeasonOrm, *, group_info: Optional[dict] = None) -> Messa
             io.write(season.finish_time.strftime(datetime_format))
             io.write('\n')
 
-        # 半庄战：开启
+        # 半庄战：返点：30000  马点：50 30 -10 -30
         io.write('半庄战：')
         if season.config["south_game_enabled"]:
-            io.write('开启')
-        else:
-            io.write('关闭')
-        io.write('\n')
-
-        if season.config["south_game_enabled"]:
-            # 半庄战马点：50 30 -10 -30
-            io.write('半庄战马点：')
+            io.write('返点：')
+            io.write(str(season.config["south_game_origin_point"]))
+            io.write(' 马点：')
             for i in season.config["south_game_horse_point"]:
                 io.write(str(i))
                 io.write(' ')
-            io.write('\n')
+        else:
+            io.write('关闭')
+        io.write('\n')
 
         # 东风战：关闭
         io.write('东风战：')
         if season.config["east_game_enabled"]:
-            io.write('开启')
-        else:
-            io.write('关闭')
-        io.write('\n')
-
-        if season.config["east_game_enabled"]:
-            # 东风马点：25 15 -5 -15
-            io.write('半庄战马点：')
+            io.write('返点：')
+            io.write(str(season.config["east_game_origin_point"]))
+            io.write(' 马点：')
             for i in season.config["east_game_horse_point"]:
                 io.write(str(i))
                 io.write(' ')
-            io.write('\n')
+        else:
+            io.write('关闭')
+        io.write('\n')
 
         return Message(MessageSegment.text(io.getvalue().strip()))
