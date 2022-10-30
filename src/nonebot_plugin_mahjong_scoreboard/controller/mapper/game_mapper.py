@@ -66,7 +66,7 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
             io.write("点）")
         io.write('\n')
 
-        if detailed and game.complete_time is not None:
+        if detailed and game.state == GameState.completed:
             io.write('完成时间：')
             io.write(game.complete_time.strftime(datetime_format))
             io.write('\n')

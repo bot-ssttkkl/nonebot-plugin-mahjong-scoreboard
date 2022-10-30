@@ -31,11 +31,12 @@ async def _delete_all_uncompleted_game():
 
     now = datetime.utcnow()
     one_day_ago = now - timedelta(days=1)
-    stmt = (update(GameOrm, synchronize_session=False)
+    stmt = (update(GameOrm)
             .where(GameOrm.state != GameState.completed,
                    GameOrm.create_time > one_day_ago,
                    GameOrm.progress == None)
-            .values(accesible=False, delete_time=now, update_time=now))
+            .values(accesible=False, delete_time=now, update_time=now)
+            .execution_options(synchronize_session=False))
     result = await session.execute(stmt)
     await session.commit()
     logger.success(f"deleted {result.rowcount} outdated uncompleted game(s)")
@@ -368,7 +369,7 @@ async def delete_game(game_code: int,
 
     await _ensure_updatable(game)
 
-    if not is_group_admin(operator, group):
+    if not await is_group_admin(operator, group):
         raise BadRequestError("需要管理员权限进行该操作")
 
     if game.state == GameState.completed and game.season_id:
