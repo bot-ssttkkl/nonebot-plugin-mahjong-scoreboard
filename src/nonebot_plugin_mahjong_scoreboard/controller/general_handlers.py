@@ -45,7 +45,7 @@ def require_user_binding_qq(matcher_type: Type[Matcher],
         @general_interceptor(matcher_type)
         async def prepare(event: MessageEvent, matcher: Matcher):
             if isinstance(event, GroupMessageEvent):
-                matcher.state["user_binding_qq"] = event.user_id
+                matcher.state.setdefault("user_binding_qq", event.user_id)
 
     require_integer(matcher_type, "user_binding_qq", "用户QQ号")
 
@@ -61,8 +61,6 @@ def require_user_binding_qq(matcher_type: Type[Matcher],
                 matcher.state["member_info"] = member_info
             except ActionFailed:
                 raise BadRequestError("该成员不在群中")
-
-        matcher.state["user_binding_qq"] = user_binding_qq
 
     return matcher_type
 

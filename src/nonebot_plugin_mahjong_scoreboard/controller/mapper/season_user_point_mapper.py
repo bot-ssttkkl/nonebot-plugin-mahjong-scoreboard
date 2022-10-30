@@ -66,6 +66,7 @@ async def map_season_user_points(season: SeasonOrm, sups: List[SeasonUserPointOr
 
     group = await session.get(GroupOrm, season.group_id)
 
+    rank = 1
     for i, sup in enumerate(sups):
         user = await session.get(UserOrm, sup.user_id)
         name = await get_user_nickname(user, group)
@@ -77,7 +78,11 @@ async def map_season_user_points(season: SeasonOrm, sups: List[SeasonUserPointOr
             point_text = '±'
         point_text += str(sup.point)
 
-        line = f"#{i + 1}  {name}    {point_text}\n"
+        # 同分同名次
+        if i > 0 and sup.point != sups[i - 1].point:
+            rank = i + 1
+
+        line = f"#{rank}  {name}    {point_text}\n"
         pending_message.write(line)
         pending += 1
 

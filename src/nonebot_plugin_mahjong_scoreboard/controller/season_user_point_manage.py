@@ -1,6 +1,6 @@
 # ========== 设置赛季PT ==========
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import MessageSegment, MessageEvent, Message
+from nonebot.adapters.onebot.v11 import MessageSegment, MessageEvent
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
@@ -32,12 +32,10 @@ async def parse_args(event: MessageEvent, matcher: Matcher):
 
     if user_id is not None:
         matcher.state["user_binding_qq"] = user_id
-        matcher.set_arg("user_binding_qq", Message(MessageSegment.text(str(user_id))))
 
     if point is not None:
         point = parse_int_or_error(point, "PT")
         matcher.state["point"] = point
-        matcher.set_arg("point", Message(MessageSegment.text(str(point))))
 
 
 require_group_binding_qq(set_season_user_point_matcher)
