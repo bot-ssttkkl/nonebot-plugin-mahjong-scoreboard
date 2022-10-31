@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple, overload
 import tzlocal
 from nonebot import logger, require
 from sqlalchemy import select, update, delete
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 
@@ -27,19 +28,19 @@ from nonebot_plugin_apscheduler import scheduler
 
 @scheduler.scheduled_job("cron", hour="*/2", id="delete_all_uncompleted_game")
 async def _delete_all_uncompleted_game():
-    session = data_source.session()
-
-    now = datetime.utcnow()
-    one_day_ago = now - timedelta(days=1)
-    stmt = (update(GameOrm)
-            .where(GameOrm.state != GameState.completed,
-                   GameOrm.create_time > one_day_ago,
-                   GameOrm.progress == None)
-            .values(accesible=False, delete_time=now, update_time=now)
-            .execution_options(synchronize_session=False))
-    result = await session.execute(stmt)
-    await session.commit()
-    logger.success(f"deleted {result.rowcount} outdated uncompleted game(s)")
+    async with AsyncSession(data_source.engine) as session:
+        now = datetime.utcnow()
+        one_day_ago = now - timedelta(days=1)
+        stmt = (update(GameOrm)
+                .where(GameOrm.state != GameState.completed,
+                       GameOrm.create_time > one_day_ago,
+                       GameOrm.progress == None,
+                       GameOrm.accessible)
+                .values(accesible=False, delete_time=now, update_time=now)
+                .execution_options(synchronize_session=False))
+        result = await session.execute(stmt)
+        await session.commit()
+        logger.success(f"deleted {result.rowcount} outdated uncompleted game(s)")
 
 
 async def new_game(promoter: UserOrm,
@@ -385,8 +386,9 @@ async def delete_uncompleted_season_games(season: SeasonOrm):
     session = data_source.session()
     now = datetime.utcnow()
     stmt = (update(GameOrm)
-            .where(GameOrm.season == season, GameOrm.state != GameState.completed)
-            .values(accesible=False, delete_time=now, update_time=now))
+            .where(GameOrm.season == season, GameOrm.state != GameState.completed, GameOrm.accessible)
+            .values(accesible=False, delete_time=now, update_time=now)
+            .execution_options(synchronize_session=False))
     await session.execute(stmt)
     await session.commit()
 
