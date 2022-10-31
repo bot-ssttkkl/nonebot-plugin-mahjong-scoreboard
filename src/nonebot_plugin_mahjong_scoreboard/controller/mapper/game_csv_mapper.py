@@ -1,8 +1,8 @@
 import csv
 from typing import TextIO, Iterable
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import datetime_format, game_state_mapping, \
-    player_and_wind_mapping
+from nonebot_plugin_mahjong_scoreboard.controller.mapper import game_state_mapping, \
+    player_and_wind_mapping, map_datetime
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game_progress
 from nonebot_plugin_mahjong_scoreboard.model.enums import GameState
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
@@ -31,7 +31,9 @@ async def map_games_as_csv(f: TextIO, games: Iterable[GameOrm]):
         ]
 
         if g.state == GameState.completed:
-            row.append(g.complete_time.strftime(datetime_format))
+            row.append(map_datetime(g.complete_time))
+        else:
+            row.append("")
 
         group = await session.get(GroupOrm, g.group_id)
 

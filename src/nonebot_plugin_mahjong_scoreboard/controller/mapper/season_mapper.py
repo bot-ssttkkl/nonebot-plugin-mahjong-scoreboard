@@ -3,7 +3,7 @@ from typing import Optional
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping, datetime_format
+from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping, datetime_format, map_datetime
 from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm
 
 
@@ -33,12 +33,12 @@ def map_season(season: SeasonOrm, *, group_info: Optional[dict] = None) -> Messa
 
         if season.start_time:
             io.write('开始时间：')
-            io.write(season.start_time.strftime(datetime_format))
+            io.write(map_datetime(season.start_time))
             io.write('\n')
 
         if season.finish_time:
             io.write('结束时间：')
-            io.write(season.finish_time.strftime(datetime_format))
+            io.write(map_datetime(season.finish_time))
             io.write('\n')
 
         # 半庄战：返点：30000  马点：50 30 -10 -30

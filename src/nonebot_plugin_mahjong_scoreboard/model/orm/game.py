@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, TYPE_CHECKING, Optional
 
-from sqlalchemy import Column, Integer, Enum, DateTime, func, Boolean, ForeignKey, Text, Index
+from sqlalchemy import Column, Integer, Enum, DateTime, Boolean, ForeignKey, Text, Index
 from sqlalchemy.orm import relationship
 
 from nonebot_plugin_mahjong_scoreboard.model.enums import Wind
@@ -49,8 +49,8 @@ class GameOrm:
     comment: Optional[str] = Column(Text)
 
     accessible: bool = Column(Boolean, nullable=False, default=True)
-    create_time: datetime = Column(DateTime, nullable=False, server_default=func.now())
-    update_time: datetime = Column(DateTime, nullable=False, server_default=func.now())
+    create_time: datetime = Column(DateTime, nullable=False, default=datetime.utcnow)
+    update_time: datetime = Column(DateTime, nullable=False, default=datetime.utcnow)
     delete_time: Optional[datetime] = Column(DateTime)
 
     __table_args__ = (

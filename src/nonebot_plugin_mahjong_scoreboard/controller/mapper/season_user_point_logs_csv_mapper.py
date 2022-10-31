@@ -1,7 +1,7 @@
 import csv
 from typing import TextIO, Iterable, List
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import datetime_format
+from nonebot_plugin_mahjong_scoreboard.controller.mapper import map_datetime
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonUserPointChangeType
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
 from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameOrm
@@ -47,7 +47,7 @@ async def map_season_user_point_change_logs_as_csv(f: TextIO, logs: Iterable[Sea
 
             user_point[user.id] = user_point.get(user.id, 0) + log.change_point
         elif log.change_type == SeasonUserPointChangeType.manually:
-            header.append(f"手动设置 （{log.create_time.strftime(datetime_format)}）")
+            header.append(f"手动设置 {map_datetime(log.create_time)}")
 
             _ensure_size(table[user_idx[user.id]], len(header), '')
             table[user_idx[user.id]][-1] = str(log.change_point)

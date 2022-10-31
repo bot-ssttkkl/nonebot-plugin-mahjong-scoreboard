@@ -33,10 +33,10 @@ async def _delete_all_uncompleted_game():
         one_day_ago = now - timedelta(days=1)
         stmt = (update(GameOrm)
                 .where(GameOrm.state != GameState.completed,
-                       GameOrm.create_time > one_day_ago,
+                       GameOrm.create_time < one_day_ago,
                        GameOrm.progress == None,
                        GameOrm.accessible)
-                .values(accesible=False, delete_time=now, update_time=now)
+                .values(accessible=False, delete_time=now, update_time=now)
                 .execution_options(synchronize_session=False))
         result = await session.execute(stmt)
         await session.commit()

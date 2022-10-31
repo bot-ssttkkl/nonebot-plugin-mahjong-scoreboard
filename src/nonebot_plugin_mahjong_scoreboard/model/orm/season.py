@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Column, Integer, DateTime, String, Enum, func, ForeignKey, Boolean, Index, JSON
+from sqlalchemy import Column, Integer, DateTime, String, Enum, ForeignKey, Boolean, Index, JSON
 from sqlalchemy.orm import relationship
 
 from . import data_source
@@ -33,8 +33,8 @@ class SeasonOrm:
     config: dict = Column(JSON, nullable=False)
 
     accessible: bool = Column(Boolean, nullable=False, default=True)
-    create_time: datetime = Column('create_time', DateTime, nullable=False, server_default=func.now())
-    update_time: datetime = Column('update_time', DateTime, nullable=False, server_default=func.now())
+    create_time: datetime = Column('create_time', DateTime, nullable=False, default=datetime.utcnow)
+    update_time: datetime = Column('update_time', DateTime, nullable=False, default=datetime.utcnow)
     delete_time: Optional[datetime] = Column('delete_time', DateTime)
 
     __table_args__ = (
@@ -54,8 +54,8 @@ class SeasonUserPointOrm:
 
     point: int = Column(Integer, nullable=False, default=0)
 
-    create_time: datetime = Column('create_time', DateTime, nullable=False, server_default=func.now())
-    update_time: datetime = Column('update_time', DateTime, nullable=False, server_default=func.now())
+    create_time: datetime = Column('create_time', DateTime, nullable=False, default=datetime.utcnow)
+    update_time: datetime = Column('update_time', DateTime, nullable=False, default=datetime.utcnow)
 
 
 @data_source.registry.mapped
@@ -77,7 +77,7 @@ class SeasonUserPointChangeLogOrm:
     related_game: Optional['GameOrm'] = relationship('GameOrm',
                                                      foreign_keys='SeasonUserPointChangeLogOrm.related_game_id')
 
-    create_time: datetime = Column('create_time', DateTime, nullable=False, server_default=func.now())
+    create_time: datetime = Column('create_time', DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (
         Index("seasons_related_game_id_idx", "related_game_id"),

@@ -3,8 +3,8 @@ from io import StringIO
 from nonebot.adapters.onebot.v11 import MessageSegment, Message
 
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import player_and_wind_mapping, game_state_mapping, \
-    datetime_format, digit_mapping, \
-    wind_mapping
+    digit_mapping, \
+    wind_mapping, map_datetime
 from nonebot_plugin_mahjong_scoreboard.model.enums import GameState
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
 from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameOrm, GameProgressOrm
@@ -68,7 +68,7 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
 
         if detailed and game.state == GameState.completed:
             io.write('完成时间：')
-            io.write(game.complete_time.strftime(datetime_format))
+            io.write(map_datetime(game.complete_time))
             io.write('\n')
 
         progress = await session.get(GameProgressOrm, game.id)
