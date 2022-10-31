@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import pytz
 import tzlocal
 
 from nonebot_plugin_mahjong_scoreboard.model.enums import PlayerAndWind, GameState, SeasonState, Wind
@@ -39,4 +40,6 @@ datetime_format = '%Y-%m-%d %H:%M'
 
 
 def map_datetime(dt: datetime):
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=pytz.utc)
     return dt.astimezone(tzlocal.get_localzone()).strftime(datetime_format)
