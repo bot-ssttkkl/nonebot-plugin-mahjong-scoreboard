@@ -196,7 +196,7 @@ async def _ensure_updatable(game: GameOrm):
 
 async def _ensure_permission(game: GameOrm, group: GroupOrm, operator: UserOrm):
     if game.state == GameState.completed:
-        completed_before_24h = datetime.now() - game.complete_time >= timedelta(days=1)
+        completed_before_24h = datetime.utcnow() - game.complete_time >= timedelta(days=1)
 
         if not completed_before_24h or await is_group_admin(operator, group):
             return
@@ -260,7 +260,7 @@ async def _handle_full_recorded_game(game: GameOrm):
         return
 
     game.state = GameState.completed
-    game.complete_time = datetime.now()
+    game.complete_time = datetime.utcnow()
 
     # 计算pt
     if not game.season_id:
@@ -377,8 +377,8 @@ async def delete_game(game_code: int,
         await revert_season_user_point_by_game(game)
 
     game.accessible = False
-    game.delete_time = datetime.now()
-    game.update_time = datetime.now()
+    game.delete_time = datetime.utcnow()
+    game.update_time = datetime.utcnow()
     await session.commit()
 
 

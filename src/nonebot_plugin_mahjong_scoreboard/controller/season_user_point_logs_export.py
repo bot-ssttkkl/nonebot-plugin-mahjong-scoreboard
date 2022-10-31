@@ -1,6 +1,7 @@
 from datetime import datetime
 from io import StringIO
 
+import tzlocal
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot, MessageEvent
 from nonebot.internal.matcher import Matcher
@@ -46,7 +47,7 @@ async def export_season_ranking(bot: Bot, event: MessageEvent, matcher: Matcher)
     if season.state == SeasonState.finished:
         filename += "（已结束）"
     else:
-        now = datetime.now()
+        now = datetime.now(tzlocal.get_localzone())
         filename += f"（截至{encode_date(now)}）"
     filename += ".csv"
 
