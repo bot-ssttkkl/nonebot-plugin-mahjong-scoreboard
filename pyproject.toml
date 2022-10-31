@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nonebot-plugin-mahjong-scoreboard"
-version = "0.1.5"
+version = "0.1.6"
 description = "日麻寄分器（NoneBot插件）"
 authors = ["ssttkkl <huang.wen.long@hotmail.com>"]
 readme = "README.md"
@@ -20,7 +20,7 @@ tzlocal = "^4.2"
 nonebot_plugin_apscheduler = "^0.2.0"
 cachetools = "^5.2.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 nonebug = "^0.2.1"
 flake8 = "^5.0.4"
 sqlalchemy2-stubs = "^0.0.2a29"
