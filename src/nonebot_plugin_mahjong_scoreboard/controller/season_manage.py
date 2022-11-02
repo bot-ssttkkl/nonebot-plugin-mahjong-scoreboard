@@ -1,3 +1,5 @@
+import re
+
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import MessageEvent, Message, MessageSegment
 from nonebot.internal.matcher import Matcher
@@ -25,6 +27,10 @@ require_group_binding_qq(new_season_matcher, True)
 @general_interceptor(new_season_matcher)
 async def new_season_got_code(matcher: Matcher,
                               raw_arg=ArgPlainText("code")):
+    match_result = re.match(r"[_a-zA-Z][_a-zA-Z0-9]*", raw_arg)
+    if match_result is None:
+        await matcher.reject("赛季代号不合法。请重新输入。（赛季代号只允许包含字母、数字和下划线，且必须以字母或下划线开头）")
+
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
     season = await season_service.get_season_by_code(raw_arg, group)
     if season is not None:
