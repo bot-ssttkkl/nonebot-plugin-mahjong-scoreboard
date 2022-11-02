@@ -92,10 +92,13 @@ def _build_game_query(stmt: Select,
                       *, offset: Optional[int] = None,
                       limit: Optional[int] = None,
                       uncompleted_only: bool = False,
+                      completed_only: bool = False,
                       reverse_order: bool = False,
                       time_span: Optional[Tuple[datetime, datetime]] = None):
     if uncompleted_only:
         stmt.append_whereclause(GameOrm.state != GameState.completed)
+    elif completed_only:
+        stmt.append_whereclause(GameOrm.state == GameState.completed)
 
     if reverse_order:
         stmt = stmt.order_by(GameOrm.id.desc())
@@ -126,60 +129,35 @@ async def get_game_by_code(game_code: int, group: GroupOrm) -> Optional[GameOrm]
 
 
 @overload
-async def get_user_games(group: GroupOrm, user: UserOrm,
-                         *, uncompleted_only: bool = False,
-                         offset: Optional[int] = None,
-                         limit: Optional[int] = None,
-                         reverse_order: bool = False,
-                         time_span: Optional[Tuple[datetime, datetime]] = None) -> List[GameOrm]:
+async def get_games(group: Optional[GroupOrm] = ...,
+                    user: Optional[UserOrm] = ...,
+                    season: Optional[SeasonOrm] = ...,
+                    *, uncompleted_only: bool = False,
+                    completed_only: bool = False,
+                    offset: Optional[int] = None,
+                    limit: Optional[int] = None,
+                    reverse_order: bool = False,
+                    time_span: Optional[Tuple[datetime, datetime]] = None) -> List[GameOrm]:
     ...
 
 
-async def get_user_games(group: GroupOrm, user: UserOrm, **kwargs) -> List[GameOrm]:
+async def get_games(group: Optional[GroupOrm] = None,
+                    user: Optional[UserOrm] = None,
+                    season: Optional[SeasonOrm] = None,
+                    **kwargs) -> List[GameOrm]:
     session = data_source.session()
 
-    stmt = (select(GameOrm).join(GameRecordOrm)
-            .where(GameOrm.group == group, GameRecordOrm.user == user))
-    stmt = _build_game_query(stmt, **kwargs)
+    stmt = select(GameOrm)
 
-    result = await session.execute(stmt)
-    return [row[0] for row in result]
+    if group is not None:
+        stmt = stmt.where(GameOrm.group == group)
 
+    if user is not None:
+        stmt = stmt.join(GameRecordOrm).where(GameRecordOrm.user == user)
 
-@overload
-async def get_group_games(group: GroupOrm,
-                          *, uncompleted_only: bool = False,
-                          offset: Optional[int] = None,
-                          limit: Optional[int] = None,
-                          reverse_order: bool = False,
-                          time_span: Optional[Tuple[datetime, datetime]] = None) -> List[GameOrm]:
-    ...
+    if season is not None:
+        stmt.append_whereclause(GameOrm.season == season)
 
-
-async def get_group_games(group: GroupOrm, **kwargs) -> List[GameOrm]:
-    session = data_source.session()
-
-    stmt = select(GameOrm).where(GameOrm.group == group)
-    stmt = _build_game_query(stmt, **kwargs)
-
-    result = await session.execute(stmt)
-    return [row[0] for row in result]
-
-
-@overload
-async def get_season_games(season: SeasonOrm,
-                           *, uncompleted_only: bool = False,
-                           offset: Optional[int] = None,
-                           limit: Optional[int] = None,
-                           reverse_order: bool = False,
-                           time_span: Optional[Tuple[datetime, datetime]] = None) -> List[GameOrm]:
-    ...
-
-
-async def get_season_games(season: SeasonOrm, **kwargs) -> List[GameOrm]:
-    session = data_source.session()
-
-    stmt = select(GameOrm).where(GameOrm.season == season)
     stmt = _build_game_query(stmt, **kwargs)
 
     result = await session.execute(stmt)
@@ -494,6 +472,6 @@ async def set_game_comment(game_code: int, group: GroupOrm, comment: str, operat
     return game
 
 
-__all__ = ("get_game_by_code", "get_group_games", "get_season_games", "get_user_games",
+__all__ = ("get_game_by_code", "get_games",
            "new_game", "delete_game", "record_game", "revert_record", "set_record_point",
            "make_game_progress", "remove_game_progress")

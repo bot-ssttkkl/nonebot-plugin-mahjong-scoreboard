@@ -3,8 +3,9 @@ from typing import List, Optional
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping
+from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping, digit_mapping
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
+from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonUserPointOrm, SeasonOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
@@ -95,3 +96,42 @@ async def map_season_user_points(season: SeasonOrm, sups: List[SeasonUserPointOr
         messages.append(Message(MessageSegment.text(pending_message.getvalue().strip())))
 
     return messages
+
+
+async def map_season_user_trend(group: GroupOrm, user: UserOrm, season: SeasonOrm, games: List[GameOrm]) -> Message:
+    with StringIO() as sio:
+        sio.write("用户")
+        sio.write(await get_user_nickname(user, group))
+        sio.write("在赛季")
+        sio.write(season.name)
+        sio.write("的最近走势如下：\n")
+
+        for g in games:
+            sio.write("  ")
+            sorted_records = sorted(g.records, key=lambda x: x.point, reverse=True)
+
+            for i, r in enumerate(sorted_records):
+                if r.user_id == user.id:
+                    rank = i + 1
+                    record = r
+                    break
+            else:
+                raise ValueError(f"user {user} not in game {g}'s records")
+
+            sio.write(digit_mapping[rank])
+            sio.write("位    ")
+
+            sio.write(str(record.score))
+            sio.write('点  (')
+            if record.point > 0:
+                sio.write('+')
+            elif r.point == 0:
+                sio.write('±')
+            sio.write(str(record.point))
+            sio.write(')  ')
+
+            sio.write("对局")
+            sio.write(str(g.code))
+            sio.write("\n")
+
+        return Message(MessageSegment.text(sio.getvalue().strip()))

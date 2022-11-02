@@ -10,7 +10,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.file_center import send_group_
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
     require_parse_unary_text_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
-from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_logs_csv_mapper import \
+from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_csv_mapper import \
     map_season_user_point_change_logs_as_csv
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonState

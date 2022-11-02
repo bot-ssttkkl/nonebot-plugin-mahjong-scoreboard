@@ -12,7 +12,6 @@ from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_
 from nonebot_plugin_mahjong_scoreboard.controller.utils import send_group_forward_msg
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service import group_service, game_service
-from nonebot_plugin_mahjong_scoreboard.service.game_service import get_user_games, get_group_games
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
 from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_binding_qq
 
@@ -57,7 +56,7 @@ async def query_user_recent_games(bot: Bot, event: GroupMessageEvent, matcher: M
     end_time = datetime.combine(date.today() + timedelta(days=1), time())
     start_time = datetime.combine(end_time - timedelta(days=7), time())
 
-    games = await get_user_games(group, user, limit=30, reverse_order=True, time_span=(start_time, end_time))
+    games = await game_service.get_games(group, user, limit=30, reverse_order=True, time_span=(start_time, end_time))
     if len(games) != 0:
         member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
         header = Message([
@@ -85,7 +84,7 @@ async def query_group_recent_games(bot: Bot, event: GroupMessageEvent, matcher: 
     end_time = datetime.combine(date.today() + timedelta(days=1), time())
     start_time = datetime.combine(end_time - timedelta(days=7), time())
 
-    games = await get_group_games(group, limit=30, reverse_order=True, time_span=(start_time, end_time))
+    games = await game_service.get_games(group, limit=30, reverse_order=True, time_span=(start_time, end_time))
     if len(games) != 0:
         header = Message(MessageSegment.text("以下是本群的最近对局"))
         messages = [header]
@@ -110,7 +109,7 @@ async def query_user_uncompleted_games(bot: Bot, event: GroupMessageEvent, match
     group = await get_group_by_binding_qq(event.group_id)
     user = await get_user_by_binding_qq(user_id)
 
-    games = await get_user_games(group, user, uncompleted_only=True, limit=30, reverse_order=True)
+    games = await game_service.get_games(group, user, uncompleted_only=True, limit=30, reverse_order=True)
     if len(games) != 0:
         member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
         header = Message([
@@ -136,7 +135,7 @@ query_group_uncompleted_games_matcher = on_command("群未完成对局", priorit
 async def query_group_uncompleted_games(bot: Bot, event: GroupMessageEvent, matcher: Matcher):
     group = await get_group_by_binding_qq(event.group_id)
 
-    games = await get_group_games(group, uncompleted_only=True, limit=30, reverse_order=True)
+    games = await game_service.get_games(group, uncompleted_only=True, limit=30, reverse_order=True)
     if len(games) != 0:
         header = Message(MessageSegment.text("以下是本群的未完成对局"))
         messages = [header]

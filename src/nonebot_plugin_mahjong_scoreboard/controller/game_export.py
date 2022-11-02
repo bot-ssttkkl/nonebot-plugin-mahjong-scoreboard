@@ -13,8 +13,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_int
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_csv_mapper import map_games_as_csv
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonState
-from nonebot_plugin_mahjong_scoreboard.service import season_service
-from nonebot_plugin_mahjong_scoreboard.service.game_service import get_season_games, get_group_games
+from nonebot_plugin_mahjong_scoreboard.service import season_service, game_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
 from nonebot_plugin_mahjong_scoreboard.utils.date import encode_date
 
@@ -41,7 +40,7 @@ async def export_season_games(bot: Bot, event: MessageEvent, matcher: Matcher):
         else:
             raise BadRequestError("当前没有运行中的赛季")
 
-    games = await get_season_games(season)
+    games = await game_service.get_games(season=season)
 
     filename = f"赛季对局 {season.name}"
     if season.state == SeasonState.finished:
@@ -71,7 +70,7 @@ require_group_binding_qq(export_group_games_matcher)
 @general_interceptor(export_group_games_matcher)
 async def export_group_games(bot: Bot, event: MessageEvent, matcher: Matcher):
     group = await get_group_by_binding_qq(matcher.state["binding_qq"])
-    games = await get_group_games(group)
+    games = await game_service.get_games(group)
 
     now = datetime.now(tzlocal.get_localzone())
     filename = f"所有对局（截至{encode_date(now)}）.csv"

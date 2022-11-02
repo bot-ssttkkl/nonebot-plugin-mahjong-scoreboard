@@ -1,4 +1,3 @@
-# ========== 设置赛季PT ==========
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import MessageSegment, MessageEvent
 from nonebot.internal.matcher import Matcher

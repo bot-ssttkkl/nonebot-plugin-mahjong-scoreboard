@@ -60,7 +60,7 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
         # 状态：未完成
         io.write('状态：')
         io.write(game_state_mapping[GameState(game.state)])
-        if game.state == GameState.invalid_total_point:
+        if game.state != GameState.completed:
             io.write("  （合计")
             io.write(str(sum(map(lambda r: r.score, game.records))))
             io.write("点）")
@@ -81,7 +81,7 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
             # [空行]
             io.write('\n')
 
-            # #1 [东]    Player Name    10000  (+5)
+            # #1 [东]    Player Name    10000点  (+5)
             # [...]
             for i, r in enumerate(sorted(game.records, key=lambda r: (r.point, r.score), reverse=True)):
                 user = await session.get(UserOrm, r.user_id)
@@ -96,6 +96,7 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
                 io.write(name)
                 io.write('    ')
                 io.write(str(r.score))
+                io.write('点')
 
                 if game.state == GameState.completed:
                     io.write('  (')
