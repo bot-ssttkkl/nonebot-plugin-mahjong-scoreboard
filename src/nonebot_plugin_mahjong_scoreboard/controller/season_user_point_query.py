@@ -9,7 +9,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_mappe
     map_season_user_points, map_season_user_trend
 from nonebot_plugin_mahjong_scoreboard.controller.utils import send_group_forward_msg, send_private_forward_msg
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
-from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service, game_service
+from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
 from nonebot_plugin_mahjong_scoreboard.service.season_service import get_season_by_id
 from nonebot_plugin_mahjong_scoreboard.service.season_user_point_service import get_season_user_point_rank, \
@@ -65,7 +65,7 @@ async def query_season_ranking(bot: Bot, event: MessageEvent, matcher: Matcher):
         season = await get_season_by_id(group.running_season_id)
         sups = await season_user_point_service.get_season_user_points(season)
 
-        msgs = await map_season_user_points(season, sups)
+        msgs = await map_season_user_points(group, season, sups)
         if len(msgs) == 1:
             await matcher.send(msgs[0])
         else:
@@ -96,9 +96,11 @@ async def query_season_user_trend(matcher: Matcher):
 
     if group.running_season_id is not None:
         season = await get_season_by_id(group.running_season_id)
-        games = await game_service.get_games(group, user, season, completed_only=True, limit=10, reverse_order=True)
-        if len(games) != 0:
-            msg = await map_season_user_trend(group, user, season, games)
+        logs = await season_user_point_service.get_season_user_point_change_logs(season, user,
+                                                                                 limit=10, reverse_order=True,
+                                                                                 join_game_and_record=True)
+        if len(logs) != 0:
+            msg = await map_season_user_trend(group, user, season, logs)
             await matcher.send(msg)
         else:
             raise BadRequestError("你还没有参加过对局")

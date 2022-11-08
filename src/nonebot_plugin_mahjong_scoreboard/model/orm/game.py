@@ -73,6 +73,7 @@ class GameRecordOrm:
 
     score: int = Column(Integer, nullable=False)  # 分数
     point: int = Column(Integer, nullable=False, default=0)  # pt
+    rank: Optional[int] = Column("rnk", Integer)  # 排名
 
 
 @data_source.registry.mapped

@@ -12,6 +12,7 @@ from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_user_nickname
+from nonebot_plugin_mahjong_scoreboard.utils.rank import ranked
 
 
 def map_game_progress(progress: GameProgressOrm) -> str:
@@ -83,11 +84,11 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
 
             # #1 [东]    Player Name    10000点  (+5)
             # [...]
-            for i, r in enumerate(sorted(game.records, key=lambda r: (r.point, r.score), reverse=True)):
+            for rank, r in ranked(game.records, key=lambda r: r.point, reverse=True):
                 user = await session.get(UserOrm, r.user_id)
                 name = await get_user_nickname(user, group)
                 io.write('#')
-                io.write(str(i + 1))
+                io.write(str(rank))
                 if r.wind is not None:
                     io.write(' [')
                     io.write(wind_mapping[r.wind])

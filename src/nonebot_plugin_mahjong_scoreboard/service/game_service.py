@@ -283,9 +283,14 @@ async def _handle_full_recorded_game(game: GameOrm):
     elif indexed_record[2][0].score == indexed_record[3][0].score:
         _divide_horse_point(indexed_record, horse_point, 2, 3)
 
+    rank = 0
     for i, (r, j) in enumerate(indexed_record):
         # （点数-返点+马点）/1000，切上
         r.point = horse_point[i] + ceil((r.score - origin_point) / 1000)
+
+        if i == 0 or indexed_record[i - 1][0].point != r.point:
+            rank += 1
+        r.rank = rank
 
     await change_season_user_point_by_game(game)
 
