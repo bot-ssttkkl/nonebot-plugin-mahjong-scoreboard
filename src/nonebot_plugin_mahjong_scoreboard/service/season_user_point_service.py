@@ -87,7 +87,7 @@ async def get_season_user_point_change_logs(season: Optional[SeasonOrm] = None,
     if join_game_and_record:
         return [(a, b, c) for (a, b, c) in result]
     else:
-        return [x for x in result]
+        return [x for (x,) in result]
 
 
 async def get_season_user_point(season: SeasonOrm, user: UserOrm) -> Optional[SeasonUserPointOrm]:
