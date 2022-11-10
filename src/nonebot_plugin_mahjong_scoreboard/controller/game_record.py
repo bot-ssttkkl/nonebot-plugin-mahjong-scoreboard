@@ -276,7 +276,7 @@ async def parse_make_game_progress_args(event: GroupMessageEvent, matcher: Match
 
                     round = parse_int_or_error(round, "局数", True)
                     if wind == '南':
-                        round *= 2
+                        round += 4
 
                     honba = parse_int_or_error(honba, "本场", True)
 
