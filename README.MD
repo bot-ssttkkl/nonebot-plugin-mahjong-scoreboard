@@ -14,8 +14,8 @@ _✨ NoneBot 日麻记分器插件 ✨_
 </div>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/ssttkkl/nonebot-plugin-sqlalchemy/master/LICENSE">
-    <img src="https://img.shields.io/github/license/ssttkkl/nonebot-plugin-sqlalchemy.svg" alt="license">
+  <a href="https://raw.githubusercontent.com/ssttkkl/nonebot-plugin-mahjong-scoreboard/master/LICENSE">
+    <img src="https://img.shields.io/github/license/ssttkkl/nonebot-plugin-mahjong-scoreboard.svg" alt="license">
   </a>
   <a href="https://pypi.python.org/pypi/nonebot-plugin-mahjong-scoreboard">
     <img src="https://img.shields.io/pypi/v/nonebot-plugin-mahjong-scoreboard.svg" alt="pypi">
