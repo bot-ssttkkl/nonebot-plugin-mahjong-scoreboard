@@ -117,6 +117,14 @@ PT精算算法为（点数-返点+马点）/1000，返点和马点在创建赛�
 
 默认值：与PORT保持一致即可
 
+## 在线乞讨
+
+<details><summary>点击请我打两把maimai</summary>
+
+![](https://github.com/ssttkkl/ssttkkl/blob/main/afdian-ssttkkl.jfif)
+
+</details>
+
 ## LICENSE
 
 > MIT License
