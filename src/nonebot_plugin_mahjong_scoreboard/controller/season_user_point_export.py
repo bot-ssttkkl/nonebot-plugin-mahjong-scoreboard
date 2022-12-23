@@ -6,7 +6,6 @@ from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot, MessageEvent
 from nonebot.internal.matcher import Matcher
 
-from nonebot_plugin_mahjong_scoreboard.controller.file_center import send_group_file, send_private_file
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
     require_parse_unary_text_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
@@ -17,6 +16,7 @@ from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonState
 from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service, season_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
 from nonebot_plugin_mahjong_scoreboard.utils.date import encode_date
+from nonebot_plugin_mahjong_scoreboard.utils.upload_file import upload_group_file, upload_private_file
 
 # ========== 导出榜单 ==========
 export_season_ranking_matcher = on_command("导出榜单", priority=5)
@@ -56,6 +56,6 @@ async def export_season_ranking(bot: Bot, event: MessageEvent, matcher: Matcher)
 
         data = sio.getvalue().encode("utf_8_sig")
         if isinstance(event, GroupMessageEvent):
-            await send_group_file(bot, event.group_id, filename, data)
+            await upload_group_file(bot, event.group_id, filename, data)
         else:
-            await send_private_file(bot, event.user_id, filename, data)
+            await upload_private_file(bot, event.user_id, filename, data)

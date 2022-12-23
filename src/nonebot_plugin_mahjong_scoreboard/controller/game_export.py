@@ -6,7 +6,6 @@ from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent, GroupMessageEvent
 from nonebot.internal.matcher import Matcher
 
-from nonebot_plugin_mahjong_scoreboard.controller.file_center import send_group_file, send_private_file
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
     require_parse_unary_text_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
@@ -16,6 +15,7 @@ from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonState
 from nonebot_plugin_mahjong_scoreboard.service import season_service, game_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
 from nonebot_plugin_mahjong_scoreboard.utils.date import encode_date
+from nonebot_plugin_mahjong_scoreboard.utils.upload_file import upload_group_file, upload_private_file
 
 # ========== 导出赛季对局 ==========
 export_season_games_matcher = on_command("导出赛季对局", aliases={"导出对局"}, priority=5)
@@ -55,9 +55,9 @@ async def export_season_games(bot: Bot, event: MessageEvent, matcher: Matcher):
 
         data = sio.getvalue().encode("utf_8_sig")
         if isinstance(event, GroupMessageEvent):
-            await send_group_file(bot, event.group_id, filename, data)
+            await upload_group_file(bot, event.group_id, filename, data)
         else:
-            await send_private_file(bot, event.user_id, filename, data)
+            await upload_private_file(bot, event.user_id, filename, data)
 
 
 # ========== 导出所有对局 ==========
@@ -80,6 +80,6 @@ async def export_group_games(bot: Bot, event: MessageEvent, matcher: Matcher):
 
         data = sio.getvalue().encode("utf_8_sig")
         if isinstance(event, GroupMessageEvent):
-            await send_group_file(bot, event.group_id, filename, data)
+            await upload_group_file(bot, event.group_id, filename, data)
         else:
-            await send_private_file(bot, event.user_id, filename, data)
+            await upload_private_file(bot, event.user_id, filename, data)

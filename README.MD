@@ -105,13 +105,13 @@ PT精算算法为（点数-返点+马点）/1000，返点和马点在创建赛�
 
 默认值：sqlite+aiosqlite:///mahjong_scoreboard.db
 
-### mahjong_scoreboard_callback_host
+### callback_host
 
 回调HOST，若为非容器环境部署（go-cqhttp与nonebot均运行在同一环境）则保持默认值。若为Docker环境部署则设置为Docker容器名。用于上传文件时让go-cqhttp下载本机文件。
 
 默认值：127.0.0.1
 
-### mahjong_scoreboard_callback_port
+### callback_port
 
 回调端口，保持默认值即可。
 
