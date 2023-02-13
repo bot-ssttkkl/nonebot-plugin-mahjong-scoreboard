@@ -370,7 +370,7 @@ async def delete_uncompleted_season_games(season: SeasonOrm):
     now = datetime.utcnow()
     stmt = (update(GameOrm)
             .where(GameOrm.season == season, GameOrm.state != GameState.completed, GameOrm.accessible)
-            .values(accesible=False, delete_time=now, update_time=now)
+            .values(accessible=False, delete_time=now, update_time=now)
             .execution_options(synchronize_session=False))
     await session.execute(stmt)
     await session.commit()
