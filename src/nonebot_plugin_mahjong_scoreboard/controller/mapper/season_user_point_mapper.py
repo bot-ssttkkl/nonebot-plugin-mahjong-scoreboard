@@ -1,14 +1,12 @@
 from io import StringIO
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
-from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameRecordOrm, GameOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
-from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonUserPointOrm, SeasonOrm, \
-    SeasonUserPointChangeLogOrm
+from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonUserPointOrm, SeasonOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_user_nickname
 from nonebot_plugin_mahjong_scoreboard.utils.rank import ranked
@@ -80,16 +78,3 @@ async def map_season_user_points(group: GroupOrm, season: SeasonOrm, sups: List[
         messages.append(Message(MessageSegment.text(pending_message.getvalue().strip())))
 
     return messages
-
-
-async def map_season_user_trend(group: GroupOrm, user: UserOrm, season: SeasonOrm,
-                                result: List[Tuple[SeasonUserPointChangeLogOrm, GameOrm, GameRecordOrm]]) -> Message:
-    with StringIO() as sio:
-        sio.write(f"用户[{await get_user_nickname(user, group)}]在赛季[{season.name}]的最近走势如下：\n")
-
-        for log, game, record in result:
-            sio.write(f"  {record.rank}位    {record.score}点  "
-                      f"({map_point(record.raw_point, record.point_scale)})  "
-                      f"对局{game.code}\n")
-
-        return Message(MessageSegment.text(sio.getvalue().strip()))

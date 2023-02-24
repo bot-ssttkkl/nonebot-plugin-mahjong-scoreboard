@@ -153,7 +153,7 @@ def require_parse_unary_at_arg(matcher_type: Type[Matcher], name: str):
     async def handle(matcher: Matcher, args: Message = SplitCommandArgs()):
         for arg in args:
             if arg.type == "at":
-                matcher.state[name] = int(args[1].data["qq"])
+                matcher.state[name] = int(arg.data["qq"])
                 break
 
     return matcher_type

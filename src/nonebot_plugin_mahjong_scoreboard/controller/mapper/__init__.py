@@ -43,3 +43,7 @@ def map_datetime(dt: datetime):
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=pytz.utc)
     return dt.astimezone(tzlocal.get_localzone()).strftime(datetime_format)
+
+
+def percentile_str(x: float, ndigits: int = 2) -> str:
+    return f'{round(x * 100, ndigits)}%'
