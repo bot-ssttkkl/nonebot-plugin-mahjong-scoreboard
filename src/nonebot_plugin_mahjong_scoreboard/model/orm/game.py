@@ -5,7 +5,7 @@ from sqlalchemy import Column, Integer, Enum, Boolean, ForeignKey, Text, Index, 
 from sqlalchemy.orm import relationship
 
 from nonebot_plugin_mahjong_scoreboard.model.enums import Wind
-from . import data_source
+from ._data_source import data_source
 from ..enums import PlayerAndWind, GameState
 
 if TYPE_CHECKING:

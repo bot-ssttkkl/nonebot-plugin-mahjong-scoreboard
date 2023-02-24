@@ -1,6 +1,6 @@
 from sqlalchemy import Column, BigInteger, Integer, Index
 
-from . import data_source
+from ._data_source import data_source
 
 
 @data_source.registry.mapped

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, List
 from sqlalchemy import Column, Integer, DateTime, String, Enum, ForeignKey, Boolean, Index
 from sqlalchemy.orm import relationship
 
-from . import data_source
+from ._data_source import data_source
 from .types.userdict import UserDict as SqlUserDict
 from ..enums import SeasonState, SeasonUserPointChangeType
 from ...utils.userdict import DictField

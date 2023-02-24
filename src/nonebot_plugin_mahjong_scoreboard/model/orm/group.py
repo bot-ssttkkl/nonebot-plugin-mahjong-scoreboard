@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Column, Integer, BigInteger, ForeignKey, Index
 from sqlalchemy.orm import relationship
 
-from . import data_source
+from ._data_source import data_source
 
 if TYPE_CHECKING:
     from .season import SeasonOrm
