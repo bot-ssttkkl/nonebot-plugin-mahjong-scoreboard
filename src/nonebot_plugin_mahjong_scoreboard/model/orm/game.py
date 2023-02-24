@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, TYPE_CHECKING, Optional
 
-from sqlalchemy import Column, Integer, Enum, DateTime, Boolean, ForeignKey, Text, Index
+from sqlalchemy import Column, Integer, Enum, Boolean, ForeignKey, Text, Index, DateTime
 from sqlalchemy.orm import relationship
 
 from nonebot_plugin_mahjong_scoreboard.model.enums import Wind
@@ -72,7 +72,15 @@ class GameRecordOrm:
     wind: Optional[Wind] = Column(Enum(Wind))
 
     score: int = Column(Integer, nullable=False)  # 分数
-    point: int = Column(Integer, nullable=False, default=0)  # pt
+
+    # 真正PT=raw_point*10^point_scale，例如point_scale=0时缩放1x，point_scale=-1时缩放0.1x
+    raw_point: int = Column('point', Integer, nullable=False, default=0)  # pt
+    point_scale: int = Column(Integer, nullable=False, default=0)  # pt缩放比例
+
+    @property
+    def point(self) -> float:
+        return self.raw_point * 10 ** self.point_scale
+
     rank: Optional[int] = Column("rnk", Integer)  # 排名
 
 

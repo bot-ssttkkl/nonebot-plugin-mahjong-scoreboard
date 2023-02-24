@@ -12,7 +12,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_mapper import ma
 from nonebot_plugin_mahjong_scoreboard.controller.utils import parse_int_or_reject
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonState
-from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm
+from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm, SeasonConfig
 from nonebot_plugin_mahjong_scoreboard.service import season_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
 from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_binding_qq
@@ -66,7 +66,7 @@ async def new_season_got_south_game_origin_point(matcher: Matcher,
         matcher.state["south_game_origin_point"] = None
         return
 
-    pt = await parse_int_or_reject(raw_arg, "半庄战原点")
+    pt = await parse_int_or_reject(raw_arg, "半庄战返点")
     matcher.state["south_game_origin_point"] = pt
 
 
@@ -78,7 +78,7 @@ async def new_season_got_south_game_horse_point(matcher: Matcher,
         return
 
     try:
-        li = list(map(int, raw_arg.split(' ')))
+        li = list(map(float, raw_arg.split(' ')))
     except ValueError:
         await matcher.reject("输入的半庄战马点不合法。请重新输入")
         return
@@ -111,7 +111,7 @@ async def new_season_got_south_game_origin_point(matcher: Matcher,
         matcher.state["east_game_origin_point"] = None
         return
 
-    pt = await parse_int_or_reject(raw_arg, "东风战原点")
+    pt = await parse_int_or_reject(raw_arg, "东风战返点")
     matcher.state["east_game_origin_point"] = pt
 
 
@@ -123,7 +123,7 @@ async def new_season_got_east_game_horse_point(matcher: Matcher,
         return
 
     try:
-        li = list(map(int, raw_arg.split(' ')))
+        li = list(map(float, raw_arg.split(' ')))
     except ValueError:
         await matcher.reject("输入的东风战马点不合法。请重新输入")
         return
@@ -133,19 +133,28 @@ async def new_season_got_east_game_horse_point(matcher: Matcher,
     matcher.state["east_game_horse_point"] = li
 
 
+@new_season_matcher.got("point_precision", "PT精度？（输入x，则精度为10^x。例如：输入0，保留整数部分；输入-1，保留小数点后一位）")
+@general_interceptor(new_season_matcher)
+async def new_season_got_point_precision(matcher: Matcher,
+                                         raw_arg=ArgPlainText("point_precision")):
+    precision = await parse_int_or_reject(raw_arg, "PT精度", max=4, min=-1)
+    matcher.state["point_precision"] = precision
+
+
 @new_season_matcher.handle()
 @general_interceptor(new_season_matcher)
 async def new_season_confirm(matcher: Matcher):
     season = SeasonOrm(code=matcher.state["code"],
                        name=matcher.state["name"],
-                       config={
+                       config=SeasonConfig({
                            "south_game_enabled": matcher.state["south_game_enabled"],
                            "south_game_origin_point": matcher.state.get("south_game_origin_point"),
                            "south_game_horse_point": matcher.state.get("south_game_horse_point"),
                            "east_game_enabled": matcher.state["east_game_enabled"],
                            "east_game_origin_point": matcher.state.get("east_game_origin_point"),
-                           "east_game_horse_point": matcher.state.get("east_game_horse_point")
-                       })
+                           "east_game_horse_point": matcher.state.get("east_game_horse_point"),
+                           "point_precision": matcher.state["point_precision"]
+                       }))
     matcher.state["season"] = season
 
     msg = map_season(season, group_info=matcher.state["group_info"])

@@ -3,7 +3,7 @@ from typing import Optional
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping, datetime_format, map_datetime
+from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping, map_datetime
 from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm
 
 
@@ -43,11 +43,11 @@ def map_season(season: SeasonOrm, *, group_info: Optional[dict] = None) -> Messa
 
         # 半庄战：返点：30000  马点：50 30 -10 -30
         io.write('半庄战：')
-        if season.config["south_game_enabled"]:
+        if season.config.south_game_enabled:
             io.write('返点：')
-            io.write(str(season.config["south_game_origin_point"]))
+            io.write(str(season.config.south_game_origin_point))
             io.write(' 马点：')
-            for i in season.config["south_game_horse_point"]:
+            for i in season.config.south_game_horse_point:
                 io.write(str(i))
                 io.write(' ')
         else:
@@ -56,15 +56,20 @@ def map_season(season: SeasonOrm, *, group_info: Optional[dict] = None) -> Messa
 
         # 东风战：关闭
         io.write('东风战：')
-        if season.config["east_game_enabled"]:
+        if season.config.east_game_enabled:
             io.write('返点：')
-            io.write(str(season.config["east_game_origin_point"]))
+            io.write(str(season.config.east_game_origin_point))
             io.write(' 马点：')
-            for i in season.config["east_game_horse_point"]:
+            for i in season.config.east_game_horse_point:
                 io.write(str(i))
                 io.write(' ')
         else:
             io.write('关闭')
+        io.write('\n')
+
+        # PT精度：1
+        io.write('PT精度：')
+        io.write(str(10 ** season.config.point_precision))
         io.write('\n')
 
         return Message(MessageSegment.text(io.getvalue().strip()))

@@ -53,7 +53,7 @@ async def query_all_seasons(bot: Bot, event: MessageEvent, matcher: Matcher):
     if len(seasons) != 0:
         group_info = await bot.get_group_info(group_id=group.binding_qq)
         header = Message([
-            MessageSegment.text(f"以下是群组{group_info['group_name']}({group_info['group_id']})的最近对局")
+            MessageSegment.text(f"以下是群组{group_info['group_name']}({group_info['group_id']})的所有赛季")
         ])
         messages = [header]
         for s in seasons:

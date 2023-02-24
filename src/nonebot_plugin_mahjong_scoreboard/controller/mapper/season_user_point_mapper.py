@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping, digit_mapping
+from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
 from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameRecordOrm, GameOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
@@ -12,6 +12,15 @@ from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonUserPointOr
 from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_user_nickname
 from nonebot_plugin_mahjong_scoreboard.utils.rank import ranked
+
+
+def map_point(point: int, precision: int) -> str:
+    point_text = str(point * 10 ** precision)
+    if point > 0:
+        point_text = f'+{point_text}'
+    elif point == 0:
+        point_text = f'±{point_text}'
+    return point_text
 
 
 async def map_season_user_point(sup: SeasonUserPointOrm,
@@ -28,27 +37,17 @@ async def map_season_user_point(sup: SeasonUserPointOrm,
     with StringIO() as io:
         # [用户名]在赛季[赛季名]
         # PT：+114
-        io.write(name)
-        io.write("在赛季")
-        io.write(season.name)
-        io.write('\n')
-
-        io.write("PT：")
-        if sup.point > 0:
-            io.write('+')
-        elif sup.point == 0:
-            io.write('±')
-        io.write(str(sup.point))
+        # 位次：30/36
+        io.write(f"[{name}]在赛季[{season.name}]\n")
+        io.write(f"PT：{map_point(sup.point, season.config.point_precision)}\n")
 
         if rank is not None:
             # 位次：+114
-            io.write('\n位次：')
-            io.write(str(rank))
+            io.write(f'位次：{rank}')
             if total is not None:
-                io.write('/')
-                io.write(str(total))
+                io.write(f'/{total}')
 
-        return Message(MessageSegment.text(io.getvalue()))
+        return Message(MessageSegment.text(io.getvalue().strip()))
 
 
 async def map_season_user_points(group: GroupOrm, season: SeasonOrm, sups: List[SeasonUserPointOrm]) -> List[Message]:
@@ -61,24 +60,14 @@ async def map_season_user_points(group: GroupOrm, season: SeasonOrm, sups: List[
 
     # 赛季：[赛季名]
     # 状态：进行中
-    pending_message.write("赛季：")
-    pending_message.write(season.name)
-    pending_message.write("\n状态：")
-    pending_message.write(season_state_mapping[season.state])
-    pending_message.write("\n\n")
+    pending_message.write(f"赛季：{season.name}\n")
+    pending_message.write(f"状态：{season_state_mapping[season.state]}\n\n")
 
     for rank, sup in ranked(sups, key=lambda sup: sup.point, reverse=True):
         user = await session.get(UserOrm, sup.user_id)
         name = await get_user_nickname(user, group)
 
-        point_text = ""
-        if sup.point > 0:
-            point_text = '+'
-        elif sup.point == 0:
-            point_text = '±'
-        point_text += str(sup.point)
-
-        line = f"#{rank}  {name}    {point_text}\n"
+        line = f"#{rank}  {name}    {map_point(sup.point, season.config.point_precision)}\n"
         pending_message.write(line)
         pending += 1
 
@@ -96,29 +85,11 @@ async def map_season_user_points(group: GroupOrm, season: SeasonOrm, sups: List[
 async def map_season_user_trend(group: GroupOrm, user: UserOrm, season: SeasonOrm,
                                 result: List[Tuple[SeasonUserPointChangeLogOrm, GameOrm, GameRecordOrm]]) -> Message:
     with StringIO() as sio:
-        sio.write("用户[")
-        sio.write(await get_user_nickname(user, group))
-        sio.write("]在赛季[")
-        sio.write(season.name)
-        sio.write("]的最近走势如下：\n")
+        sio.write(f"用户[{await get_user_nickname(user, group)}]在赛季[{season.name}]的最近走势如下：\n")
 
         for log, game, record in result:
-            sio.write("  ")
-
-            sio.write(digit_mapping[record.rank])
-            sio.write("位    ")
-
-            sio.write(str(record.score))
-            sio.write('点  (')
-            if record.point > 0:
-                sio.write('+')
-            elif record.point == 0:
-                sio.write('±')
-            sio.write(str(record.point))
-            sio.write(')  ')
-
-            sio.write("对局")
-            sio.write(str(game.code))
-            sio.write("\n")
+            sio.write(f"  {record.rank}位    {record.score}点  "
+                      f"({map_point(record.raw_point, record.point_scale)})  "
+                      f"对局{game.code}\n")
 
         return Message(MessageSegment.text(sio.getvalue().strip()))

@@ -121,7 +121,7 @@ async def count_season_user_point(season: SeasonOrm) -> Optional[SeasonUserPoint
 
 async def change_season_user_point_manually(season: SeasonOrm,
                                             user: UserOrm,
-                                            point: int,
+                                            point: float,
                                             operator: UserOrm) -> SeasonUserPointOrm:
     session = data_source.session()
     group = await session.get(GroupOrm, season.group_id)
@@ -133,7 +133,7 @@ async def change_season_user_point_manually(season: SeasonOrm,
         sup = SeasonUserPointOrm(season=season, user=user)
         session.add(sup)
 
-    sup.point = point
+    sup.point = int(point * (10 ** -season.config.point_precision))
 
     log = SeasonUserPointChangeLogOrm(season=season, user=user,
                                       change_type=SeasonUserPointChangeType.manually,
@@ -157,7 +157,9 @@ async def change_season_user_point_by_game(game: GameOrm):
         user_point = (await session.execute(stmt)).scalar_one_or_none()
 
         if user_point is None:
-            user_point = SeasonUserPointOrm(season_id=game.season_id, user_id=r.user_id, point=0)
+            user_point = SeasonUserPointOrm(season_id=game.season_id,
+                                            user_id=r.user_id,
+                                            point=0)
             session.add(user_point)
 
         user_point.point += r.point
@@ -171,6 +173,55 @@ async def change_season_user_point_by_game(game: GameOrm):
         session.add(change_log)
 
     await session.commit()
+
+
+# async def revert_season_user_point_manually(season: SeasonOrm,
+#                                             user: UserOrm,
+#                                             operator: UserOrm) -> bool:
+#     session = data_source.session()
+#     group = await session.get(GroupOrm, season.group_id)
+#     if not await is_group_admin(operator, group):
+#         raise BadRequestError("没有权限")
+#
+#     stmt = select(SeasonUserPointChangeLogOrm).where(
+#         SeasonUserPointChangeLogOrm.season_id == season.id,
+#         SeasonUserPointChangeLogOrm.user_id == user.id
+#     ).order_by(
+#         SeasonUserPointChangeLogOrm.create_time.desc()
+#     ).limit(2)
+#
+#     result = await session.scalars(stmt)
+#     if len(result) == 0:
+#         return False
+#     else:
+#         log: SeasonUserPointChangeLogOrm = result[0]
+#         prev_log: SeasonUserPointChangeLogOrm = result[1] if len(result) >= 2 else None
+#
+#         if log.change_type != SeasonUserPointChangeType.manually \
+#                 or datetime.utcnow() - log.create_time > timedelta(days=1):
+#             return False
+#
+#         stmt = delete(SeasonUserPointChangeLogOrm).where(
+#             SeasonUserPointChangeLogOrm.season_id == season.id,
+#             SeasonUserPointChangeLogOrm.user_id == user.id
+#         )
+#         await session.execute(stmt)
+#
+#         if prev_log is not None:
+#             stmt = update(SeasonUserPointOrm).where(
+#                 SeasonUserPointOrm.season_id == season.id,
+#                 SeasonUserPointOrm.user_id == user.id
+#             ).values(
+#                 point=prev_log.create_time
+#             )
+#         else:
+#             stmt = delete(SeasonUserPointOrm).where(
+#                 SeasonUserPointOrm.season_id == season.id,
+#                 SeasonUserPointOrm.user_id == user.id
+#             )
+#         await session.execute(stmt)
+#
+#         await session.commit()
 
 
 async def revert_season_user_point_by_game(game: GameOrm):

@@ -33,11 +33,12 @@ help_text = f"""
 - {default_cmd_start}结束赛季
 - {default_cmd_start}删除赛季 [<代号>]
 
-赛季PT：
-- {default_cmd_start}设置赛季PT <PT> [@<用户>]
+赛季查询：
+- {default_cmd_start}查询榜单 [<赛季代号>]
+- {default_cmd_start}导出榜单 [<赛季代号>]
+- {default_cmd_start}查询最近走势 [@<用户>]
 - {default_cmd_start}查询PT [@<用户>]
-- {default_cmd_start}查询榜单
-- {default_cmd_start}导出榜单
+- {default_cmd_start}设置PT <PT> [@<用户>]
 
 以上命令格式中，以<>包裹的表示一个参数，以[]包裹的表示一个可选项。
 
@@ -49,8 +50,7 @@ from nonebot.plugin import PluginMetadata
 __plugin_meta__ = PluginMetadata(
     name='日麻寄分器',
     description='为群友提供日麻计分及榜单统计功能',
-    usage=help_text,
-    extra={'version': '0.1.0'}
+    usage=help_text
 )
 
 from . import controller

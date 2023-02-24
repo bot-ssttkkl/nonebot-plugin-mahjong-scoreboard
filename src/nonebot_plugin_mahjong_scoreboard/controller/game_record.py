@@ -12,7 +12,8 @@ from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import requir
     require_game_code_from_context, require_parse_unary_integer_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game
-from nonebot_plugin_mahjong_scoreboard.controller.utils import split_message, parse_int_or_error, try_parse_wind
+from nonebot_plugin_mahjong_scoreboard.controller.utils import split_message, parse_int_or_error, try_parse_wind, \
+    parse_float_or_error
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import PlayerAndWind, GameState
 from nonebot_plugin_mahjong_scoreboard.service import game_service, group_service, user_service
@@ -196,7 +197,7 @@ async def parse_record_point_args(event: GroupMessageEvent, matcher: Matcher):
         elif arg.type == 'at':
             user_id = int(arg.data["qq"])
 
-    point = parse_int_or_error(point, 'PT')
+    point = parse_float_or_error(point, 'PT')
 
     if game_code is None:
         raise BadRequestError("请指定对局编号")

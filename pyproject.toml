@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nonebot-plugin-mahjong-scoreboard"
-version = "0.1.10"
+version = "0.1.11"
 description = "日麻寄分器（NoneBot插件）"
 authors = ["ssttkkl <huang.wen.long@hotmail.com>"]
 readme = "README.MD"
@@ -25,6 +25,7 @@ nonebot-plugin-gocqhttp-cross-machine-upload-file = "^0.1.0"
 nonebug = "^0.2.1"
 flake8 = "^5.0.4"
 sqlalchemy2-stubs = "^0.0.2a29"
+nonebot2 = {extras = ["fastapi"], version = "^2.0.0rc3"}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -246,68 +246,71 @@ async def _handle_full_recorded_game(game: GameOrm):
 
     season = await session.get(SeasonOrm, game.season_id)
     if game.player_and_wind == PlayerAndWind.four_men_east:
-        horse_point = season.config["east_game_horse_point"]
-        origin_point = season.config["east_game_origin_point"]
+        horse_point = season.config.east_game_horse_point
+        origin_point = season.config.east_game_origin_point
     elif game.player_and_wind == PlayerAndWind.four_men_south:
-        horse_point = season.config["south_game_horse_point"]
-        origin_point = season.config["south_game_origin_point"]
+        horse_point = season.config.south_game_horse_point
+        origin_point = season.config.south_game_origin_point
     else:
         raise ValueError("invalid players and wind")
 
+    point_scale = season.config.point_precision
+    horse_point = list(map(lambda x: x * (10 ** -point_scale), horse_point))
+
     # 降序排序（带上原索引）
     indexed_record: List[Tuple[GameRecordOrm, int]] = [(r, i) for i, r in enumerate(game.records)]
-    indexed_record.sort(key=lambda tup: tup[0].score, reverse=True)
+    # 先按照score降序，若score相同则按照风排序（顺序：东南西北None）
+    indexed_record.sort(key=lambda tup: (-tup[0].score, tup[0].wind is None, tup[0].wind))
 
     # 处理同分
     # 四人幸终
     if indexed_record[0][0].score == indexed_record[1][0].score == \
             indexed_record[2][0].score == indexed_record[3][0].score:
-        _divide_horse_point(indexed_record, horse_point, 0, 3)
+        _divide_horse_point(horse_point, 0, 3)
     # 一二三位同分
     elif indexed_record[0][0].score == indexed_record[1][0].score == indexed_record[2][0].score:
-        _divide_horse_point(indexed_record, horse_point, 0, 2)
+        _divide_horse_point(horse_point, 0, 2)
     # 二三四位同分
     elif indexed_record[1][0].score == indexed_record[2][0].score == indexed_record[3][0].score:
-        _divide_horse_point(indexed_record, horse_point, 1, 3)
+        _divide_horse_point(horse_point, 1, 3)
     # 一二位同分
     elif indexed_record[0][0].score == indexed_record[1][0].score:
-        _divide_horse_point(indexed_record, horse_point, 0, 1)
+        _divide_horse_point(horse_point, 0, 1)
 
         # 且三四位同分
         if indexed_record[2][0].score == indexed_record[3][0].score:
-            _divide_horse_point(indexed_record, horse_point, 2, 3)
+            _divide_horse_point(horse_point, 2, 3)
     # 二三位同分
     elif indexed_record[1][0].score == indexed_record[2][0].score:
-        _divide_horse_point(indexed_record, horse_point, 1, 2)
+        _divide_horse_point(horse_point, 1, 2)
     # 三四位同分
     elif indexed_record[2][0].score == indexed_record[3][0].score:
-        _divide_horse_point(indexed_record, horse_point, 2, 3)
+        _divide_horse_point(horse_point, 2, 3)
 
     rank = 0
     for i, (r, j) in enumerate(indexed_record):
         # （点数-返点+马点）/1000，切上
-        r.point = horse_point[i] + ceil((r.score - origin_point) / 1000)
+        r.raw_point = ceil(horse_point[i] + (r.score - origin_point) * (10 ** (-point_scale - 3)))
+        r.point_scale = point_scale
 
-        if i == 0 or indexed_record[i - 1][0].point != r.point:
+        if i == 0 or indexed_record[i - 1][0].raw_point != r.raw_point:
             rank += 1
         r.rank = rank
 
     await change_season_user_point_by_game(game)
 
 
-def _divide_horse_point(indexed_record: List[Tuple[GameRecordOrm, int]], horse_point: List[int], start: int, end: int):
+def _divide_horse_point(horse_point: List[int], start: int, end: int):
     sum_horse_point = sum(horse_point[start:end + 1])
     divided_horse_point = sum_horse_point // (end - start + 1)
 
     for i in range(start, end + 1):
         horse_point[i] = divided_horse_point
 
+    # 除不尽的部分给第一个
     if divided_horse_point * (end - start + 1) != sum_horse_point:
-        min_index = start
-        for i in range(start + 1, end + 1):
-            if indexed_record[i][1] < indexed_record[min_index][1]:
-                min_index = i
-        horse_point[min_index] += sum_horse_point - divided_horse_point * (end - start + 1)
+        rest_horse_point = sum_horse_point - divided_horse_point * (end - start + 1)
+        horse_point[start] += rest_horse_point
 
 
 async def revert_record(game_code: int,
@@ -428,7 +431,7 @@ async def remove_game_progress(game_code: int, group: GroupOrm):
     return game
 
 
-async def set_record_point(game_code: int, group: GroupOrm, user: UserOrm, point: int, operator: UserOrm):
+async def set_record_point(game_code: int, group: GroupOrm, user: UserOrm, point: float, operator: UserOrm):
     session = data_source.session()
 
     game = await get_game_by_code(game_code, group)
@@ -452,7 +455,11 @@ async def set_record_point(game_code: int, group: GroupOrm, user: UserOrm, point
         raise BadRequestError("这场对局不属于赛季")
 
     await revert_season_user_point_by_game(game)
-    record.point = point
+
+    season = await session.get(SeasonOrm, group.season_id)
+    record.point_scale = season.config.point_precision
+    record.raw_point = int(point * (10 ** -season.config.point_precision))
+
     await change_season_user_point_by_game(game)
 
     game.update_time = datetime.utcnow()
@@ -479,4 +486,5 @@ async def set_game_comment(game_code: int, group: GroupOrm, comment: str, operat
 
 __all__ = ("get_game_by_code", "get_games",
            "new_game", "delete_game", "record_game", "revert_record", "set_record_point",
-           "make_game_progress", "remove_game_progress")
+           "make_game_progress", "remove_game_progress",
+           "delete_uncompleted_season_games")

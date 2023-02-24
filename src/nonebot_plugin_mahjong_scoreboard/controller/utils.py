@@ -42,31 +42,65 @@ async def get_group_info(group_binding_qq: int):
         raise BadRequestError(e.info["wording"])
 
 
-def parse_int_or_error(raw: Union[int, str, None], desc: str, allow_chinese: bool = False) -> int:
+def parse_int_or_error(raw: Union[int, str, None],
+                       desc: str,
+                       allow_chinese: bool = False,
+                       max: Optional[int] = None,
+                       min: Optional[int] = None) -> int:
     if not raw:
         raise BadRequestError(f"请指定{desc}")
 
     try:
         if allow_chinese:
-            return decode_integer(raw)
+            x = decode_integer(raw)
         else:
-            return int(raw)
+            x = int(raw)
+
+        if max is not None and x > max or min is not None and x < min:
+            raise ValueError(x)
+
+        return x
+    except ValueError:
+        comment = []
+        if min is not None:
+            comment.append(f"最小值：{min}")
+        if max is not None:
+            comment.append(f"最大值：{max}")
+        comment = '，'.join(comment)
+        if len(comment) != 0:
+            comment = f"（{comment}）"
+        raise BadRequestError(comment)
+
+
+async def parse_int_or_reject(raw: Union[int, str, None],
+                              desc: str,
+                              allow_chinese: bool = False,
+                              max: Optional[int] = None,
+                              min: Optional[int] = None) -> int:
+    matcher = current_matcher.get()
+    try:
+        return parse_int_or_error(raw, desc, allow_chinese, max, min)
+    except BadRequestError as e:
+        await matcher.reject(e.message)
+
+
+def parse_float_or_error(raw: Union[float, int, str, None], desc: str) -> float:
+    if not raw:
+        raise BadRequestError(f"请指定{desc}")
+
+    try:
+        return float(raw)
     except ValueError:
         raise BadRequestError(f"输入的{desc}不合法")
 
 
-async def parse_int_or_reject(raw: Union[int, str, None], desc: str, allow_chinese: bool = False) -> int:
+async def parse_float_or_reject(raw: Union[float, int, str, None], desc: str) -> float:
     matcher = current_matcher.get()
-    if not raw:
-        await matcher.reject(f"请指定{desc}")
 
     try:
-        if allow_chinese:
-            return decode_integer(raw)
-        else:
-            return int(raw)
-    except ValueError:
-        await matcher.reject(f"输入的{desc}不合法。请重新输入")
+        return parse_float_or_error(raw, desc)
+    except BadRequestError as e:
+        await matcher.reject(e.message)
 
 
 def try_parse_wind(text: str) -> Optional[Wind]:

@@ -1,4 +1,11 @@
-def ranked(__iterable, *, key=None, reverse=False):
+from typing import Iterable, Tuple, TypeVar, Callable, Any, Optional
+
+T = TypeVar("T")
+
+
+def ranked(__iterable: Iterable[T], *,
+           key: Optional[Callable[[T], Any]] = None,
+           reverse: bool = False) -> Iterable[Tuple[int, T]]:
     if key is None:
         key = lambda x: x
 

@@ -6,7 +6,7 @@ from nonebot.internal.matcher import Matcher
 from nonebot_plugin_mahjong_scoreboard.controller.context import get_context
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.utils import get_group_info, split_message, \
-    parse_int_or_error
+    parse_int_or_error, parse_float_or_error
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq, ensure_group_admin
 from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_binding_qq
@@ -77,6 +77,23 @@ def require_integer(matcher_type: Type[Matcher], arg_name: str, desc: str):
         if arg_name not in matcher.state:
             arg = event.message.extract_plain_text()
             arg = parse_int_or_error(arg, desc)
+            matcher.state[arg_name] = arg
+
+    return matcher_type
+
+
+def require_float(matcher_type: Type[Matcher], arg_name: str, desc: str):
+    @matcher_type.handle()
+    async def check(matcher: Matcher):
+        if arg_name not in matcher.state:
+            await matcher.pause(desc + "？")
+
+    @matcher_type.handle()
+    @general_interceptor(matcher_type)
+    async def receive(event: MessageEvent, matcher: Matcher):
+        if arg_name not in matcher.state:
+            arg = event.message.extract_plain_text()
+            arg = parse_float_or_error(arg, desc)
             matcher.state[arg_name] = arg
 
     return matcher_type

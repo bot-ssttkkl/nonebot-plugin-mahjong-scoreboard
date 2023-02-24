@@ -34,49 +34,35 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
     session = data_source.session()
 
     group = await session.get(GroupOrm, game.group_id)
+    season = await session.get(SeasonOrm, game.season_id)
 
     with StringIO() as io:
         # 对局22090901  四人南
-        io.write('对局')
-        io.write(str(game.code))
-        io.write('  ')
-        io.write(player_and_wind_mapping[game.player_and_wind])
-        io.write('\n')
+        io.write(f'对局{game.code}  {player_and_wind_mapping[game.player_and_wind]}\n')
 
         if detailed:
             # 所属赛季：Season Name
-            io.write('所属赛季：')
-            if game.season_id is None:
-                io.write('无')
-            else:
-                season = await session.get(SeasonOrm, game.season_id)
-                io.write(season.name)
-            io.write('\n')
+            season_name = '无'
+            if game.season_id is not None:
+                season_name = season.name
+            io.write(f'所属赛季：{season_name}\n')
 
             promoter = await session.get(UserOrm, game.promoter_user_id)
-            io.write('创建者：')
-            io.write(await get_user_nickname(promoter, group))
-            io.write('\n')
+            io.write(f'创建者：{await get_user_nickname(promoter, group)}\n')
 
         # 状态：未完成
-        io.write('状态：')
-        io.write(game_state_mapping[GameState(game.state)])
+        io.write(f'状态：{game_state_mapping[GameState(game.state)]}')
         if game.state != GameState.completed:
-            io.write("  （合计")
-            io.write(str(sum(map(lambda r: r.score, game.records))))
-            io.write("点）")
+            sum_score = sum(map(lambda r: r.score, game.records))
+            io.write(f"  （合计{sum_score}点）")
         io.write('\n')
 
         if detailed and game.state == GameState.completed:
-            io.write('完成时间：')
-            io.write(map_datetime(game.complete_time))
-            io.write('\n')
+            io.write(f'完成时间：{map_datetime(game.complete_time)}\n')
 
         progress = await session.get(GameProgressOrm, game.id)
         if progress is not None:
-            io.write('进度：')
-            io.write(map_game_progress(progress))
-            io.write('\n')
+            io.write(f'进度：{map_game_progress(progress)}\n')
 
         if len(game.records) > 0:
             # [空行]
@@ -87,26 +73,18 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
             for rank, r in ranked(game.records, key=lambda r: r.point, reverse=True):
                 user = await session.get(UserOrm, r.user_id)
                 name = await get_user_nickname(user, group)
-                io.write('#')
-                io.write(str(rank))
+                io.write(f'#{rank}')
                 if r.wind is not None:
-                    io.write(' [')
-                    io.write(wind_mapping[r.wind])
-                    io.write(']')
-                io.write('    ')
-                io.write(name)
-                io.write('    ')
-                io.write(str(r.score))
-                io.write('点')
+                    io.write(f' [{wind_mapping[r.wind]}]')
+                io.write(f'    {name}    {r.score}点')
 
                 if game.state == GameState.completed:
-                    io.write('  (')
+                    point_text = str(r.point)
                     if r.point > 0:
-                        io.write('+')
+                        point_text = f'+{point_text}'
                     elif r.point == 0:
-                        io.write('±')
-                    io.write(str(r.point))
-                    io.write(')')
+                        point_text = f'±{point_text}'
+                    io.write(f'  ({point_text})')
 
                 io.write('\n')
 
