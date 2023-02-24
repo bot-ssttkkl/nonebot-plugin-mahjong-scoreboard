@@ -1,12 +1,12 @@
 from typing import Type
 
-from nonebot.adapters.onebot.v11 import MessageEvent, GroupMessageEvent, Bot, ActionFailed
+from nonebot.adapters.onebot.v11 import MessageEvent, GroupMessageEvent, Bot, ActionFailed, Message
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.context import get_context
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
-from nonebot_plugin_mahjong_scoreboard.controller.utils import get_group_info, split_message, \
-    parse_int_or_error, parse_float_or_error
+from nonebot_plugin_mahjong_scoreboard.controller.utils import get_group_info, parse_int_or_error, parse_float_or_error, \
+    SplitCommandArgs
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq, ensure_group_admin
 from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_binding_qq
@@ -118,10 +118,9 @@ def require_str(matcher_type: Type[Matcher], arg_name: str, desc: str):
 def require_parse_unary_text_arg(matcher_type: Type[Matcher], arg_name: str):
     @matcher_type.handle()
     @general_interceptor(matcher_type)
-    async def parse_args(event: MessageEvent, matcher: Matcher):
+    async def parse_args(matcher: Matcher, args: Message = SplitCommandArgs()):
         text = None
 
-        args = split_message(event.message)[1:]
         for arg in args:
             if arg.type == "text":
                 text = arg.data["text"]
@@ -135,10 +134,9 @@ def require_parse_unary_text_arg(matcher_type: Type[Matcher], arg_name: str):
 def require_parse_unary_integer_arg(matcher_type: Type[Matcher], arg_name: str):
     @matcher_type.handle()
     @general_interceptor(matcher_type)
-    async def parse_args(event: MessageEvent, matcher: Matcher):
+    async def parse_args(matcher: Matcher, args: Message = SplitCommandArgs()):
         text = None
 
-        args = split_message(event.message)[1:]
         for arg in args:
             if arg.type == "text":
                 text = arg.data["text"]
@@ -152,10 +150,11 @@ def require_parse_unary_integer_arg(matcher_type: Type[Matcher], arg_name: str):
 def require_parse_unary_at_arg(matcher_type: Type[Matcher], name: str):
     @matcher_type.handle()
     @general_interceptor(matcher_type)
-    async def handle(event: MessageEvent, matcher: Matcher):
-        args = split_message(event.message)
-        if len(args) > 1 and args[1].type == 'at':
-            matcher.state[name] = int(args[1].data["qq"])
+    async def handle(matcher: Matcher, args: Message = SplitCommandArgs()):
+        for arg in args:
+            if arg.type == "at":
+                matcher.state[name] = int(args[1].data["qq"])
+                break
 
     return matcher_type
 

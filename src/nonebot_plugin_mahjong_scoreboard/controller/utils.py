@@ -2,6 +2,8 @@ from typing import List, Optional, Union
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, MessageEvent, ActionFailed, Bot
 from nonebot.internal.matcher import current_bot, current_matcher
+from nonebot.internal.params import Depends
+from nonebot.params import CommandArg
 
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import Wind
@@ -28,6 +30,13 @@ def split_message(message: Message, ignore_empty: bool = True) -> List[MessageSe
             result.append(seg)
 
     return result
+
+
+def SplitCommandArgs(ignore_empty: bool = True):
+    def dep(raw_args=CommandArg()):
+        return split_message(raw_args, ignore_empty)
+
+    return Depends(dep)
 
 
 async def get_group_info(group_binding_qq: int):

@@ -1,23 +1,23 @@
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import MessageSegment, MessageEvent
+from nonebot.adapters.onebot.v11 import MessageSegment, MessageEvent, Message
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
     require_user_binding_qq, require_float
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_mapper import map_season_user_point
-from nonebot_plugin_mahjong_scoreboard.controller.utils import split_message, parse_int_or_error, parse_float_or_error
+from nonebot_plugin_mahjong_scoreboard.controller.utils import parse_float_or_error, \
+    SplitCommandArgs
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service, user_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
 from nonebot_plugin_mahjong_scoreboard.service.season_service import get_season_by_id
 
 
-async def parse_args(event: MessageEvent, matcher: Matcher):
+async def parse_args(matcher: Matcher, args: Message):
     user_id = None
     point = None
 
-    args = split_message(event.message)[1:]
     for arg in args:
         if arg.type == "at":
             user_id = int(arg.data["qq"])
@@ -38,8 +38,8 @@ set_season_user_point_matcher = on_command("设置用户PT", aliases={"设置用
 
 @set_season_user_point_matcher.handle()
 @general_interceptor(set_season_user_point_matcher)
-async def parse_set_season_user_point_args(event: MessageEvent, matcher: Matcher):
-    await parse_args(event, matcher)
+async def parse_set_season_user_point_args(matcher: Matcher, args: Message = SplitCommandArgs()):
+    await parse_args(matcher, args)
 
 
 require_group_binding_qq(set_season_user_point_matcher)

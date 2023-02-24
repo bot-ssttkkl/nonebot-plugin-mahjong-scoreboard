@@ -4,7 +4,7 @@ from typing import Type
 
 from cachetools import TTLCache
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageSegment, Message
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.context import save_context, get_context
@@ -12,8 +12,8 @@ from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import requir
     require_game_code_from_context, require_parse_unary_integer_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game
-from nonebot_plugin_mahjong_scoreboard.controller.utils import split_message, parse_int_or_error, try_parse_wind, \
-    parse_float_or_error
+from nonebot_plugin_mahjong_scoreboard.controller.utils import parse_int_or_error, try_parse_wind, \
+    parse_float_or_error, SplitCommandArgs
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import PlayerAndWind, GameState
 from nonebot_plugin_mahjong_scoreboard.service import game_service, group_service, user_service
@@ -73,13 +73,11 @@ require_game_code_from_context_and_group_latest_game_code(record_matcher)
 
 @record_matcher.handle()
 @general_interceptor(record_matcher)
-async def parse_record_args(event: GroupMessageEvent, matcher: Matcher):
+async def parse_record_args(event: GroupMessageEvent, matcher: Matcher, args: Message = SplitCommandArgs()):
     game_code = matcher.state.get("game_code")
     user_id = event.user_id
     score = None
     wind = None
-
-    args = split_message(event.message)[1:]
 
     for arg in args:
         if arg.type == "text":
@@ -137,11 +135,9 @@ require_game_code_from_context_and_group_latest_game_code(revert_record_matcher)
 
 @revert_record_matcher.handle()
 @general_interceptor(revert_record_matcher)
-async def parse_revert_record_args(event: GroupMessageEvent, matcher: Matcher):
+async def parse_revert_record_args(event: GroupMessageEvent, matcher: Matcher, args: Message = SplitCommandArgs()):
     game_code = matcher.state.get("game_code")
     user_id = event.user_id
-
-    args = split_message(event.message)[1:]
 
     for arg in args:
         if arg.type == "text":
@@ -180,12 +176,10 @@ require_game_code_from_context_and_group_latest_game_code(set_record_point_match
 
 @set_record_point_matcher.handle()
 @general_interceptor(set_record_point_matcher)
-async def parse_record_point_args(event: GroupMessageEvent, matcher: Matcher):
+async def parse_record_point_args(event: GroupMessageEvent, matcher: Matcher, args: Message = SplitCommandArgs()):
     game_code = matcher.state.get("game_code")
     user_id = event.user_id
     point = None
-
-    args = split_message(event.message)[1:]
 
     for arg in args:
         if arg.type == "text":
@@ -255,13 +249,11 @@ round_honba_pattern = r"([东南])([一二三四1234])局([0123456789零一两�
 
 @make_game_progress_matcher.handle()
 @general_interceptor(make_game_progress_matcher)
-async def parse_make_game_progress_args(event: GroupMessageEvent, matcher: Matcher):
+async def parse_make_game_progress_args(matcher: Matcher, args: Message = SplitCommandArgs()):
     game_code = matcher.state.get("game_code")
     completed = False
     round = None
     honba = None
-
-    args = split_message(event.message)[1:]
 
     for arg in args:
         if arg.type == 'text':
@@ -317,11 +309,10 @@ require_game_code_from_context_and_group_latest_game_code(set_game_comment_match
 
 @set_game_comment_matcher.handle()
 @general_interceptor(set_game_comment_matcher)
-async def parse_set_game_comment_args(event: GroupMessageEvent, matcher: Matcher):
+async def parse_set_game_comment_args(matcher: Matcher, args: Message = SplitCommandArgs(False)):
     game_code = matcher.state.get("game_code")
     comment = StringIO()
 
-    args = split_message(event.message, False)[1:]
     for arg in args:
         if arg.type == 'text':
             text = arg.data["text"]
