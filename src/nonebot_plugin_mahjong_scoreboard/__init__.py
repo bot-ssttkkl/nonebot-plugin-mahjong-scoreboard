@@ -5,7 +5,7 @@ nonebot-plugin-mahjong-scoreboard
 @License        : MIT
 @GitHub         : https://github.com/ssttkkl/nonebot-plugin-mahjong-scoreboard
 """
-from .utils.onebot import default_cmd_start
+from .utils.nonebot import default_cmd_start
 
 help_text = f"""
 对局：

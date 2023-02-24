@@ -17,7 +17,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.utils import split_message, pa
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import PlayerAndWind, GameState
 from nonebot_plugin_mahjong_scoreboard.service import game_service, group_service, user_service
-from nonebot_plugin_mahjong_scoreboard.utils.onebot import default_cmd_start
+from nonebot_plugin_mahjong_scoreboard.utils.nonebot import default_cmd_start
 
 group_latest_game_code = TTLCache(4096, 7200)
 
