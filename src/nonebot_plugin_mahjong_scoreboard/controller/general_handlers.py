@@ -66,6 +66,16 @@ def require_user_binding_qq(matcher_type: Type[Matcher],
     return matcher_type
 
 
+def require_running_season(matcher_type: Type[Matcher]):
+    @matcher_type.handle()
+    async def check(matcher: Matcher):
+        group = await get_group_by_binding_qq(matcher.state["binding_qq"])
+        if group.running_season_id is None:
+            raise BadRequestError("当前没有运行中的赛季")
+        else:
+            matcher.state["running_season_id"] = group.running_season_id
+
+
 def require_integer(matcher_type: Type[Matcher], arg_name: str, desc: str):
     @matcher_type.handle()
     async def check(matcher: Matcher):

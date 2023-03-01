@@ -34,7 +34,6 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
     session = data_source.session()
 
     group = await session.get(GroupOrm, game.group_id)
-    season = await session.get(SeasonOrm, game.season_id)
 
     with StringIO() as io:
         # 对局22090901  四人南
@@ -44,6 +43,7 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
             # 所属赛季：Season Name
             season_name = '无'
             if game.season_id is not None:
+                season = await session.get(SeasonOrm, game.season_id)
                 season_name = season.name
             io.write(f'所属赛季：{season_name}\n')
 
