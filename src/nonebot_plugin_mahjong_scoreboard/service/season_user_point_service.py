@@ -3,7 +3,7 @@ from operator import and_
 from typing import Optional, List, Literal, overload, Tuple, Union
 
 from sqlalchemy.future import select
-from sqlalchemy.sql.functions import count
+from sqlalchemy.sql.functions import count, func
 
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonUserPointChangeType
@@ -148,7 +148,7 @@ async def change_season_user_point_manually(season: SeasonOrm,
 async def change_season_user_point_by_game(game: GameOrm):
     session = data_source.session()
 
-    for rank, r in ranked(game.records, key=lambda r: r.point, reverse=True):
+    for rank, r in ranked(game.records, key=lambda r: r.raw_point, reverse=True):
         # 记录SeasonUserPoint
         stmt = select(SeasonUserPointOrm).where(
             SeasonUserPointOrm.season_id == game.season_id,
@@ -162,13 +162,13 @@ async def change_season_user_point_by_game(game: GameOrm):
                                             point=0)
             session.add(user_point)
 
-        user_point.point += r.point
+        user_point.point += r.raw_point
 
         # 记录SeasonUserPointChangeLog
         change_log = SeasonUserPointChangeLogOrm(user_id=r.user_id,
                                                  season_id=game.season_id,
                                                  change_type=SeasonUserPointChangeType.game,
-                                                 change_point=r.point,
+                                                 change_point=r.raw_point,
                                                  related_game_id=game.id)
         session.add(change_log)
 
@@ -237,11 +237,28 @@ async def revert_season_user_point_by_game(game: GameOrm):
     )
 
     for change_log, user_point in await session.execute(stmt):
-        change_log: SeasonUserPointChangeLogOrm
-        user_point: SeasonUserPointOrm
+        # 判断在此之后是否还变动过PT
+        stmt = select(func.count(SeasonUserPointChangeLogOrm.id)).where(
+            SeasonUserPointChangeLogOrm.season_id == change_log.season_id,
+            SeasonUserPointChangeLogOrm.user_id == change_log.user_id,
+            SeasonUserPointChangeLogOrm.id > change_log.id
+        )
+        cnt = (await session.execute(stmt)).scalar_one()
+
+        if cnt != 0:
+            raise BadRequestError("撤销结算失败，在该对局之后该用户PT发生了改变")
 
         user_point.point -= change_log.change_point
-
         await session.delete(change_log)
+
+        # 若用户只有这一次PT变动，则删除PT记录
+        stmt = select(func.count(SeasonUserPointChangeLogOrm.id)).where(
+            SeasonUserPointChangeLogOrm.season_id == user_point.season_id,
+            SeasonUserPointChangeLogOrm.user_id == user_point.user_id,
+        )
+        cnt = (await session.execute(stmt)).scalar_one()
+
+        if cnt == 0:
+            await session.delete(user_point)
 
     await session.commit()

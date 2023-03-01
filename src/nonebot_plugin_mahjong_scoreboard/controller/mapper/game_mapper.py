@@ -4,7 +4,7 @@ from nonebot.adapters.onebot.v11 import MessageSegment, Message
 
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import player_and_wind_mapping, game_state_mapping, \
     digit_mapping, \
-    wind_mapping, map_datetime
+    wind_mapping, map_datetime, map_point
 from nonebot_plugin_mahjong_scoreboard.model.enums import GameState
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
 from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameOrm, GameProgressOrm
@@ -70,7 +70,7 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
 
             # #1 [东]    Player Name    10000点  (+5)
             # [...]
-            for rank, r in ranked(game.records, key=lambda r: r.point, reverse=True):
+            for rank, r in ranked(game.records, key=lambda r: r.raw_point, reverse=True):
                 user = await session.get(UserOrm, r.user_id)
                 name = await get_user_nickname(user, group)
                 io.write(f'#{rank}')
@@ -79,11 +79,7 @@ async def map_game(game: GameOrm, *, detailed: bool = False) -> Message:
                 io.write(f'    {name}    {r.score}点')
 
                 if game.state == GameState.completed:
-                    point_text = str(r.point)
-                    if r.point > 0:
-                        point_text = f'+{point_text}'
-                    elif r.point == 0:
-                        point_text = f'±{point_text}'
+                    point_text = map_point(r.raw_point, r.point_scale)
                     io.write(f'  ({point_text})')
 
                 io.write('\n')

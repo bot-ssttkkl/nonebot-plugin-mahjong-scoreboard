@@ -3,22 +3,13 @@ from typing import List, Optional
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping
+from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping, map_point
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
 from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonUserPointOrm, SeasonOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_user_nickname
 from nonebot_plugin_mahjong_scoreboard.utils.rank import ranked
-
-
-def map_point(point: int, precision: int) -> str:
-    point_text = str(point * 10 ** precision)
-    if point > 0:
-        point_text = f'+{point_text}'
-    elif point == 0:
-        point_text = f'±{point_text}'
-    return point_text
 
 
 async def map_season_user_point(sup: SeasonUserPointOrm,

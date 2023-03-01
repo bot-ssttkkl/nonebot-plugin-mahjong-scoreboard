@@ -2,7 +2,7 @@ import csv
 from typing import TextIO, Iterable
 
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import game_state_mapping, \
-    player_and_wind_mapping, map_datetime
+    player_and_wind_mapping, map_datetime, map_point
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game_progress
 from nonebot_plugin_mahjong_scoreboard.model.enums import GameState
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
@@ -49,11 +49,11 @@ async def map_games_as_csv(f: TextIO, games: Iterable[GameOrm]):
         else:
             row.append("")
 
-        for r in sorted(g.records, key=lambda x: x.point, reverse=True):
+        for r in sorted(g.records, key=lambda x: x.raw_point, reverse=True):
             user = await session.get(UserOrm, r.user_id)
             row.extend([f"{await get_user_nickname(user, group)} ({user.binding_qq})",
                         r.score,
-                        r.point])
+                        map_point(r.raw_point, r.point_scale)])
 
         progress = await session.get(GameProgressOrm, g.id)
         if progress is not None:
