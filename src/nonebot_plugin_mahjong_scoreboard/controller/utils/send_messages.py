@@ -49,7 +49,7 @@ async def send_forward_msg(bot: Bot, event: MessageEvent, messages: List[Message
 
 
 async def send_msgs(bot: Bot, event: MessageEvent, messages: List[Message]):
-    if len(messages) > 0 and conf.mahjong_scoreboard_send_forward_message:
+    if len(messages) > 1 and conf.mahjong_scoreboard_send_forward_message:
         await send_forward_msg(bot, event, messages)
     else:
         for msg in messages:

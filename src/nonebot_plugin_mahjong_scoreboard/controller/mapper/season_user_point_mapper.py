@@ -62,6 +62,11 @@ async def map_season_user_points(group: GroupOrm, season: SeasonOrm, sups: List[
     pending_message.write(f"赛季：{season.name}\n")
     pending_message.write(f"状态：{season_state_mapping[season.state]}\n\n")
 
+    if len(sups) == 0:
+        pending_message.write("还没有用户参与该赛季")
+        messages.append(Message(MessageSegment.text(pending_message.getvalue().strip())))
+        return messages
+
     for rank, sup in ranked(sups, key=lambda sup: sup.point, reverse=True):
         user = await session.get(UserOrm, sup.user_id)
         name = await get_user_nickname(user, group)
