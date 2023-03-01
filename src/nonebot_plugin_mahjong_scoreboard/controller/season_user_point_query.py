@@ -1,5 +1,5 @@
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import Bot, MessageEvent, GroupMessageEvent
+from nonebot.adapters.onebot.v11 import Bot, MessageEvent
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
@@ -7,7 +7,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import requir
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_mapper import map_season_user_point, \
     map_season_user_points
-from nonebot_plugin_mahjong_scoreboard.controller.utils import send_group_forward_msg, send_private_forward_msg
+from nonebot_plugin_mahjong_scoreboard.controller.utils.send_messages import send_msgs
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service, season_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
@@ -74,10 +74,4 @@ async def query_season_ranking(bot: Bot, event: MessageEvent, matcher: Matcher):
     sups = await season_user_point_service.get_season_user_points(season)
 
     msgs = await map_season_user_points(group, season, sups)
-    if len(msgs) == 1:
-        await matcher.send(msgs[0])
-    else:
-        if isinstance(event, GroupMessageEvent):
-            await send_group_forward_msg(bot, event.group_id, msgs)
-        else:
-            await send_private_forward_msg(bot, event.user_id, msgs)
+    await send_msgs(bot, event, msgs)

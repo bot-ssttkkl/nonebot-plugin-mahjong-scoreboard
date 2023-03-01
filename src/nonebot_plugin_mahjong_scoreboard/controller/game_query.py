@@ -1,7 +1,7 @@
 from datetime import date, timedelta, datetime, time
 
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageSegment, MessageEvent
+from nonebot.adapters.onebot.v11 import Bot, Message, MessageSegment, MessageEvent
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.context import save_context
@@ -9,7 +9,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import requir
     require_game_code_from_context, require_parse_unary_integer_arg, require_group_binding_qq, require_user_binding_qq
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game
-from nonebot_plugin_mahjong_scoreboard.controller.utils import send_group_forward_msg, send_private_forward_msg
+from nonebot_plugin_mahjong_scoreboard.controller.utils.send_messages import send_msgs
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service import group_service, game_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
@@ -72,10 +72,7 @@ async def query_user_recent_games(bot: Bot, event: MessageEvent, matcher: Matche
         for g in games:
             messages.append(await map_game(g, detailed=True))
 
-        if isinstance(event, GroupMessageEvent):
-            await send_group_forward_msg(bot, event.group_id, messages)
-        else:
-            await send_private_forward_msg(bot, event.user_id, messages)
+        await send_msgs(bot, event, messages)
     else:
         await matcher.send("你还没有进行过对局")
 
@@ -101,10 +98,7 @@ async def query_group_recent_games(bot: Bot, event: MessageEvent, matcher: Match
         for g in games:
             messages.append(await map_game(g, detailed=True))
 
-        if isinstance(event, GroupMessageEvent):
-            await send_group_forward_msg(bot, event.group_id, messages)
-        else:
-            await send_private_forward_msg(bot, event.user_id, messages)
+        await send_msgs(bot, event, messages)
     else:
         await matcher.send("本群还没有进行过对局")
 
@@ -139,10 +133,7 @@ async def query_user_uncompleted_games(bot: Bot, event: MessageEvent, matcher: M
         for g in games:
             messages.append(await map_game(g, detailed=True))
 
-        if isinstance(event, GroupMessageEvent):
-            await send_group_forward_msg(bot, event.group_id, messages)
-        else:
-            await send_private_forward_msg(bot, event.user_id, messages)
+        await send_msgs(bot, event, messages)
     else:
         await matcher.send("你还没有未完成的对局")
 
@@ -151,6 +142,7 @@ async def query_user_uncompleted_games(bot: Bot, event: MessageEvent, matcher: M
 query_group_uncompleted_games_matcher = on_command("群未完成对局", priority=5)
 
 require_group_binding_qq(query_group_uncompleted_games_matcher)
+
 
 @query_group_uncompleted_games_matcher.handle()
 @general_interceptor(query_group_uncompleted_games_matcher)
@@ -166,9 +158,6 @@ async def query_group_uncompleted_games(bot: Bot, event: MessageEvent, matcher: 
         for g in games:
             messages.append(await map_game(g, detailed=True))
 
-        if isinstance(event, GroupMessageEvent):
-            await send_group_forward_msg(bot, event.group_id, messages)
-        else:
-            await send_private_forward_msg(bot, event.user_id, messages)
+        await send_msgs(bot, event, messages)
     else:
         await matcher.send("本群还没有未完成的对局")

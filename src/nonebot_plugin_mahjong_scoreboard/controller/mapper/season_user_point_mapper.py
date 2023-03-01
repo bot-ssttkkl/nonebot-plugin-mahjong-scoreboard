@@ -48,7 +48,8 @@ async def map_season_user_point(sup: SeasonUserPointOrm,
         return Message(MessageSegment.text(io.getvalue().strip()))
 
 
-async def map_season_user_points(group: GroupOrm, season: SeasonOrm, sups: List[SeasonUserPointOrm]) -> List[Message]:
+async def map_season_user_points(group: GroupOrm, season: SeasonOrm, sups: List[SeasonUserPointOrm],
+                                 record_per_msg: int = 10) -> List[Message]:
     session = data_source.session()
 
     messages = []
@@ -69,7 +70,7 @@ async def map_season_user_points(group: GroupOrm, season: SeasonOrm, sups: List[
         pending_message.write(line)
         pending += 1
 
-        if pending >= 10:
+        if 0 < record_per_msg <= pending:
             messages.append(Message(MessageSegment.text(pending_message.getvalue().strip())))
             pending = 0
             pending_message = StringIO()

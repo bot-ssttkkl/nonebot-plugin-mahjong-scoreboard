@@ -9,7 +9,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import requir
     require_parse_unary_text_arg, require_str
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_mapper import map_season
-from nonebot_plugin_mahjong_scoreboard.controller.utils import parse_int_or_reject
+from nonebot_plugin_mahjong_scoreboard.controller.utils.parse import parse_int_or_reject
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonState
 from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm, SeasonConfig

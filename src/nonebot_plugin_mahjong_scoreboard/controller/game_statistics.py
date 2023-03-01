@@ -8,7 +8,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import requir
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_statistics_mapper import map_season_user_trend, \
     map_user_statistics, map_season_user_statistics
-from nonebot_plugin_mahjong_scoreboard.controller.utils import SplitCommandArgs
+from nonebot_plugin_mahjong_scoreboard.controller.utils.message import SplitCommandArgs
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service
 from nonebot_plugin_mahjong_scoreboard.service.game_service import get_games

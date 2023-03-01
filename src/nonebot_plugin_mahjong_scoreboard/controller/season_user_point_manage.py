@@ -6,8 +6,8 @@ from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import requir
     require_user_binding_qq, require_float
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_mapper import map_season_user_point
-from nonebot_plugin_mahjong_scoreboard.controller.utils import parse_float_or_error, \
-    SplitCommandArgs
+from nonebot_plugin_mahjong_scoreboard.controller.utils.message import SplitCommandArgs
+from nonebot_plugin_mahjong_scoreboard.controller.utils.parse import parse_float_or_error
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service, user_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq

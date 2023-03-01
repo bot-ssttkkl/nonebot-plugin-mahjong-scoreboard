@@ -1,12 +1,12 @@
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import Bot, Message, MessageSegment, MessageEvent, GroupMessageEvent
+from nonebot.adapters.onebot.v11 import Bot, Message, MessageSegment, MessageEvent
 from nonebot.internal.matcher import Matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
     require_parse_unary_text_arg
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_mapper import map_season
-from nonebot_plugin_mahjong_scoreboard.controller.utils import send_group_forward_msg, send_private_forward_msg
+from nonebot_plugin_mahjong_scoreboard.controller.utils.send_messages import send_msgs
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service import season_service
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
@@ -59,9 +59,6 @@ async def query_all_seasons(bot: Bot, event: MessageEvent, matcher: Matcher):
         for s in seasons:
             messages.append(map_season(s))
 
-        if isinstance(event, GroupMessageEvent):
-            await send_group_forward_msg(bot, event.group_id, messages)
-        else:
-            await send_private_forward_msg(bot, event.user_id, messages)
+        await send_msgs(bot, event, messages)
     else:
         await matcher.send("你还没有进行过对局")

@@ -21,6 +21,18 @@ async def get_group_by_binding_qq(binding_qq: int) -> GroupOrm:
     return group
 
 
+async def get_group_info(group_binding_qq: int):
+    bot = current_bot.get()
+    try:
+        group_info = await bot.get_group_info(group_id=group_binding_qq)
+        # 如果机器人尚未加入群, group_create_time, group_level, max_member_count 和 member_count 将会为0
+        if group_info["member_count"] == 0:
+            raise BadRequestError("机器人尚未加入群")
+        return group_info
+    except ActionFailed as e:
+        raise BadRequestError(e.info["wording"])
+
+
 async def is_group_admin(user: UserOrm, group: GroupOrm) -> bool:
     bot = current_bot.get()
     member_info = await bot.get_group_member_info(group_id=group.binding_qq, user_id=user.binding_qq)
