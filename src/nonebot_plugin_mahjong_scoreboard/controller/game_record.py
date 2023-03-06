@@ -261,7 +261,7 @@ async def parse_make_game_progress_args(matcher: Matcher, args: Message = SplitC
             text = arg.data["text"]
             if text.startswith("对局"):
                 game_code = parse_int_or_error(text[len("对局"):], '对局编号')
-            elif text == '完成':
+            elif text == '完成' or text == '已完成':
                 completed = True
             else:
                 match_result = re.match(round_honba_pattern, text)
@@ -276,6 +276,8 @@ async def parse_make_game_progress_args(matcher: Matcher, args: Message = SplitC
 
     if game_code is None:
         raise BadRequestError("请指定对局编号")
+    if not completed and (round is None or honba is None):
+        raise BadRequestError("请指定对局进度（”东/南x局y本场“或”完成“）")
 
     matcher.state["game_code"] = game_code
     matcher.state["completed"] = completed
