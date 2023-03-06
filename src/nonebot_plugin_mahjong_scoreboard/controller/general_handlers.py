@@ -1,7 +1,7 @@
 from typing import Type
 
 from nonebot.adapters.onebot.v11 import MessageEvent, GroupMessageEvent, Bot, ActionFailed, Message
-from nonebot.internal.matcher import Matcher
+from nonebot.internal.matcher import Matcher, current_matcher
 
 from nonebot_plugin_mahjong_scoreboard.controller.context import get_context
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
@@ -11,6 +11,13 @@ from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq, ensure_group_admin, \
     get_group_info
 from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_binding_qq
+
+
+async def hint_for_question_flow_on_first():
+    matcher = current_matcher.get()
+    if not matcher.state.get("hinted_for_question_flow", False):
+        await matcher.send("进入问答模式，回复”/q“中止流程")
+        matcher.state["hinted_for_question_flow"] = True
 
 
 def require_group_binding_qq(matcher_type: Type[Matcher], check_admin: bool = False):
@@ -80,6 +87,7 @@ def require_integer(matcher_type: Type[Matcher], arg_name: str, desc: str):
     @matcher_type.handle()
     async def check(matcher: Matcher):
         if arg_name not in matcher.state:
+            await hint_for_question_flow_on_first()
             await matcher.pause(desc + "？")
 
     @matcher_type.handle()
@@ -97,6 +105,7 @@ def require_float(matcher_type: Type[Matcher], arg_name: str, desc: str):
     @matcher_type.handle()
     async def check(matcher: Matcher):
         if arg_name not in matcher.state:
+            await hint_for_question_flow_on_first()
             await matcher.pause(desc + "？")
 
     @matcher_type.handle()
@@ -114,6 +123,7 @@ def require_str(matcher_type: Type[Matcher], arg_name: str, desc: str):
     @matcher_type.handle()
     async def check(matcher: Matcher):
         if arg_name not in matcher.state:
+            await hint_for_question_flow_on_first()
             await matcher.pause(desc + "？")
 
     @matcher_type.handle()

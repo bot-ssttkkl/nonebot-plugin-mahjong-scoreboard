@@ -6,7 +6,7 @@ from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
 from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
-    require_parse_unary_text_arg, require_str
+    require_parse_unary_text_arg, require_str, hint_for_question_flow_on_first
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_mapper import map_season
 from nonebot_plugin_mahjong_scoreboard.controller.utils.parse import parse_int_or_reject
@@ -21,6 +21,8 @@ from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_b
 new_season_matcher = on_command("新建赛季", aliases={"新赛季"}, priority=5)
 
 require_group_binding_qq(new_season_matcher, True)
+
+new_season_matcher.append_handler(hint_for_question_flow_on_first)
 
 
 @new_season_matcher.got("code", "赛季代号？")
