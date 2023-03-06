@@ -14,7 +14,7 @@ help_text = f"""
 - {default_cmd_start}撤销结算对局 [对局<编号>] [@<用户>]
 - {default_cmd_start}设置对局PT <PT> [对局<编号>] [@<用户>]
 - {default_cmd_start}删除对局 [对局<编号>]
-- {default_cmd_start}设置对局进度 <进度> [对局<编号>]
+- {default_cmd_start}设置对局进度 <东/南x局y本场 或 完成> [对局<编号>]
 
 对局查询：
 - {default_cmd_start}查询对局 [<编号>]
@@ -36,9 +36,13 @@ help_text = f"""
 赛季查询：
 - {default_cmd_start}查询榜单 [<赛季代号>]
 - {default_cmd_start}导出榜单 [<赛季代号>]
-- {default_cmd_start}查询最近走势 [@<用户>]
 - {default_cmd_start}查询PT [@<用户>]
 - {default_cmd_start}设置PT <PT> [@<用户>]
+
+数据统计：
+- {default_cmd_start}对战数据
+- {default_cmd_start}赛季对战数据 [<赛季代号>]
+- {default_cmd_start}最近走势 [@<用户>]
 
 以上命令格式中，以<>包裹的表示一个参数，以[]包裹的表示一个可选项。
 
