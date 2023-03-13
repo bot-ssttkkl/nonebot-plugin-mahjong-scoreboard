@@ -1,4 +1,5 @@
-from sqlalchemy import Column, BigInteger, Integer, Index
+from sqlalchemy import BigInteger, Index
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ._data_source import data_source
 
@@ -7,8 +8,8 @@ from ._data_source import data_source
 class UserOrm:
     __tablename__ = 'users'
 
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
-    binding_qq: int = Column(BigInteger)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    binding_qq: Mapped[int] = mapped_column(BigInteger)
 
     __table_args__ = (
         Index("users_binding_qq_idx", "binding_qq"),

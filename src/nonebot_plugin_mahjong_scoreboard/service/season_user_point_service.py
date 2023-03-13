@@ -75,7 +75,7 @@ async def get_season_user_point_change_logs(season: Optional[SeasonOrm] = None,
         stmt = stmt.where(SeasonUserPointChangeLogOrm.season == season)
 
     if user is not None:
-        stmt.append_whereclause(SeasonUserPointChangeLogOrm.user == user)
+        stmt = stmt.where(SeasonUserPointChangeLogOrm.user == user)
 
     if reverse_order:
         stmt = stmt.order_by(SeasonUserPointChangeLogOrm.id.desc())

@@ -2,8 +2,8 @@ from collections import UserDict
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional, List
 
-from sqlalchemy import Column, Integer, DateTime, String, Enum, ForeignKey, Boolean, Index
-from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey, Index
+from sqlalchemy.orm import mapped_column, relationship, Mapped
 
 from ._data_source import data_source
 from .types.userdict import UserDict as SqlUserDict
@@ -17,38 +17,38 @@ if TYPE_CHECKING:
 
 
 class SeasonConfig(UserDict):
-    south_game_enabled: bool = DictField()
-    south_game_origin_point: Optional[int] = DictField(default=None)
-    south_game_horse_point: Optional[List[int]] = DictField(default_factory=list)
-    east_game_enabled: bool = DictField()
-    east_game_origin_point: Optional[int] = DictField(default=None)
-    east_game_horse_point: Optional[List[int]] = DictField(default_factory=list)
-    point_precision: int = DictField(default=0)  # PT精确到10^point_precision
+    south_game_enabled: Mapped[bool] = DictField()
+    south_game_origin_point: Mapped[Optional[int]] = DictField(default=None)
+    south_game_horse_point: Mapped[Optional[List[int]]] = DictField(default_factory=list)
+    east_game_enabled: Mapped[bool] = DictField()
+    east_game_origin_point: Mapped[Optional[int]] = DictField(default=None)
+    east_game_horse_point: Mapped[Optional[List[int]]] = DictField(default_factory=list)
+    point_precision: Mapped[int] = DictField(default=0)  # PT精确到10^point_precision
 
 
 @data_source.registry.mapped
 class SeasonOrm:
     __tablename__ = 'seasons'
 
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
-    group_id: int = Column(Integer, ForeignKey('groups.id'), nullable=False)
-    group: 'GroupOrm' = relationship('GroupOrm', foreign_keys='SeasonOrm.group_id')
+    group_id: Mapped[int] = mapped_column(ForeignKey('groups.id'))
+    group: Mapped['GroupOrm'] = relationship(foreign_keys='SeasonOrm.group_id')
 
-    state: SeasonState = Column(Enum(SeasonState), nullable=False, default=SeasonState.initial)
+    state: Mapped[SeasonState] = mapped_column(default=SeasonState.initial)
 
-    code: str = Column(String, nullable=False)
-    name: str = Column(String, nullable=False)
+    code: Mapped[str]
+    name: Mapped[str]
 
-    start_time: Optional[datetime] = Column(DateTime)
-    finish_time: Optional[datetime] = Column(DateTime)
+    start_time: Mapped[Optional[datetime]]
+    finish_time: Mapped[Optional[datetime]]
 
-    config: SeasonConfig = Column(SqlUserDict(SeasonConfig), nullable=False)
+    config: Mapped[SeasonConfig] = mapped_column(SqlUserDict(SeasonConfig))
 
-    accessible: bool = Column(Boolean, nullable=False, default=True)
-    create_time: datetime = Column(DateTime, nullable=False, default=datetime.utcnow)
-    update_time: datetime = Column(DateTime, nullable=False, default=datetime.utcnow)
-    delete_time: Optional[datetime] = Column(DateTime)
+    accessible: Mapped[bool] = mapped_column(default=True)
+    create_time: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    update_time: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    delete_time: Mapped[Optional[datetime]]
 
     __table_args__ = (
         Index("seasons_group_id_code_idx", "group_id", "code"),
@@ -59,38 +59,37 @@ class SeasonOrm:
 class SeasonUserPointOrm:
     __tablename__ = 'season_user_points'
 
-    season_id: int = Column(Integer, ForeignKey('seasons.id'), nullable=False, primary_key=True)
-    season: 'SeasonOrm' = relationship('SeasonOrm', foreign_keys='SeasonUserPointOrm.season_id')
+    season_id: Mapped[int] = mapped_column(ForeignKey('seasons.id'), primary_key=True)
+    season: Mapped['SeasonOrm'] = relationship(foreign_keys='SeasonUserPointOrm.season_id')
 
-    user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False, primary_key=True)
-    user: 'UserOrm' = relationship('UserOrm', foreign_keys='SeasonUserPointOrm.user_id')
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), primary_key=True)
+    user: Mapped['UserOrm'] = relationship(foreign_keys='SeasonUserPointOrm.user_id')
 
-    point: int = Column(Integer, nullable=False, default=0)
+    point: Mapped[int] = mapped_column(default=0)
 
-    create_time: datetime = Column(DateTime, nullable=False, default=datetime.utcnow)
-    update_time: datetime = Column(DateTime, nullable=False, default=datetime.utcnow)
+    create_time: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    update_time: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
 
 @data_source.registry.mapped
 class SeasonUserPointChangeLogOrm:
     __tablename__ = 'season_user_point_change_logs'
 
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
-    season_id: int = Column(Integer, ForeignKey('seasons.id'), nullable=False)
-    season: 'SeasonOrm' = relationship('SeasonOrm', foreign_keys='SeasonUserPointChangeLogOrm.season_id')
+    season_id: Mapped[int] = mapped_column(ForeignKey('seasons.id'))
+    season: Mapped['SeasonOrm'] = relationship(foreign_keys='SeasonUserPointChangeLogOrm.season_id')
 
-    user_id: int = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user: 'UserOrm' = relationship('UserOrm', foreign_keys='SeasonUserPointChangeLogOrm.user_id')
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    user: Mapped['UserOrm'] = relationship(foreign_keys='SeasonUserPointChangeLogOrm.user_id')
 
-    change_type: SeasonUserPointChangeType = Column(Enum(SeasonUserPointChangeType), nullable=False)
-    change_point: int = Column(Integer, nullable=False)
+    change_type: Mapped[SeasonUserPointChangeType]
+    change_point: Mapped[int]
 
-    related_game_id: Optional[int] = Column(Integer, ForeignKey('games.id'))
-    related_game: Optional['GameOrm'] = relationship('GameOrm',
-                                                     foreign_keys='SeasonUserPointChangeLogOrm.related_game_id')
+    related_game_id: Mapped[Optional[int]] = mapped_column(ForeignKey('games.id'))
+    related_game: Mapped[Optional['GameOrm']] = relationship(foreign_keys='SeasonUserPointChangeLogOrm.related_game_id')
 
-    create_time: datetime = Column(DateTime, nullable=False, default=datetime.utcnow)
+    create_time: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     __table_args__ = (
         Index("seasons_related_game_id_idx", "related_game_id"),

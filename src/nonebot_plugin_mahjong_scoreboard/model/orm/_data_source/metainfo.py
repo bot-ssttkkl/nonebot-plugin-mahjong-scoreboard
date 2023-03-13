@@ -1,5 +1,6 @@
-from sqlalchemy import Column, String, JSON, inspect, select
+from sqlalchemy import JSON, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapped, mapped_column
 
 from .src import data_source
 
@@ -10,11 +11,11 @@ APP_DB_VERSION = 2
 class MetaInfoOrm:
     __tablename__ = 'metainfo'
 
-    key: str = Column(String(64), primary_key=True)
-    value = Column(JSON)
+    key: Mapped[str] = mapped_column(primary_key=True)
+    value: Mapped[any] = mapped_column(JSON)
 
 
-async def get_metainfo(key: str):
+async def get_metainfo(key: str) -> any:
     async with AsyncSession(data_source.engine) as session:
         record = await session.get(MetaInfoOrm, key)
         return record.value

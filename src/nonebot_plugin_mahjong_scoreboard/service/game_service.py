@@ -94,11 +94,11 @@ def _build_game_query(stmt: Select,
                       uncompleted_only: bool = False,
                       completed_only: bool = False,
                       reverse_order: bool = False,
-                      time_span: Optional[Tuple[datetime, datetime]] = None):
+                      time_span: Optional[Tuple[datetime, datetime]] = None) -> Select:
     if uncompleted_only:
-        stmt.append_whereclause(GameOrm.state != GameState.completed)
+        stmt = stmt.where(GameOrm.state != GameState.completed)
     elif completed_only:
-        stmt.append_whereclause(GameOrm.state == GameState.completed)
+        stmt = stmt.where(GameOrm.state == GameState.completed)
 
     if reverse_order:
         stmt = stmt.order_by(GameOrm.id.desc())
@@ -106,10 +106,10 @@ def _build_game_query(stmt: Select,
         stmt = stmt.order_by(GameOrm.id)
 
     if time_span:
-        stmt.append_whereclause(GameOrm.create_time >= time_span[0])
-        stmt.append_whereclause(GameOrm.create_time < time_span[1])
+        stmt = stmt.where(GameOrm.create_time >= time_span[0])
+        stmt = stmt.where(GameOrm.create_time < time_span[1])
 
-    stmt.append_whereclause(GameOrm.accessible)
+    stmt = stmt.where(GameOrm.accessible)
 
     stmt = (stmt.offset(offset).limit(limit)
             .options(selectinload(GameOrm.records)))
@@ -156,7 +156,7 @@ async def get_games(group: Optional[GroupOrm] = None,
         stmt = stmt.join(GameRecordOrm).where(GameRecordOrm.user == user)
 
     if season is not None:
-        stmt.append_whereclause(GameOrm.season == season)
+        stmt = stmt.where(GameOrm.season == season)
 
     stmt = _build_game_query(stmt, **kwargs)
 
