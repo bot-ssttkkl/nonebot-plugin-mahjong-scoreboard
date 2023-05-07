@@ -78,7 +78,7 @@ class GameRecordOrm:
 
     @property
     def point(self) -> float:
-        return self.raw_point * 10 ** self.point_scale
+        return self.raw_point * (10 ** self.point_scale)
 
     rank: Mapped[Optional[int]] = mapped_column("rnk")  # 排名
 

@@ -3,7 +3,7 @@ from typing import List, Tuple, Optional
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import digit_mapping, percentile_str
+from nonebot_plugin_mahjong_scoreboard.controller.mapper import digit_mapping, percentile_str, map_real_point
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_mapper import map_point
 from nonebot_plugin_mahjong_scoreboard.model.game_statistics import GameStatistics
 from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameRecordOrm, GameOrm
@@ -40,7 +40,7 @@ async def map_game_statistics(group: GroupOrm, user: UserOrm, season: Optional[S
             sio.write(f"  {digit_mapping[i + 1]}位率：{percentile_str(rate)}\n")
         sio.write(f"  平均顺位：{round(game_statistics.avg_rank, 2)}\n")
         if game_statistics.pt_expectation is not None:
-            sio.write(f"  PT期望：{map_point(game_statistics.pt_expectation)}\n")
+            sio.write(f"  PT期望：{map_real_point(game_statistics.pt_expectation, 2)}\n")
         sio.write(f"  被飞率：{percentile_str(game_statistics.flying_rate)}")
 
         return Message(MessageSegment.text(sio.getvalue().strip()))

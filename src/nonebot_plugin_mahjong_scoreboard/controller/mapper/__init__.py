@@ -51,9 +51,13 @@ def percentile_str(x: float, ndigits: int = 2) -> str:
 
 
 def map_point(raw_point: Union[int, float], scale: int = 0) -> str:
-    point_text = f"%.{-scale}f" % (raw_point * 10 ** scale)
-    if raw_point > 0:
+    return map_real_point(raw_point * 10 ** scale, scale)
+
+
+def map_real_point(point: Union[int, float], precision: int = 0) -> str:
+    point_text = f"%.{precision}f" % point
+    if point > 0:
         point_text = f'+{point_text}'
-    elif raw_point == 0:
+    elif point == 0:
         point_text = f'±{point_text}'
     return point_text

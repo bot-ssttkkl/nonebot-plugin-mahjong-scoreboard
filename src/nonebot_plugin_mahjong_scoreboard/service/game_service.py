@@ -504,8 +504,7 @@ async def get_game_statistics(group: GroupOrm, user: UserOrm, season: Optional[S
 
     cnt = [0, 0, 0, 0]
 
-    pt_south = 0.0
-    pt_east = 0.0
+    sum_point = 0.0
 
     flying = 0
 
@@ -517,10 +516,7 @@ async def get_game_statistics(group: GroupOrm, user: UserOrm, season: Optional[S
                 if r.score < 0:
                     flying += 1
 
-                if g.player_and_wind == PlayerAndWind.four_men_south:
-                    pt_south += r.point
-                elif g.player_and_wind == PlayerAndWind.four_men_east:
-                    pt_east += r.point
+                sum_point += r.point
 
                 break
 
@@ -529,11 +525,7 @@ async def get_game_statistics(group: GroupOrm, user: UserOrm, season: Optional[S
     avg_rank = (cnt[0] * 1 + cnt[1] * 2 + cnt[2] * 3 + cnt[3] * 4) / total
 
     if season is not None:
-        pt_expectation = 0
-        if total_south:
-            pt_expectation += pt_south / total_south
-        if total_east:
-            pt_expectation += pt_east / total_east
+        pt_expectation = sum_point / total
     else:
         pt_expectation = None
 
