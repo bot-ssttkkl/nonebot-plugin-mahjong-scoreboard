@@ -1,10 +1,11 @@
 from io import StringIO
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import digit_mapping, percentile_str
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_mapper import map_point
+from nonebot_plugin_mahjong_scoreboard.model.game_statistics import GameStatistics
 from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameRecordOrm, GameOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm, \
@@ -26,23 +27,20 @@ async def map_season_user_trend(group: GroupOrm, user: UserOrm, season: SeasonOr
         return Message(MessageSegment.text(sio.getvalue().strip()))
 
 
-async def map_user_statistics(group: GroupOrm, user: UserOrm, total: int, rates: List[int]) -> Message:
+async def map_game_statistics(group: GroupOrm, user: UserOrm, season: Optional[SeasonOrm],
+                              game_statistics: GameStatistics) -> Message:
     with StringIO() as sio:
-        sio.write(f"用户[{await get_user_nickname(user, group)}]的对战数据如下：\n")
+        if season is not None:
+            sio.write(f"用户[{await get_user_nickname(user, group)}]在赛季[{season.name}]的对战数据如下：\n")
+        else:
+            sio.write(f"用户[{await get_user_nickname(user, group)}]的对战数据如下：\n")
 
-        sio.write(f"  对局数：{total}\n")
-        for i, rate in enumerate(rates):
+        sio.write(f"  对局数：{game_statistics.total} （半庄：{game_statistics.total_south}、东风：{game_statistics.total_east}）\n")
+        for i, rate in enumerate(game_statistics.rates):
             sio.write(f"  {digit_mapping[i + 1]}位率：{percentile_str(rate)}\n")
-
-        return Message(MessageSegment.text(sio.getvalue().strip()))
-
-
-async def map_season_user_statistics(group: GroupOrm, user: UserOrm, season: SeasonOrm, total: int, rates: List[int]) -> Message:
-    with StringIO() as sio:
-        sio.write(f"用户[{await get_user_nickname(user, group)}]在赛季[{season.name}]的对战数据如下：\n")
-
-        sio.write(f"  对局数：{total}\n")
-        for i, rate in enumerate(rates):
-            sio.write(f"  {digit_mapping[i + 1]}位率：{percentile_str(rate)}\n")
+        sio.write(f"  平均顺位：{round(game_statistics.avg_rank, 2)}\n")
+        if game_statistics.pt_expectation is not None:
+            sio.write(f"  PT期望：{map_point(game_statistics.pt_expectation)}\n")
+        sio.write(f"  被飞率：{percentile_str(game_statistics.flying_rate)}")
 
         return Message(MessageSegment.text(sio.getvalue().strip()))

@@ -11,6 +11,7 @@ from sqlalchemy.sql import Select
 
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model.enums import GameState, PlayerAndWind, Wind, SeasonState
+from nonebot_plugin_mahjong_scoreboard.model.game_statistics import GameStatistics
 from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
 from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameOrm, GameRecordOrm, GameProgressOrm
 from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
@@ -482,6 +483,63 @@ async def set_game_comment(game_code: int, group: GroupOrm, comment: str, operat
     game.update_time = datetime.utcnow()
     await session.commit()
     return game
+
+
+async def get_game_statistics(group: GroupOrm, user: UserOrm, season: Optional[SeasonOrm] = None):
+    games = await get_games(group, user, season, completed_only=True)
+
+    if len(games) == 0:
+        raise BadRequestError("你还没有进行对局")
+
+    total = len(games)
+
+    total_east = 0
+    total_south = 0
+
+    for g in games:
+        if g.player_and_wind == PlayerAndWind.four_men_south:
+            total_south += 1
+        elif g.player_and_wind == PlayerAndWind.four_men_east:
+            total_east += 1
+
+    cnt = [0, 0, 0, 0]
+
+    pt_south = 0.0
+    pt_east = 0.0
+
+    flying = 0
+
+    for g in games:
+        for r in g.records:
+            if r.user_id == user.id:
+                cnt[r.rank - 1] += 1
+
+                if r.score < 0:
+                    flying += 1
+
+                if g.player_and_wind == PlayerAndWind.four_men_south:
+                    pt_south += r.point
+                elif g.player_and_wind == PlayerAndWind.four_men_east:
+                    pt_east += r.point
+
+                break
+
+    rates = list(map(lambda x: x / total, cnt))
+
+    avg_rank = (cnt[0] * 1 + cnt[1] * 2 + cnt[2] * 3 + cnt[3] * 4) / total
+
+    if season is not None:
+        pt_expectation = 0
+        if total_south:
+            pt_expectation += pt_south / total_south
+        if total_east:
+            pt_expectation += pt_east / total_east
+    else:
+        pt_expectation = None
+
+    flying_rate = flying / total
+
+    return GameStatistics(total, total_east, total_south, rates, avg_rank, pt_expectation, flying_rate)
 
 
 __all__ = ("get_game_by_code", "get_games",

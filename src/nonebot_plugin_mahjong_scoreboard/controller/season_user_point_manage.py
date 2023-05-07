@@ -77,7 +77,7 @@ async def set_season_user_point(event: MessageEvent, matcher: Matcher):
 
 
 # ========== 重置用户PT ==========
-reset_season_user_point_matcher = on_command("重置用户PT", aliases={"初始化用户pt"}, priority=5)
+reset_season_user_point_matcher = on_command("重置用户PT", aliases={"重置用户pt", "重置PT", "重置pt"}, priority=5)
 
 require_parse_unary_at_arg(reset_season_user_point_matcher, "user_binding_qq")
 require_group_binding_qq(reset_season_user_point_matcher)

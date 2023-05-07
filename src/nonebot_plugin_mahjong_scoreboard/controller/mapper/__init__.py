@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Union
 
 import pytz
 import tzlocal
@@ -49,7 +50,7 @@ def percentile_str(x: float, ndigits: int = 2) -> str:
     return f'{round(x * 100, ndigits)}%'
 
 
-def map_point(raw_point: int, scale: int) -> str:
+def map_point(raw_point: Union[int, float], scale: int = 0) -> str:
     point_text = f"%.{-scale}f" % (raw_point * 10 ** scale)
     if raw_point > 0:
         point_text = f'+{point_text}'

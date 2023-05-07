@@ -7,11 +7,11 @@ from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import requir
     require_group_binding_qq, require_user_binding_qq, require_running_season
 from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_statistics_mapper import map_season_user_trend, \
-    map_user_statistics, map_season_user_statistics
+    map_game_statistics
 from nonebot_plugin_mahjong_scoreboard.controller.utils.message import SplitCommandArgs
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service
-from nonebot_plugin_mahjong_scoreboard.service.game_service import get_games
+from nonebot_plugin_mahjong_scoreboard.service.game_service import get_game_statistics
 from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
 from nonebot_plugin_mahjong_scoreboard.service.season_service import get_season_by_id, get_season_by_code
 from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_binding_qq
@@ -62,21 +62,8 @@ async def query_user_statistics(matcher: Matcher):
     group = await get_group_by_binding_qq(group_binding_qq)
     user = await get_user_by_binding_qq(user_binding_qq)
 
-    games = await get_games(group, user, completed_only=True)
-
-    if len(games) == 0:
-        await matcher.send("你还没有进行对局")
-        return
-
-    cnt = [0, 0, 0, 0]
-
-    for g in games:
-        for r in g.records:
-            if r.user_id == user.id:
-                cnt[r.rank - 1] += 1
-
-    rates = list(map(lambda x: x / len(games), cnt))
-    msg = await map_user_statistics(group, user, len(games), rates)
+    game_statistics = await get_game_statistics(group, user)
+    msg = await map_game_statistics(group, user, None, game_statistics)
     await matcher.send(msg)
 
 
@@ -128,19 +115,6 @@ async def query_season_user_statistics(matcher: Matcher):
         else:
             raise BadRequestError("当前没有运行中的赛季")
 
-    games = await get_games(group, user, season, completed_only=True)
-
-    if len(games) == 0:
-        await matcher.send("你还没有进行对局")
-        return
-
-    cnt = [0, 0, 0, 0]
-
-    for g in games:
-        for r in g.records:
-            if r.user_id == user.id:
-                cnt[r.rank - 1] += 1
-
-    rates = list(map(lambda x: x / len(games), cnt))
-    msg = await map_season_user_statistics(group, user, season, len(games), rates)
+    game_statistics = await get_game_statistics(group, user, season)
+    msg = await map_game_statistics(group, user, season, game_statistics)
     await matcher.send(msg)
