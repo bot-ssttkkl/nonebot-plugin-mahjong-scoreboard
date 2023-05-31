@@ -1,17 +1,9 @@
 from typing import List, Optional
 
-from nonebot.adapters.onebot.v11 import Message, MessageSegment, MessageEvent
+from nonebot.adapters.qqguild import Message, MessageSegment
+from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import Depends
 from nonebot.params import CommandArg
-
-
-def get_reply_message_id(event: MessageEvent) -> Optional[int]:
-    message_id = None
-    for seg in event.original_message:
-        if seg.type == "reply":
-            message_id = int(seg.data["id"])
-            break
-    return message_id
 
 
 def split_message(message: Message, ignore_empty: bool = True) -> List[MessageSegment]:
@@ -27,8 +19,12 @@ def split_message(message: Message, ignore_empty: bool = True) -> List[MessageSe
     return result
 
 
-def SplitCommandArgs(ignore_empty: bool = True):
-    def dep(raw_args=CommandArg()):
-        return split_message(raw_args, ignore_empty)
+def SplitCommandArgs(*, lookup_matcher_state: bool = False,
+                     lookup_matcher_state_key: Optional[str] = "command_args_store",
+                     ignore_empty: bool = True):
+    def dep(matcher: Matcher, command_arg=CommandArg()):
+        if lookup_matcher_state:
+            command_arg = matcher.state[lookup_matcher_state_key]
+        return split_message(command_arg, ignore_empty)
 
     return Depends(dep)

@@ -2,9 +2,9 @@ from sqlalchemy import JSON, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .src import data_source
+from .data_source import data_source
 
-APP_DB_VERSION = 2
+APP_DB_VERSION = 3
 
 
 @data_source.registry.mapped

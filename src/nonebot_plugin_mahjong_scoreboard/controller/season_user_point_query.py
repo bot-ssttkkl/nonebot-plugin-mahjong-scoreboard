@@ -1,71 +1,82 @@
-from nonebot import on_command
-from nonebot.adapters.onebot.v11 import Bot, MessageEvent
+from io import StringIO
+
+from nonebot import on_command, Bot
+from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 
-from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_group_binding_qq, \
-    require_user_binding_qq, require_parse_unary_at_arg, require_parse_unary_text_arg, require_running_season
-from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
-from nonebot_plugin_mahjong_scoreboard.controller.mapper.season_user_point_mapper import map_season_user_point, \
-    map_season_user_points
-from nonebot_plugin_mahjong_scoreboard.controller.utils.send_messages import send_msgs
-from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
-from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service, season_service
-from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
-from nonebot_plugin_mahjong_scoreboard.service.season_service import get_season_by_id
-from nonebot_plugin_mahjong_scoreboard.service.season_user_point_service import get_season_user_point_rank, \
-    count_season_user_point
-from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_binding_qq
+from .interceptor import handle_error
+from .mapper import season_state_mapping, map_point
+from .mapper.season_user_point_mapper import map_season_user_point
+from .utils.dep import RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSeason
+from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
+from ..errors import BadRequestError
+from ..model import Season, User
+from ..platform.get_user_nickname import get_user_nickname
+from ..platform.send_messages import send_msgs
+from ..service.season_user_point_service import get_season_user_point, get_season_user_points
 
 # ========== 查询PT ==========
 query_season_point_matcher = on_command("查询PT", aliases={"查询pt", "PT", "pt"}, priority=5)
 
-require_parse_unary_at_arg(query_season_point_matcher, "user_binding_qq")
-require_group_binding_qq(query_season_point_matcher)
-require_user_binding_qq(query_season_point_matcher)
-require_running_season(query_season_point_matcher)
+require_store_command_args(query_season_point_matcher)
+require_platform_group_id(query_season_point_matcher)
+require_platform_user_id(query_season_point_matcher)
 
 
 @query_season_point_matcher.handle()
-@general_interceptor(query_season_point_matcher)
-async def query_season_point(matcher: Matcher):
-    user = await get_user_by_binding_qq(matcher.state["user_binding_qq"])
-
-    season = await get_season_by_id(matcher.state["running_season_id"])
-    sup = await season_user_point_service.get_season_user_point(season, user)
+@handle_error()
+async def query_season_point(matcher: Matcher, season: Season = RunningSeasonDep(),
+                             user: User = UserDep(lookup_matcher_state=True)):
+    sup = await get_season_user_point(season.id, user.id)
     if sup is None:
         raise BadRequestError("你还没有参加过对局")
 
-    rank = await get_season_user_point_rank(sup)
-    total = await count_season_user_point(season)
-
-    msg = await map_season_user_point(sup, rank, total)
+    msg = await map_season_user_point(sup, season)
     await matcher.send(msg)
 
 
 # ========== 查询榜单 ==========
 query_season_ranking_matcher = on_command("查询榜单", aliases={"榜单"}, priority=5)
 
-require_parse_unary_text_arg(query_season_ranking_matcher, "season_code")
-require_group_binding_qq(query_season_ranking_matcher)
+require_store_command_args(query_season_ranking_matcher)
+require_platform_group_id(query_season_ranking_matcher)
+
+RECORD_PER_MSG = 10
 
 
 @query_season_ranking_matcher.handle()
-@general_interceptor(query_season_ranking_matcher)
-async def query_season_ranking(bot: Bot, event: MessageEvent, matcher: Matcher):
-    group = await get_group_by_binding_qq(matcher.state["binding_qq"])
+@handle_error()
+async def query_season_ranking(bot: Bot, event: Event,
+                               season: Season = SeasonFromUnaryArgOrRunningSeason()):
+    sups = await get_season_user_points(season.id)
 
-    season_code = matcher.state.get("season_code", None)
-    if season_code:
-        season = await season_service.get_season_by_code(season_code, group)
-        if season is None:
-            raise BadRequestError("找不到指定赛季")
+    msgs = []
+
+    pending = 0
+    pending_msg_io = StringIO()
+
+    # 赛季：[赛季名]
+    # 状态：进行中
+    pending_msg_io.write(f"赛季：{season.name}\n")
+    pending_msg_io.write(f"状态：{season_state_mapping[season.state]}\n\n")
+
+    if len(sups) == 0:
+        pending_msg_io.write("还没有用户参与该赛季")
+        msgs.append(pending_msg_io.getvalue().strip())
     else:
-        if group.running_season_id:
-            season = await season_service.get_season_by_id(group.running_season_id)
-        else:
-            raise BadRequestError("当前没有运行中的赛季")
+        for sup in sups:
+            line = f"#{sup.rank}  " \
+                   f"{await get_user_nickname(bot, sup.user.platform_user_id, season.group.platform_group_id)}    " \
+                   f"{map_point(sup.point, season.config.point_precision)}\n"
+            pending_msg_io.write(line)
+            pending += 1
 
-    sups = await season_user_point_service.get_season_user_points(season)
+            if 0 < RECORD_PER_MSG <= pending:
+                msgs.append(pending_msg_io.getvalue().strip())
+                pending = 0
+                pending_msg_io = StringIO()
 
-    msgs = await map_season_user_points(group, season, sups)
+        if pending > 0:
+            msgs.append(pending_msg_io.getvalue().strip())
+
     await send_msgs(bot, event, msgs)

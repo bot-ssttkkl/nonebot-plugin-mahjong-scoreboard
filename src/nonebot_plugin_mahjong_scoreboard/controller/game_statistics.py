@@ -1,120 +1,102 @@
 # ========== 查询最近走势 ==========
-from nonebot import on_command
-from nonebot.adapters.onebot.v11 import Message
-from nonebot.internal.matcher import Matcher
+from io import StringIO
 
-from nonebot_plugin_mahjong_scoreboard.controller.general_handlers import require_parse_unary_at_arg, \
-    require_group_binding_qq, require_user_binding_qq, require_running_season
-from nonebot_plugin_mahjong_scoreboard.controller.interceptor import general_interceptor
-from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_statistics_mapper import map_season_user_trend, \
-    map_game_statistics
-from nonebot_plugin_mahjong_scoreboard.controller.utils.message import SplitCommandArgs
-from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
-from nonebot_plugin_mahjong_scoreboard.service import season_user_point_service
-from nonebot_plugin_mahjong_scoreboard.service.game_service import get_game_statistics
-from nonebot_plugin_mahjong_scoreboard.service.group_service import get_group_by_binding_qq
-from nonebot_plugin_mahjong_scoreboard.service.season_service import get_season_by_id, get_season_by_code
-from nonebot_plugin_mahjong_scoreboard.service.user_service import get_user_by_binding_qq
+from nonebot import on_command, Bot
+from nonebot.internal.matcher import Matcher, current_bot
+from nonebot_plugin_session import Session
+
+from .interceptor import handle_error
+from .mapper import map_point, digit_mapping, percentile_str, map_real_point
+from .utils.dep import GroupDep, SessionDep, RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSeason
+from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
+from ..errors import BadRequestError
+from ..model import GameStatistics, Group, Season, User
+from ..platform.get_user_nickname import get_user_nickname
+from ..service.game_service import get_game_statistics, get_games, get_season_game_statistics
+from ..utils.session import get_platform_group_id
 
 # ============ 查询最近走势 ============
 query_season_user_trend_matcher = on_command("查询最近走势", aliases={"最近走势", "走势"}, priority=5)
 
-require_parse_unary_at_arg(query_season_user_trend_matcher, "user_binding_qq")
-require_group_binding_qq(query_season_user_trend_matcher)
-require_user_binding_qq(query_season_user_trend_matcher)
-require_running_season(query_season_user_trend_matcher)
+require_store_command_args(query_season_user_trend_matcher)
+require_platform_group_id(query_season_user_trend_matcher)
+require_platform_user_id(query_season_user_trend_matcher)
 
 
 @query_season_user_trend_matcher.handle()
-@general_interceptor(query_season_user_trend_matcher)
-async def query_season_user_trend(matcher: Matcher):
-    group_binding_qq = matcher.state["binding_qq"]
-    user_binding_qq = matcher.state["user_binding_qq"]
+@handle_error()
+async def query_season_user_trend(bot: Bot, matcher: Matcher, group: Group = GroupDep(),
+                                  session: Session = SessionDep(),
+                                  user: User = UserDep(lookup_matcher_state=True),
+                                  season: Season = RunningSeasonDep()):
+    games = await get_games(group.id, user.id, season.id, limit=10, reverse_order=True, completed_only=True)
 
-    group = await get_group_by_binding_qq(group_binding_qq)
-    user = await get_user_by_binding_qq(user_binding_qq)
+    if len(games) != 0:
+        with StringIO() as sio:
+            sio.write(f"用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
+                      f"的最近走势如下：\n")
 
-    season = await get_season_by_id(matcher.state["running_season_id"])
-    logs = await season_user_point_service.get_season_user_point_change_logs(season, user,
-                                                                             limit=10, reverse_order=True,
-                                                                             join_game_and_record=True)
-    if len(logs) != 0:
-        msg = await map_season_user_trend(group, user, season, logs)
-        await matcher.send(msg)
+            for game in games:
+                record = game.records[0]
+                for r in game.records:
+                    if r.user.id == user.id:
+                        record = r
+
+                sio.write(f"  {record.rank}位    {record.score}点  "
+                          f"({map_point(record.raw_point, record.point_scale)})  "
+                          f"对局{game.code}\n")
+
+            await matcher.send(sio.getvalue().strip())
     else:
         raise BadRequestError("你还没有参加过对局")
 
 
 # ============ 对战数据 ============
+async def map_game_statistics(game_statistics: GameStatistics, user: User, group: Group) -> str:
+    bot = current_bot.get()
+    with StringIO() as sio:
+        sio.write(f"用户[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]的对战数据：\n")
+
+        sio.write(f"  对局数：{game_statistics.total} （半庄：{game_statistics.total_south}、东风：{game_statistics.total_east}）\n")
+        for i, rate in enumerate(game_statistics.rates):
+            sio.write(f"  {digit_mapping[i + 1]}位率：{percentile_str(rate)}\n")
+        sio.write(f"  平均顺位：{round(game_statistics.avg_rank, 2)}\n")
+        if game_statistics.pt_expectation is not None:
+            sio.write(f"  PT期望：{map_real_point(game_statistics.pt_expectation, 2)}\n")
+        sio.write(f"  被飞率：{percentile_str(game_statistics.flying_rate)}")
+
+        return sio.getvalue().strip()
+
+
 query_user_statistics_matcher = on_command("对战数据", priority=5)
 
-require_parse_unary_at_arg(query_user_statistics_matcher, "user_binding_qq")
-require_group_binding_qq(query_user_statistics_matcher)
-require_user_binding_qq(query_user_statistics_matcher)
+require_store_command_args(query_user_statistics_matcher)
+require_platform_group_id(query_user_statistics_matcher)
+require_platform_user_id(query_user_statistics_matcher)
 
 
 @query_user_statistics_matcher.handle()
-@general_interceptor(query_user_statistics_matcher)
-async def query_user_statistics(matcher: Matcher):
-    group_binding_qq = matcher.state["binding_qq"]
-    user_binding_qq = matcher.state["user_binding_qq"]
-
-    group = await get_group_by_binding_qq(group_binding_qq)
-    user = await get_user_by_binding_qq(user_binding_qq)
-
-    game_statistics = await get_game_statistics(group, user)
-    msg = await map_game_statistics(group, user, None, game_statistics)
+@handle_error()
+async def query_user_statistics(matcher: Matcher, group: Group = GroupDep(),
+                                user: User = UserDep(lookup_matcher_state=True)):
+    game_statistics = await get_game_statistics(group.id, user.id)
+    msg = await map_game_statistics(game_statistics, user, group)
     await matcher.send(msg)
 
 
 # ============ 赛季对战数据 ============
 query_season_user_statistics_matcher = on_command("赛季对战数据", priority=5)
 
-
-@query_season_user_statistics_matcher.handle()
-@general_interceptor(query_season_user_statistics_matcher)
-async def parse_query_season_user_statistics_args(matcher: Matcher, args: Message = SplitCommandArgs()):
-    user_id = None
-    season_code = None
-
-    for arg in args:
-        if arg.type == "at":
-            user_id = int(arg.data["qq"])
-        elif arg.type == "text":
-            season_code = arg.data["text"]
-
-    if user_id is not None:
-        matcher.state["user_binding_qq"] = user_id
-
-    if season_code is not None:
-        matcher.state["season_code"] = season_code
-
-
-require_parse_unary_at_arg(query_season_user_statistics_matcher, "user_binding_qq")
-require_group_binding_qq(query_season_user_statistics_matcher)
-require_user_binding_qq(query_season_user_statistics_matcher)
+require_store_command_args(query_season_user_statistics_matcher)
+require_platform_group_id(query_season_user_statistics_matcher)
+require_platform_user_id(query_season_user_statistics_matcher)
 
 
 @query_season_user_statistics_matcher.handle()
-@general_interceptor(query_season_user_statistics_matcher)
-async def query_season_user_statistics(matcher: Matcher):
-    group_binding_qq = matcher.state["binding_qq"]
-    user_binding_qq = matcher.state["user_binding_qq"]
-
-    group = await get_group_by_binding_qq(group_binding_qq)
-    user = await get_user_by_binding_qq(user_binding_qq)
-
-    season_code = matcher.state.get("season_code", None)
-    if season_code:
-        season = await get_season_by_code(season_code, group)
-        if season is None:
-            raise BadRequestError("找不到指定赛季")
-    else:
-        if group.running_season_id:
-            season = await get_season_by_id(group.running_season_id)
-        else:
-            raise BadRequestError("当前没有运行中的赛季")
-
-    game_statistics = await get_game_statistics(group, user, season)
-    msg = await map_game_statistics(group, user, season, game_statistics)
+@handle_error()
+async def query_season_user_statistics(matcher: Matcher, group: Group = GroupDep(),
+                                       user: User = UserDep(lookup_matcher_state=True),
+                                       season: Season = SeasonFromUnaryArgOrRunningSeason()):
+    game_statistics = await get_season_game_statistics(group.id, user.id, season.id)
+    msg = await  map_game_statistics(game_statistics, user, group)
     await matcher.send(msg)

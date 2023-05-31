@@ -1,20 +1,19 @@
 import csv
 from typing import TextIO, Iterable
 
+from nonebot.internal.matcher import current_bot
+
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import game_state_mapping, \
     player_and_wind_mapping, map_datetime, map_point
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game_progress
+from nonebot_plugin_mahjong_scoreboard.model import Game
 from nonebot_plugin_mahjong_scoreboard.model.enums import GameState
-from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
-from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameOrm, GameProgressOrm
-from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
-from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm
-from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
-from nonebot_plugin_mahjong_scoreboard.service.group_service import get_user_nickname
+from nonebot_plugin_mahjong_scoreboard.platform.get_user_nickname import get_user_nickname
+from nonebot_plugin_mahjong_scoreboard.utils.session import get_real_id
 
 
-async def map_games_as_csv(f: TextIO, games: Iterable[GameOrm]):
-    session = data_source.session()
+async def write_games_csv(f: TextIO, games: Iterable[Game]):
+    bot = current_bot.get()
 
     writer = csv.writer(f)
     writer.writerow(['对局编号', '对局类型', '状态', '完成时间',
@@ -35,29 +34,25 @@ async def map_games_as_csv(f: TextIO, games: Iterable[GameOrm]):
         else:
             row.append("")
 
-        group = await session.get(GroupOrm, g.group_id)
-
-        if g.season_id is not None:
-            season = await session.get(SeasonOrm, g.season_id)
-            row.append(season.name)
+        if g.season is not None:
+            row.append(g.season.name)
         else:
             row.append("")
 
-        if g.promoter_user_id is not None:
-            promoter = await session.get(UserOrm, g.promoter_user_id)
-            row.append(f"{await get_user_nickname(promoter, group)} ({promoter.binding_qq})")
+        if g.promoter is not None:
+            row.append(f"{await get_user_nickname(bot, g.promoter.platform_user_id, g.group.platform_group_id)}"
+                       f" ({get_real_id(g.promoter.platform_user_id)})")
         else:
             row.append("")
 
         for r in sorted(g.records, key=lambda x: x.raw_point, reverse=True):
-            user = await session.get(UserOrm, r.user_id)
-            row.extend([f"{await get_user_nickname(user, group)} ({user.binding_qq})",
+            row.extend([f"{await get_user_nickname(bot, r.user.platform_user_id, g.group.platform_group_id)}"
+                        f" ({get_real_id(r.user.platform_user_id)})",
                         r.score,
                         map_point(r.raw_point, r.point_scale)])
 
-        progress = await session.get(GameProgressOrm, g.id)
-        if progress is not None:
-            row.append(map_game_progress(progress))
+        if g.progress is not None:
+            row.append(map_game_progress(g.progress))
         else:
             row.append("")
 
