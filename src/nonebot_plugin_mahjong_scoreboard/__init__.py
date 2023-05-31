@@ -5,6 +5,14 @@ nonebot-plugin-mahjong-scoreboard
 @License        : MIT
 @GitHub         : https://github.com/ssttkkl/nonebot-plugin-mahjong-scoreboard
 """
+from nonebot import require
+
+require("nonebot_plugin_localstore")
+require("nonebot_plugin_session")
+require("nonebot_plugin_sqlalchemy")
+require("nonebot_plugin_apscheduler")
+require("nonebot_plugin_gocqhttp_cross_machine_upload_file")
+
 from .utils.nonebot import default_cmd_start
 
 help_text = f"""

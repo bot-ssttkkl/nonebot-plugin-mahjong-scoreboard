@@ -1,8 +1,8 @@
 from typing import List
 
-from nonebot.adapters.onebot.v11 import Message, MessageEvent, Bot, GroupMessageEvent
+from nonebot.adapters.onebot.v11 import Message, Bot, Event
 
-from nonebot_plugin_mahjong_scoreboard.config import conf
+from ...config import conf
 
 
 async def send_group_forward_msg(bot: Bot, group_id: int, messages: List[Message]):
@@ -41,14 +41,16 @@ async def send_private_forward_msg(bot: Bot, user_id: int, messages: List[Messag
     await bot.send_private_forward_msg(user_id=user_id, messages=msg_li)
 
 
-async def send_forward_msg(bot: Bot, event: MessageEvent, messages: List[Message]):
-    if isinstance(event, GroupMessageEvent):
-        await send_group_forward_msg(bot, event.group_id, messages)
+async def send_forward_msg(bot: Bot, event: Event, messages: List[Message]):
+    user_id = getattr(event, "user_id", None)
+    group_id = getattr(event, "group_id", None)
+    if group_id is not None:
+        await send_group_forward_msg(bot, group_id, messages)
     else:
-        await send_private_forward_msg(bot, event.user_id, messages)
+        await send_private_forward_msg(bot, user_id, messages)
 
 
-async def send_msgs(bot: Bot, event: MessageEvent, messages: List[Message]):
+async def send_msgs(bot: Bot, event: Event, messages: List[Message]):
     if len(messages) > 1 and conf.mahjong_scoreboard_send_forward_message:
         await send_forward_msg(bot, event, messages)
     else:

@@ -1,19 +1,19 @@
-from collections import UserDict as UserDictType
 from typing import Type
 
+from pydantic import BaseModel
 from sqlalchemy import TypeDecorator, JSON
 
 
-class UserDict(TypeDecorator):
+class PydanticModel(TypeDecorator):
     impl = JSON
     cache_ok = True
 
-    def __init__(self, dict_type: Type[UserDictType], *args, **kwargs):
+    def __init__(self, t_model: Type[BaseModel], *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dict_type = dict_type
+        self.t_model = t_model
 
     def process_bind_param(self, value, dialect):
-        return value.data
+        return value.dict()
 
     def process_result_value(self, value, dialect):
-        return self.dict_type(value)
+        return self.t_model.parse_obj(value)

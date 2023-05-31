@@ -1,67 +1,77 @@
 from datetime import datetime
 from typing import Optional, List
 
-from sqlalchemy import select
+from .game_service import delete_uncompleted_season_games
+from .group_service import is_group_admin
+from .mapper import map_season
+from ..errors import BadRequestError
+from ..model import Season, SeasonConfig
+from ..model.enums import SeasonState
+from ..repository import data_source
+from ..repository.data_model import GroupOrm, SeasonOrm
+from ..repository.season import SeasonRepository
 
-from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
-from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonState
-from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
-from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
-from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm
-from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
-from nonebot_plugin_mahjong_scoreboard.service.game_service import delete_uncompleted_season_games
-from nonebot_plugin_mahjong_scoreboard.service.group_service import ensure_group_admin
+
+async def _ensure_permission(season: SeasonOrm, operator_user_id: int):
+    if not await is_group_admin(operator_user_id, season.group_id):
+        raise BadRequestError("没有权限")
 
 
-async def _ensure_permission(season: SeasonOrm, operator: UserOrm):
+async def new_season(group_id: int, code: str, name: str, config: SeasonConfig) -> Season:
     session = data_source.session()
 
-    group = await session.get(GroupOrm, season.group_id)
-    await ensure_group_admin(operator, group)
-
-
-async def new_season(season: SeasonOrm) -> SeasonOrm:
-    session = data_source.session()
+    season = SeasonOrm(
+        code=code,
+        name=name,
+        config=config,
+        group_id=group_id
+    )
     session.add(season)
     await session.commit()
-    return season
+    await session.refresh(season)
+    return await map_season(season, session)
 
 
-async def get_season_by_code(season_code: str, group: GroupOrm) -> Optional[SeasonOrm]:
+async def get_season_by_code(season_code: str, group_id: int) -> Optional[Season]:
     session = data_source.session()
-    stmt = select(SeasonOrm).where(
-        SeasonOrm.group_id == group.id,
-        SeasonOrm.code == season_code,
-        SeasonOrm.accessible
-    ).limit(1)
-    season = (await session.execute(stmt)).scalar_one_or_none()
-    return season
+    repo = SeasonRepository(session)
+    season = await repo.get_by_code(season_code, group_id)
+    return await map_season(season, session)
 
 
-async def get_season_by_id(season_id: int) -> Optional[SeasonOrm]:
+async def get_season_by_id(season_id: int) -> Optional[Season]:
     session = data_source.session()
-    stmt = select(SeasonOrm).where(
-        SeasonOrm.id == season_id,
-        SeasonOrm.accessible
-    ).limit(1)
-    season = (await session.execute(stmt)).scalar_one_or_none()
-    return season
+    repo = SeasonRepository(session)
+    season = await repo.get_by_pk(season_id)
+    return await map_season(season, session)
 
 
-async def get_all_seasons(group: GroupOrm) -> List[SeasonOrm]:
+async def get_group_seasons(group_id: int) -> List[Season]:
     session = data_source.session()
-    stmt = select(SeasonOrm).where(
-        SeasonOrm.group == group,
-        SeasonOrm.accessible
-    )
-    result = await session.execute(stmt)
-    return [row[0] for row in result]
+    repo = SeasonRepository(session)
+    seasons = await repo.get_group_seasons(group_id)
+    return [await map_season(s, session) for s in seasons]
 
 
-async def start_season(season: SeasonOrm, operator: UserOrm):
-    await _ensure_permission(season, operator)
-
+async def get_group_running_season(group_id: int) -> Optional[Season]:
     session = data_source.session()
+    group = await session.get(GroupOrm, group_id)
+    repo = SeasonRepository(session)
+    if group.running_season_id:
+        season = await repo.get_by_pk(group.running_season_id)
+        return await map_season(season, session)
+    else:
+        return None
+
+
+async def start_season(season_id: int, operator_user_id: int):
+    session = data_source.session()
+
+    repo = SeasonRepository(session)
+
+    season = await repo.get_by_pk(season_id)
+
+    await _ensure_permission(season, operator_user_id)
 
     group: GroupOrm = await session.get(GroupOrm, season.group_id)
     if season.state != SeasonState.initial:
@@ -77,29 +87,38 @@ async def start_season(season: SeasonOrm, operator: UserOrm):
     await session.commit()
 
 
-async def finish_season(season: SeasonOrm, operator: UserOrm):
-    await _ensure_permission(season, operator)
-
+async def finish_season(season_id: int, operator_user_id: int):
     session = data_source.session()
-    group: GroupOrm = await session.get(GroupOrm, season.group_id)
+
+    repo = SeasonRepository(session)
+
+    season = await repo.get_by_pk(season_id)
+
+    await _ensure_permission(season, operator_user_id)
 
     if season.state != SeasonState.running:
         raise BadRequestError("该赛季尚未开启或已经结束")
 
-    await delete_uncompleted_season_games(season)
+    await delete_uncompleted_season_games(season.id)
 
     season.state = SeasonState.finished
     season.finish_time = datetime.utcnow()
+
+    group = await session.get(GroupOrm, season.group_id)
     group.running_season_id = None
 
     season.update_time = datetime.utcnow()
     await session.commit()
 
 
-async def remove_season(season: SeasonOrm, operator: UserOrm):
-    await _ensure_permission(season, operator)
-
+async def remove_season(season_id: int, operator_user_id: int):
     session = data_source.session()
+
+    repo = SeasonRepository(session)
+
+    season = await repo.get_by_pk(season_id)
+
+    await _ensure_permission(season, operator_user_id)
 
     if season.state != SeasonState.initial:
         raise BadRequestError("该赛季已经开启或已经结束")

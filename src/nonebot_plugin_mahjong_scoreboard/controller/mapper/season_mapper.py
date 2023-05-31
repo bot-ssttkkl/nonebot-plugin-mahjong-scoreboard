@@ -1,13 +1,10 @@
 from io import StringIO
-from typing import Optional
 
-from nonebot.adapters.onebot.v11 import Message, MessageSegment
-
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import season_state_mapping, map_datetime
-from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm
+from . import season_state_mapping, map_datetime
+from ...model import Season
 
 
-def map_season(season: SeasonOrm, *, group_info: Optional[dict] = None) -> Message:
+def map_season(season: Season) -> str:
     with StringIO() as io:
         # {season.name}
         io.write(season.name)
@@ -17,14 +14,6 @@ def map_season(season: SeasonOrm, *, group_info: Optional[dict] = None) -> Messa
         io.write('代号：')
         io.write(season.code)
         io.write('\n')
-
-        if group_info is not None:
-            # 群组：义已死吾亦死 (114514)
-            io.write('群组：')
-            io.write(group_info["group_name"])
-            io.write(' (')
-            io.write(str(group_info["group_id"]))
-            io.write(')\n')
 
         if season.state:
             io.write('状态：')
@@ -72,4 +61,4 @@ def map_season(season: SeasonOrm, *, group_info: Optional[dict] = None) -> Messa
         io.write(str(10 ** season.config.point_precision))
         io.write('\n')
 
-        return Message(MessageSegment.text(io.getvalue().strip()))
+        return io.getvalue().strip()

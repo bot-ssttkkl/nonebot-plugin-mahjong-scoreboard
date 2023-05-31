@@ -1,14 +1,13 @@
 import csv
 from typing import TextIO, Iterable, List
 
+from nonebot.internal.matcher import current_bot
+
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import map_datetime
+from nonebot_plugin_mahjong_scoreboard.model import Season, SeasonUserPointChangeLog
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonUserPointChangeType
-from nonebot_plugin_mahjong_scoreboard.model.orm import data_source
-from nonebot_plugin_mahjong_scoreboard.model.orm.game import GameOrm
-from nonebot_plugin_mahjong_scoreboard.model.orm.group import GroupOrm
-from nonebot_plugin_mahjong_scoreboard.model.orm.season import SeasonOrm, SeasonUserPointChangeLogOrm
-from nonebot_plugin_mahjong_scoreboard.model.orm.user import UserOrm
-from nonebot_plugin_mahjong_scoreboard.service.group_service import get_user_nickname
+from nonebot_plugin_mahjong_scoreboard.platform.get_user_nickname import get_user_nickname
+from nonebot_plugin_mahjong_scoreboard.utils.session import get_real_id
 
 
 def _ensure_size(li: list, new_size: int, default):
@@ -16,10 +15,9 @@ def _ensure_size(li: list, new_size: int, default):
         li.append(default)
 
 
-async def map_season_user_point_change_logs_as_csv(f: TextIO, logs: Iterable[SeasonUserPointChangeLogOrm],
-                                                   season: SeasonOrm):
-    session = data_source.session()
-    group = await session.get(GroupOrm, season.group_id)
+async def write_season_user_point_change_logs_csv(f: TextIO, logs: Iterable[SeasonUserPointChangeLog],
+                                                  season: Season):
+    bot = current_bot.get()
 
     header = ['', '合计PT']
     table: List[List[str]] = []
@@ -31,28 +29,27 @@ async def map_season_user_point_change_logs_as_csv(f: TextIO, logs: Iterable[Sea
 
     # 初步绘制表格
     for log in logs:
-        user = await session.get(UserOrm, log.user_id)
-        if user.id not in user_idx:
-            table.append([f"{await get_user_nickname(user, group)} ({user.binding_qq})", ""])
-            user_idx[user.id] = len(table) - 1
+        if log.user.id not in user_idx:
+            table.append([f"{await get_user_nickname(bot, log.user.platform_user_id, season.group.platform_group_id)}"
+                          f" ({get_real_id(log.user.platform_user_id)})", ""])
+            user_idx[log.user.id] = len(table) - 1
 
         if log.change_type == SeasonUserPointChangeType.game:
-            related_game = await session.get(GameOrm, log.related_game_id)
-            if related_game.id not in game_idx:
-                header.append(str(related_game.code))
-                game_idx[related_game.id] = len(header) - 1
+            if log.related_game.id not in game_idx:
+                header.append(str(log.related_game.code))
+                game_idx[log.related_game.id] = len(header) - 1
 
-            _ensure_size(table[user_idx[user.id]], game_idx[related_game.id] + 1, '')
-            table[user_idx[user.id]][game_idx[related_game.id]] = str(log.change_point)
+            _ensure_size(table[user_idx[log.user.id]], game_idx[log.related_game.id] + 1, '')
+            table[user_idx[log.user.id]][game_idx[log.related_game.id]] = str(log.change_point)
 
-            user_point[user.id] = user_point.get(user.id, 0) + log.change_point
+            user_point[log.user.id] = user_point.get(log.user.id, 0) + log.change_point
         elif log.change_type == SeasonUserPointChangeType.manually:
             header.append(f"手动设置 {map_datetime(log.create_time)}")
 
-            _ensure_size(table[user_idx[user.id]], len(header), '')
-            table[user_idx[user.id]][-1] = str(log.change_point)
+            _ensure_size(table[user_idx[log.user.id]], len(header), '')
+            table[user_idx[log.user.id]][-1] = str(log.change_point)
 
-            user_point[user.id] = log.change_point
+            user_point[log.user.id] = log.change_point
 
     # 将行（用户）按pt排序
     ordered_user_idx = []
