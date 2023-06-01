@@ -16,6 +16,7 @@ from ..model.enums import GameState, PlayerAndWind, Wind, SeasonState
 from ..repository import data_source
 from ..repository.data_model import GroupOrm, GameOrm, GameRecordOrm, GameProgressOrm, SeasonOrm
 from ..repository.game import GameRepository
+from ..repository.pagination import Page
 from ..repository.season import SeasonRepository
 from ..utils.date import encode_date
 from ..utils.integer import count_digit
@@ -341,6 +342,7 @@ async def make_game_progress(game_code: int, round: int, honba: int,
 
     game.update_time = datetime.utcnow()
     await session.commit()
+    await session.refresh(game)  # 刷新一下，保证能拿到game.progress
     return await map_game(game, session)
 
 
@@ -434,16 +436,18 @@ async def get_games(group_id: int, user_id: Optional[int] = None, season_id: Opt
                     offset: Optional[int] = ...,
                     limit: Optional[int] = ...,
                     reverse_order: bool = ...,
-                    time_span: Optional[Tuple[datetime, datetime]] = ...) -> List[Game]:
+                    time_span: Optional[Tuple[datetime, datetime]] = ...) -> Page[Game]:
     ...
 
 
 async def get_games(group_id: int, user_id: Optional[int] = None, season_id: Optional[int] = None, **kwargs) -> \
-        List[Game]:
+        Page[Game]:
     session = data_source.session()
     game_repo = GameRepository(session)
     games = await game_repo.get(group_id, user_id, season_id, **kwargs)
-    return [await map_game(g, session) for g in games]
+
+    data = [await map_game(g, session) for g in games.data]
+    return Page(data=data, total=games.total)
 
 
 def _get_game_statistics_by_games(games: List[GameOrm], user_id: int,
@@ -499,7 +503,7 @@ async def get_game_statistics(group_id: int, user_id: int):
 
     game_repo = GameRepository(session)
     games = await game_repo.get(group_id, user_id, completed_only=True)
-    return _get_game_statistics_by_games(games, user_id)
+    return _get_game_statistics_by_games(games.data, user_id)
 
 
 async def get_season_game_statistics(group_id: int, user_id: int, season_id: int):
@@ -509,7 +513,7 @@ async def get_season_game_statistics(group_id: int, user_id: int, season_id: int
 
     game_repo = GameRepository(session)
     games = await game_repo.get(group_id, user_id, season.id, completed_only=True)
-    return _get_game_statistics_by_games(games, user_id, is_same_season=True)
+    return _get_game_statistics_by_games(games.data, user_id, is_same_season=True)
 
 
 __all__ = ("new_game", "delete_game", "record_game", "revert_record", "set_record_point",

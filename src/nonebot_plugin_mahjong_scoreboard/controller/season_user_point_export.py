@@ -10,6 +10,7 @@ from .interceptor import handle_error
 from .mapper.season_user_point_csv_mapper import write_season_user_point_change_logs_csv
 from .utils.dep import SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
+from ..errors import BadRequestError
 from ..model import Season
 from ..model.enums import SeasonState
 from ..service.season_user_point_service import get_season_user_point_change_logs
@@ -27,6 +28,9 @@ require_platform_group_id(export_season_ranking_matcher)
 async def export_season_ranking(bot: Bot, event: MessageEvent,
                                 season: Season = SeasonFromUnaryArgOrRunningSeason()):
     logs = await get_season_user_point_change_logs(season.id)
+
+    if len(logs) == 0:
+        raise BadRequestError("还没有用户参与该赛季")
 
     filename = f"赛季榜单 {season.name}"
     if season.state == SeasonState.finished:

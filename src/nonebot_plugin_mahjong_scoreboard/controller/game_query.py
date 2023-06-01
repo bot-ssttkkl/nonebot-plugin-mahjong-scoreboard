@@ -5,7 +5,8 @@ from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 
 from .interceptor import handle_error
-from .mapper.game_mapper import map_game
+from .mapper.game_mapper import map_game, map_game_lite
+from .mapper.pagination_mapper import map_pagination
 from .utils.dep import GroupDep, UnaryArg, UserDep
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from .utils.parse import parse_int_or_error
@@ -48,24 +49,21 @@ require_platform_user_id(query_user_recent_games_matcher)
 
 @query_user_recent_games_matcher.handle()
 @handle_error()
-async def query_user_recent_games(bot: Bot, event: Event, matcher: Matcher,
+async def query_user_recent_games(bot: Bot, event: Event,
                                   group: Group = GroupDep(),
                                   user: User = UserDep()):
     end_time = datetime.combine(date.today() + timedelta(days=1), time())
     start_time = datetime.combine(end_time - timedelta(days=7), time())
 
-    games = await get_games(group.id, user.id, limit=5, reverse_order=True, time_span=(start_time, end_time))
-    if len(games) != 0:
-        msgs = []
-        msgs.append(f"以下是[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]"
-                    f"的最近对局：")
-
-        for g in games:
-            msgs.append(await map_game(g, detailed=True))
+    games = await get_games(group.id, user.id, reverse_order=True, time_span=(start_time, end_time))
+    msgs = await map_pagination(games.data, map_game_lite)
+    if games.total != 0:
+        msgs.insert(0, f"以下是[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]"
+                       f"最近七天的对局：")
 
         await send_msgs(bot, event, msgs)
     else:
-        await matcher.send("你还没有进行过对局")
+        raise BadRequestError("用户最近七天还没有进行过对局")
 
 
 # ========== 群最近对局 ==========
@@ -77,21 +75,18 @@ require_platform_group_id(query_group_recent_games_matcher)
 
 @query_group_recent_games_matcher.handle()
 @handle_error()
-async def query_group_recent_games(bot: Bot, event: Event, matcher: Matcher, group=GroupDep()):
+async def query_group_recent_games(bot: Bot, event: Event, group=GroupDep()):
     end_time = datetime.combine(date.today() + timedelta(days=1), time())
     start_time = datetime.combine(end_time - timedelta(days=7), time())
 
-    games = await get_games(group.id, limit=5, reverse_order=True, time_span=(start_time, end_time))
-    if len(games) != 0:
-        msgs = []
-        msgs.append(f"以下是本群的最近对局：")
-
-        for g in games:
-            msgs.append(await map_game(g, detailed=True))
+    games = await get_games(group.id, reverse_order=True, time_span=(start_time, end_time))
+    msgs = await map_pagination(games.data, map_game_lite)
+    if games.total != 0:
+        msgs.insert(0, f"以下是本群最近七天的对局：")
 
         await send_msgs(bot, event, msgs)
     else:
-        await matcher.send("本群还没有进行过对局")
+        raise BadRequestError("本群最近七天还没有进行过对局")
 
 
 # ========== 个人未完成对局 ==========
@@ -104,21 +99,18 @@ require_platform_user_id(query_user_uncompleted_games_matcher)
 
 @query_user_uncompleted_games_matcher.handle()
 @handle_error()
-async def query_user_uncompleted_games(bot: Bot, event: Event, matcher: Matcher,
+async def query_user_uncompleted_games(bot: Bot, event: Event,
                                        group=GroupDep(),
                                        user: User = UserDep()):
-    games = await get_games(group.id, user.id, uncompleted_only=True, limit=10, reverse_order=True)
-    if len(games) != 0:
-        msgs = []
-        msgs.append(f"以下是[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]"
-                    f"的未完成对局：")
-
-        for g in games:
-            msgs.append(await map_game(g, detailed=True))
+    games = await get_games(group.id, user.id, uncompleted_only=True, reverse_order=True)
+    msgs = await map_pagination(games.data, map_game_lite)
+    if games.total != 0:
+        msgs.insert(0, f"以下是[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]"
+                       f"的未完成对局：")
 
         await send_msgs(bot, event, msgs)
     else:
-        await matcher.send("你还没有未完成的对局")
+        raise BadRequestError("用户没有未完成的对局")
 
 
 # ========== 群未完成对局 ==========
@@ -130,15 +122,12 @@ require_platform_group_id(query_group_uncompleted_games_matcher)
 
 @query_group_uncompleted_games_matcher.handle()
 @handle_error()
-async def query_group_uncompleted_games(bot: Bot, event: Event, matcher: Matcher, group=GroupDep()):
-    games = await get_games(group.id, uncompleted_only=True, limit=10, reverse_order=True)
-    if len(games) != 0:
-        msgs = []
-        msgs.append(f"以下是本群的未完成对局：")
-
-        for g in games:
-            msgs.append(await map_game(g, detailed=True))
+async def query_group_uncompleted_games(bot: Bot, event: Event, group=GroupDep()):
+    games = await get_games(group.id, uncompleted_only=True, reverse_order=True)
+    msgs = await map_pagination(games.data, map_game_lite)
+    if games.total != 0:
+        msgs.insert(0, f"以下是本群的未完成对局：")
 
         await send_msgs(bot, event, msgs)
     else:
-        await matcher.send("本群还没有未完成的对局")
+        raise BadRequestError("本群没有未完成的对局")

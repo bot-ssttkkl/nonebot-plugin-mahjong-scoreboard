@@ -31,12 +31,12 @@ async def query_season_user_trend(bot: Bot, matcher: Matcher, group: Group = Gro
                                   season: Season = RunningSeasonDep()):
     games = await get_games(group.id, user.id, season.id, limit=10, reverse_order=True, completed_only=True)
 
-    if len(games) != 0:
+    if games.total != 0:
         with StringIO() as sio:
             sio.write(f"用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
                       f"的最近走势如下：\n")
 
-            for game in games:
+            for game in games.data:
                 record = game.records[0]
                 for r in game.records:
                     if r.user.id == user.id:
@@ -48,7 +48,7 @@ async def query_season_user_trend(bot: Bot, matcher: Matcher, group: Group = Gro
 
             await matcher.send(sio.getvalue().strip())
     else:
-        raise BadRequestError("你还没有参加过对局")
+        raise BadRequestError("用户还没有参加过对局")
 
 
 # ============ 对战数据 ============

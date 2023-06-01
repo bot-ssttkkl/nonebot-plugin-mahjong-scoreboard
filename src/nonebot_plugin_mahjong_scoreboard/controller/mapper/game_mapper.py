@@ -37,10 +37,11 @@ async def map_game(game: Game, *, detailed: bool = False) -> str:
                 season_name = game.season.name
             io.write(f'所属赛季：{season_name}\n')
 
-            io.write(f'创建者：{game.promoter.platform_user_id}\n')
+            io.write(
+                f'创建者：{await get_user_nickname(bot, game.promoter.platform_user_id, game.group.platform_group_id)}\n')
 
         # 状态：未完成
-        io.write(f'状态：{game_state_mapping[GameState(game.state)]}')
+        io.write(f'状态：{game_state_mapping[game.state]}')
         if game.state != GameState.completed:
             sum_score = sum(map(lambda r: r.score, game.records))
             io.write(f"  （合计{sum_score}点）")
@@ -76,5 +77,24 @@ async def map_game(game: Game, *, detailed: bool = False) -> str:
             io.write("备注：")
             io.write(game.comment)
             io.write('\n')
+
+        return io.getvalue().strip()
+
+
+async def map_game_lite(game: Game) -> str:
+    bot = current_bot.get()
+    with StringIO() as io:
+        # 对局23060101 [已完成]  Player Name(+5)  Player Name(+5)  Player Name(+5)  Player Name(+5)
+        io.write(f"对局{game.code}  ")
+
+        if game.progress is not None:
+            io.write(f"[{map_game_progress(game.progress)}]")
+        else:
+            io.write(f"[{game_state_mapping[game.state]}]")
+
+        for r in sorted(game.records, key=lambda r: r.raw_point, reverse=True):
+            io.write(f"  {await get_user_nickname(bot, r.user.platform_user_id, game.group.platform_group_id)}")
+            if game.state == GameState.completed:
+                io.write(f"({map_point(r.raw_point, r.point_scale)})")
 
         return io.getvalue().strip()
