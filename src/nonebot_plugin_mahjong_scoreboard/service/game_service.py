@@ -453,7 +453,7 @@ async def get_games(group_id: int, user_id: Optional[int] = None, season_id: Opt
 def _get_game_statistics_by_games(games: List[GameOrm], user_id: int,
                                   is_same_season: bool = False) -> GameStatistics:
     if len(games) == 0:
-        raise BadRequestError("你还没有进行对局")
+        raise BadRequestError("用户还没有进行对局")
 
     total = len(games)
 
