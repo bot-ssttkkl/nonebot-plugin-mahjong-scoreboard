@@ -26,7 +26,7 @@ require_platform_user_id(query_season_point_matcher)
 @query_season_point_matcher.handle()
 @handle_error()
 async def query_season_point(matcher: Matcher, season: Season = RunningSeasonDep(),
-                             user: User = UserDep(lookup_matcher_state=True)):
+                             user: User = UserDep()):
     sup = await get_season_user_point(season.id, user.id)
     if sup is None:
         raise BadRequestError("你还没有参加过对局")

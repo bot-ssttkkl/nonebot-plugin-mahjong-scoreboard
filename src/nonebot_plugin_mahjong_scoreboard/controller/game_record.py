@@ -10,13 +10,12 @@ from nonebot_plugin_session import Session
 
 from .interceptor import handle_error
 from .mapper.game_mapper import map_game
-from .utils.dep import GroupDep, UserDep, UnaryArg, SessionDep, MentionUserArg
-from .utils.message import SplitCommandArgs
+from .utils.dep import GroupDep, UserDep, UnaryArg, SessionDep, SplitCommandArgs, SenderUserDep
 from .utils.parse import parse_int_or_error, try_parse_wind, parse_float_or_error
 from ..errors import BadRequestError
 from ..model import Group, User
 from ..model.enums import PlayerAndWind, GameState, Wind
-from ..service import game_service, user_service
+from ..service import game_service
 from ..utils.nonebot import default_cmd_start
 from ..utils.session import get_platform_group_id
 
@@ -39,7 +38,7 @@ new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
 @new_game_matcher.handle()
 @handle_error()
 async def new_game(matcher: Matcher, player_and_wind=UnaryArg(), session: Session = SessionDep(),
-                   group=GroupDep(), promoter=UserDep()):
+                   group=GroupDep(), promoter=SenderUserDep()):
     if player_and_wind == "四人东":
         player_and_wind = PlayerAndWind.four_men_east
     elif player_and_wind == "四人南":
@@ -100,13 +99,9 @@ async def parse_record_args(args=SplitCommandArgs(), game_code=GameCodeFromGroup
 @handle_error()
 async def record(matcher: Matcher,
                  group: Group = GroupDep(),
-                 operator: User = UserDep(),
-                 platform_user_id=MentionUserArg(),
+                 user: User = UserDep(),
+                 operator: User = SenderUserDep(),
                  args=Depends(parse_record_args)):
-    if platform_user_id is None:
-        platform_user_id = operator.platform_user_id
-    user = await user_service.get_user(platform_user_id)
-
     game = await game_service.record_game(args.game_code, group.id, user.id,
                                           args.score, args.wind, operator.id)
 
@@ -125,14 +120,10 @@ revert_record_matcher = on_command("撤销结算对局", aliases={"撤销结算"
 @handle_error()
 async def revert_record(matcher: Matcher,
                         group: Group = GroupDep(),
-                        operator: User = UserDep(),
-                        platform_user_id=MentionUserArg(),
+                        user: User = UserDep(),
+                        operator: User = SenderUserDep(),
                         latest_game_code=GameCodeFromGroupLatest(),
                         game_code=UnaryArg(parser=lambda x: parse_int_or_error(x, '对局编号'))):
-    if platform_user_id is None:
-        platform_user_id = operator.platform_user_id
-    user = await user_service.get_user(platform_user_id)
-
     if game_code is None:
         game_code = latest_game_code
 
@@ -180,13 +171,9 @@ async def parse_set_record_point_args(args=SplitCommandArgs(),
 @handle_error()
 async def set_record_point(matcher: Matcher,
                            group: Group = GroupDep(),
-                           operator: User = UserDep(),
-                           platform_user_id=MentionUserArg(),
+                           user: User = UserDep(),
+                           operator: User = SenderUserDep(),
                            args: SetRecordPointArgs = Depends(parse_set_record_point_args)):
-    if platform_user_id is None:
-        platform_user_id = operator.platform_user_id
-    user = await user_service.get_user(platform_user_id)
-
     game = await game_service.set_record_point(args.game_code, group.id, user.id,
                                                args.point, operator.id)
 
@@ -201,7 +188,7 @@ delete_game_matcher = on_command("删除对局", priority=5)
 
 @delete_game_matcher.handle()
 @handle_error()
-async def delete_game(matcher: Matcher, group: Group = GroupDep(), operator: User = UserDep(),
+async def delete_game(matcher: Matcher, group: Group = GroupDep(), operator: User = SenderUserDep(),
                       game_code=UnaryArg(parser=lambda x: parse_int_or_error(x, '对局编号'))):
     if game_code is None:
         raise BadRequestError("请指定对局编号")
@@ -259,7 +246,7 @@ async def parse_make_game_progress_args(args=SplitCommandArgs(),
 
 @make_game_progress_matcher.handle()
 @handle_error()
-async def make_game_progress(matcher: Matcher, group: Group = GroupDep(), operator: User = UserDep(),
+async def make_game_progress(matcher: Matcher, group: Group = GroupDep(), operator: User = SenderUserDep(),
                              args: MakeGameProgressArgs = Depends(parse_make_game_progress_args)):
     if not args.completed:
         game = await game_service.make_game_progress(args.game_code,
@@ -309,7 +296,7 @@ async def parse_set_game_comment_args(args=SplitCommandArgs(ignore_empty=False),
 
 @set_game_comment_matcher.handle()
 @handle_error()
-async def set_game_comment(matcher: Matcher, group: Group = GroupDep(), operator: User = UserDep(),
+async def set_game_comment(matcher: Matcher, group: Group = GroupDep(), operator: User = SenderUserDep(),
                            args: SetGameCommentArgs = Depends(parse_set_game_comment_args)):
     game = await game_service.set_game_comment(args.game_code, group.id, args.comment,
                                                operator.id)

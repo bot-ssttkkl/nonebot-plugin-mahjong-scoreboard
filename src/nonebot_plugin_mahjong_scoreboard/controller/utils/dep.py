@@ -5,17 +5,32 @@ from nonebot import Bot
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import Depends
+from nonebot.params import CommandArg
 from nonebot_plugin_session import extract_session
 
-from .message import SplitCommandArgs
+from .message import split_message
 from ..interceptor import handle_error
 from ...errors import BadRequestError
 from ...model import Group
 from ...platform.mention import extract_mention_user
-from ...service.group_service import get_group
+from ...service.group_service import get_group, is_group_admin
 from ...service.season_service import get_group_running_season, get_season_by_code
 from ...service.user_service import get_user
 from ...utils.session import get_platform_group_id, get_platform_user_id
+
+
+def SplitCommandArgs(*, lookup_matcher_state: bool = True,
+                     lookup_matcher_state_key: Optional[str] = "command_args_store",
+                     ignore_empty: bool = True):
+    def dep(matcher: Matcher, command_arg=CommandArg()):
+        if lookup_matcher_state and command_arg is None:
+            command_arg = matcher.state.get(lookup_matcher_state_key)
+        if command_arg is not None:
+            return split_message(command_arg, ignore_empty)
+        else:
+            return []
+
+    return Depends(dep)
 
 
 def SessionDep():
@@ -27,7 +42,7 @@ def SessionDep():
 
 
 def GroupDep(*, lookup_matcher_state: bool = True,
-             lookup_matcher_state_key: Optional[str] = "platform_group_id",
+             lookup_matcher_state_key: str = "platform_group_id",
              raise_on_missing: bool = True):
     @handle_error()
     async def dependency(matcher: Matcher, session=SessionDep()):
@@ -52,15 +67,23 @@ def GroupDep(*, lookup_matcher_state: bool = True,
 
 
 def UserDep(*, lookup_matcher_state: bool = True,
-            lookup_matcher_state_key: Optional[str] = None,
-            use_event_sender: bool = True,
+            lookup_matcher_state_key: str = "platform_user_id",
+            use_mention_user_arg: bool = True,
+            mention_user_arg_lookup_matcher_state: bool = True,
+            mention_user_arg_lookup_matcher_state_key: str = "command_args_store",
+            use_sender: bool = True,
             raise_on_missing: bool = True):
+    # 优先级：matcher.state、消息中的提及、事件发送者
     @handle_error()
-    async def dependency(matcher: Matcher, session=SessionDep()):
+    async def dependency(matcher: Matcher, session=SessionDep(),
+                         mention=MentionUserArg(lookup_matcher_state=mention_user_arg_lookup_matcher_state,
+                                                lookup_matcher_state_key=mention_user_arg_lookup_matcher_state_key)):
         platform_user_id = None
         if lookup_matcher_state:
             platform_user_id = matcher.state.get(lookup_matcher_state_key)
-        if platform_user_id is None and use_event_sender:
+        if platform_user_id is None and use_mention_user_arg and mention is not None:
+            platform_user_id = mention
+        if platform_user_id is None and use_sender:
             platform_user_id = get_platform_user_id(session)
 
         if platform_user_id is None:
@@ -77,12 +100,16 @@ def UserDep(*, lookup_matcher_state: bool = True,
     return Depends(dependency)
 
 
-def RunningSeasonDep(*, lookup_matcher_state: bool = True,
-                     lookup_matcher_state_key: Optional[str] = "platform_group_id",
+def SenderUserDep():
+    return UserDep(lookup_matcher_state=False, use_mention_user_arg=False)
+
+
+def RunningSeasonDep(*, group_lookup_matcher_state: bool = True,
+                     group_lookup_matcher_state_key: str = "platform_group_id",
                      raise_on_missing: bool = True):
     @handle_error()
-    async def dependency(matcher: Matcher, group=GroupDep(lookup_matcher_state=lookup_matcher_state,
-                                                          lookup_matcher_state_key=lookup_matcher_state_key)):
+    async def dependency(matcher: Matcher, group=GroupDep(lookup_matcher_state=group_lookup_matcher_state,
+                                                          lookup_matcher_state_key=group_lookup_matcher_state_key)):
         if "db_mutex" not in matcher.state:
             matcher.state["db_mutex"] = Lock()
         async with matcher.state["db_mutex"]:
@@ -94,8 +121,8 @@ def RunningSeasonDep(*, lookup_matcher_state: bool = True,
     return Depends(dependency)
 
 
-def UnaryArg(*, lookup_matcher_state: bool = False,
-             lookup_matcher_state_key: Optional[str] = "command_args_store",
+def UnaryArg(*, lookup_matcher_state: bool = True,
+             lookup_matcher_state_key: str = "command_args_store",
              parser: Optional[Callable[[str], any]] = None):
     @handle_error()
     async def dependency(args=SplitCommandArgs(lookup_matcher_state=lookup_matcher_state,
@@ -115,8 +142,8 @@ def UnaryArg(*, lookup_matcher_state: bool = False,
     return Depends(dependency)
 
 
-def MentionUserArg(*, lookup_matcher_state: bool = False,
-                   lookup_matcher_state_key: Optional[str] = "command_args_store"):
+def MentionUserArg(*, lookup_matcher_state: bool = True,
+                   lookup_matcher_state_key: str = "command_args_store"):
     def dependency(args=SplitCommandArgs(lookup_matcher_state=lookup_matcher_state,
                                          lookup_matcher_state_key=lookup_matcher_state_key)):
         for arg in args:
@@ -129,10 +156,12 @@ def MentionUserArg(*, lookup_matcher_state: bool = False,
     return Depends(dependency)
 
 
-def SeasonFromUnaryArgOrRunningSeason():
+def SeasonFromUnaryArgOrRunningSeason(*, unary_arg_lookup_matcher_state: bool = True,
+                                      unary_arg_lookup_matcher_state_key: str = "command_args_store"):
     @handle_error()
     async def dependency(matcher: Matcher, group: Group = GroupDep(),
-                         season_code=UnaryArg(lookup_matcher_state=True)):
+                         season_code=UnaryArg(lookup_matcher_state=unary_arg_lookup_matcher_state,
+                                              lookup_matcher_state_key=unary_arg_lookup_matcher_state_key)):
         if "db_mutex" not in matcher.state:
             matcher.state["db_mutex"] = Lock()
         async with matcher.state["db_mutex"]:
@@ -147,3 +176,14 @@ def SeasonFromUnaryArgOrRunningSeason():
             return season
 
     return Depends(dependency)
+
+
+def GroupAdminDep(raise_on_false: bool = True):
+    @handle_error()
+    async def dependency(group=GroupDep(), sender=SenderUserDep()):
+        admin = await is_group_admin(sender.id, group.id)
+        if not admin and raise_on_false:
+            raise BadRequestError("权限不足")
+        return admin
+
+    return dependency

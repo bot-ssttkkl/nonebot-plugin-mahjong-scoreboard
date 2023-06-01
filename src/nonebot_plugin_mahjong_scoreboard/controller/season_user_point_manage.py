@@ -5,7 +5,7 @@ from nonebot_plugin_session import Session
 
 from .interceptor import handle_error
 from .mapper.season_user_point_mapper import map_season_user_point
-from .utils.dep import UserDep, GroupDep, RunningSeasonDep, SessionDep, UnaryArg
+from .utils.dep import UserDep, GroupDep, RunningSeasonDep, SessionDep, UnaryArg, SenderUserDep, GroupAdminDep
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from .utils.parse import parse_float_or_error
 from ..model import Group, User, Season
@@ -18,15 +18,15 @@ set_season_user_point_matcher = on_command("设置用户PT", aliases={"设置用
 
 require_store_command_args(set_season_user_point_matcher)
 require_platform_group_id(set_season_user_point_matcher)
-require_platform_user_id(set_season_user_point_matcher, sender_as_default_on_group_message=False)
+require_platform_user_id(set_season_user_point_matcher, use_sender_on_group_message=False)
 
 
 @set_season_user_point_matcher.handle()
 @handle_error()
 async def set_season_user_point_confirm(bot: Bot, matcher: Matcher, session: Session = SessionDep(),
-                                        user: User = UserDep(lookup_matcher_state=True, use_event_sender=False),
-                                        pt=UnaryArg(lookup_matcher_state=True,
-                                                    parser=lambda x: parse_float_or_error(x, 'PT'))):
+                                        user: User = UserDep(use_sender=False),
+                                        pt=UnaryArg(parser=lambda x: parse_float_or_error(x, 'PT')),
+                                        group_admin=GroupAdminDep()):
     await matcher.pause(
         f"确定设置用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
         f"PT为{pt}吗？(y/n)")
@@ -36,11 +36,10 @@ async def set_season_user_point_confirm(bot: Bot, matcher: Matcher, session: Ses
 @handle_error()
 async def set_season_user_point_end(event: Event, matcher: Matcher,
                                     group: Group = GroupDep(),
-                                    user: User = UserDep(lookup_matcher_state=True, use_event_sender=False),
-                                    operator: User = UserDep(),
+                                    user: User = UserDep(use_sender=False),
+                                    operator: User = SenderUserDep(),
                                     season: Season = RunningSeasonDep(),
-                                    pt=UnaryArg(lookup_matcher_state=True,
-                                                parser=lambda x: parse_float_or_error(x, 'PT'))):
+                                    pt=UnaryArg(parser=lambda x: parse_float_or_error(x, 'PT'))):
     if event.get_message().extract_plain_text() == 'y':
         sup = await change_season_user_point_manually(season.id,
                                                       group.id, user.id,
@@ -58,13 +57,14 @@ reset_season_user_point_matcher = on_command("重置用户PT", aliases={"重置�
 
 require_store_command_args(reset_season_user_point_matcher)
 require_platform_group_id(reset_season_user_point_matcher)
-require_platform_user_id(reset_season_user_point_matcher, sender_as_default_on_group_message=False)
+require_platform_user_id(reset_season_user_point_matcher, use_sender_on_group_message=False)
 
 
 @reset_season_user_point_matcher.handle()
 @handle_error()
 async def reset_season_user_point_confirm(bot: Bot, matcher: Matcher, session: Session = SessionDep(),
-                                          user: User = UserDep(lookup_matcher_state=True, use_event_sender=False)):
+                                          user: User = UserDep(use_sender=False),
+                                          group_admin=GroupAdminDep()):
     await matcher.pause(
         f"确定重置用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
         f"PT吗？(y/n)")
@@ -74,8 +74,8 @@ async def reset_season_user_point_confirm(bot: Bot, matcher: Matcher, session: S
 @handle_error()
 async def reset_season_user_point_end(event: Event, matcher: Matcher,
                                       group: Group = GroupDep(),
-                                      user: User = UserDep(lookup_matcher_state=True, use_event_sender=False),
-                                      operator: User = UserDep(),
+                                      user: User = UserDep(use_sender=False),
+                                      operator: User = SenderUserDep(),
                                       season: Season = RunningSeasonDep()):
     if event.get_message().extract_plain_text() == 'y':
         await reset_season_user_point(season.id,

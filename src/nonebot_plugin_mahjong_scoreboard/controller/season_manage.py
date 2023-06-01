@@ -7,8 +7,8 @@ from nonebot.internal.params import ArgPlainText
 
 from .interceptor import handle_interruption, handle_error
 from .mapper.season_mapper import map_season
-from .utils.dep import GroupDep, UserDep, UnaryArg, RunningSeasonDep
-from .utils.general_handlers import hint_for_question_flow_on_first
+from .utils.dep import GroupDep, UnaryArg, RunningSeasonDep, SenderUserDep, GroupAdminDep
+from .utils.general_handlers import hint_for_question_flow_on_first, require_store_command_args
 from .utils.parse import parse_int_or_reject
 from ..errors import BadRequestError
 from ..model import Group, Season, User, SeasonConfig
@@ -27,7 +27,8 @@ new_season_matcher.append_handler(hint_for_question_flow_on_first)
 @handle_interruption()
 async def new_season_got_code(matcher: Matcher,
                               raw_arg=ArgPlainText("code"),
-                              group: Group = GroupDep()):
+                              group: Group = GroupDep(),
+                              group_admin=GroupAdminDep()):
     match_result = re.match(r"[_a-zA-Z]\w*", raw_arg)
     if match_result is None:
         await matcher.reject("赛季代号不合法。请重新输入。（赛季代号只允许包含字母、数字和下划线，且必须以字母或下划线开头）")
@@ -194,7 +195,7 @@ async def new_season_handle(event: Event, matcher: Matcher, group: Group = Group
 
 @new_season_matcher.handle()
 @handle_error()
-async def new_season_start(event: Event, matcher: Matcher, operator: User = UserDep()):
+async def new_season_start(event: Event, matcher: Matcher, operator: User = SenderUserDep()):
     if event.get_message().extract_plain_text() == 'y':
         await start_season(matcher.state["season"].id, operator.id)
         await matcher.send("赛季开启成功")
@@ -209,7 +210,8 @@ start_season_matcher = on_command("开启赛季", priority=5)
 @start_season_matcher.handle()
 @handle_error()
 async def start_season_matcher_confirm(matcher: Matcher, group: Group = GroupDep(),
-                                       season_code=UnaryArg()):
+                                       season_code=UnaryArg(),
+                                       group_admin=GroupAdminDep()):
     if season_code is None:
         raise BadRequestError("请指定赛季编号。使用“/新赛季”指令创建赛季")
 
@@ -230,7 +232,7 @@ async def start_season_matcher_confirm(matcher: Matcher, group: Group = GroupDep
 
 @start_season_matcher.handle()
 @handle_error()
-async def start_season_end(event: Event, matcher: Matcher, operator: User = UserDep()):
+async def start_season_end(event: Event, matcher: Matcher, operator: User = SenderUserDep()):
     if event.get_message().extract_plain_text() == 'y':
         await season_service.start_season(matcher.state["season"].id, operator.id)
         await matcher.send("赛季开启成功")
@@ -244,7 +246,8 @@ finish_season_matcher = on_command("结束赛季", priority=5)
 
 @finish_season_matcher.handle()
 @handle_error()
-async def finish_season_confirm(matcher: Matcher, season: Season = RunningSeasonDep()):
+async def finish_season_confirm(matcher: Matcher, season: Season = RunningSeasonDep(),
+                                group_admin=GroupAdminDep()):
     matcher.state["season"] = season
     msg = map_season(season)
     msg += "\n\n结束赛季将删除赛季的所有未完成对局，并且无法再修改赛季的已完成对局。\n确定结束赛季吗？(y/n)"
@@ -253,7 +256,7 @@ async def finish_season_confirm(matcher: Matcher, season: Season = RunningSeason
 
 @finish_season_matcher.handle()
 @handle_error()
-async def finish_season_end(event: Event, matcher: Matcher, operator: User = UserDep()):
+async def finish_season_end(event: Event, matcher: Matcher, operator: User = SenderUserDep()):
     if event.get_message().extract_plain_text() == 'y':
         await finish_season(matcher.state["season"].id, operator.id)
         await matcher.send("赛季结束成功")
@@ -268,7 +271,8 @@ remove_season_matcher = on_command("删除赛季", priority=5)
 @remove_season_matcher.handle()
 @handle_error()
 async def remove_season_confirm(matcher: Matcher, group: Group = GroupDep(),
-                                season_code=UnaryArg()):
+                                season_code=UnaryArg(),
+                                group_admin=GroupAdminDep()):
     if season_code is None:
         raise BadRequestError("请指定赛季编号")
 
@@ -289,7 +293,7 @@ async def remove_season_confirm(matcher: Matcher, group: Group = GroupDep(),
 
 @remove_season_matcher.handle()
 @handle_error()
-async def remove_season_end(event: Event, matcher: Matcher, operator: User = UserDep()):
+async def remove_season_end(event: Event, matcher: Matcher, operator: User = SenderUserDep()):
     if event.get_message().extract_plain_text() == 'y':
         await season_service.remove_season(matcher.state["season"].id, operator.id)
         await matcher.send("赛季删除成功")
