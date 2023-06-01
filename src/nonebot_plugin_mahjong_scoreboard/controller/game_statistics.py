@@ -27,7 +27,7 @@ require_platform_user_id(query_season_user_trend_matcher)
 @handle_error()
 async def query_season_user_trend(bot: Bot, matcher: Matcher, group: Group = GroupDep(),
                                   session: Session = SessionDep(),
-                                  user: User = UserDep(lookup_matcher_state=True),
+                                  user: User = UserDep(),
                                   season: Season = RunningSeasonDep()):
     games = await get_games(group.id, user.id, season.id, limit=10, reverse_order=True, completed_only=True)
 
@@ -78,7 +78,7 @@ require_platform_user_id(query_user_statistics_matcher)
 @query_user_statistics_matcher.handle()
 @handle_error()
 async def query_user_statistics(matcher: Matcher, group: Group = GroupDep(),
-                                user: User = UserDep(lookup_matcher_state=True)):
+                                user: User = UserDep()):
     game_statistics = await get_game_statistics(group.id, user.id)
     msg = await map_game_statistics(game_statistics, user, group)
     await matcher.send(msg)
@@ -95,7 +95,7 @@ require_platform_user_id(query_season_user_statistics_matcher)
 @query_season_user_statistics_matcher.handle()
 @handle_error()
 async def query_season_user_statistics(matcher: Matcher, group: Group = GroupDep(),
-                                       user: User = UserDep(lookup_matcher_state=True),
+                                       user: User = UserDep(),
                                        season: Season = SeasonFromUnaryArgOrRunningSeason()):
     game_statistics = await get_season_game_statistics(group.id, user.id, season.id)
     msg = await  map_game_statistics(game_statistics, user, group)

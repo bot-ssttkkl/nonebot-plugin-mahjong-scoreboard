@@ -18,13 +18,3 @@ def split_message(message: Message, ignore_empty: bool = True) -> List[MessageSe
 
     return result
 
-
-def SplitCommandArgs(*, lookup_matcher_state: bool = False,
-                     lookup_matcher_state_key: Optional[str] = "command_args_store",
-                     ignore_empty: bool = True):
-    def dep(matcher: Matcher, command_arg=CommandArg()):
-        if lookup_matcher_state:
-            command_arg = matcher.state[lookup_matcher_state_key]
-        return split_message(command_arg, ignore_empty)
-
-    return Depends(dep)

@@ -26,7 +26,7 @@ require_platform_group_id(query_by_code_matcher)
 @query_by_code_matcher.handle()
 @handle_error()
 async def query_by_code(matcher: Matcher, group: Group = GroupDep(),
-                        game_code=UnaryArg(lookup_matcher_state=True, parser=lambda x: parse_int_or_error(x, '对局编号'))):
+                        game_code=UnaryArg(parser=lambda x: parse_int_or_error(x, '对局编号'))):
     if game_code is None:
         raise BadRequestError("请指定对局编号")
 
@@ -50,14 +50,14 @@ require_platform_user_id(query_user_recent_games_matcher)
 @handle_error()
 async def query_user_recent_games(bot: Bot, event: Event, matcher: Matcher,
                                   group: Group = GroupDep(),
-                                  user: User = UserDep(lookup_matcher_state=True)):
+                                  user: User = UserDep()):
     end_time = datetime.combine(date.today() + timedelta(days=1), time())
     start_time = datetime.combine(end_time - timedelta(days=7), time())
 
     games = await get_games(group.id, user.id, limit=5, reverse_order=True, time_span=(start_time, end_time))
     if len(games) != 0:
         msgs = []
-        msgs.append(f"以下是[{await get_user_nickname(bot, platform_user_id, group.platform_group_id)}]"
+        msgs.append(f"以下是[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]"
                     f"的最近对局：")
 
         for g in games:
@@ -106,7 +106,7 @@ require_platform_user_id(query_user_uncompleted_games_matcher)
 @handle_error()
 async def query_user_uncompleted_games(bot: Bot, event: Event, matcher: Matcher,
                                        group=GroupDep(),
-                                       user: User = UserDep(lookup_matcher_state=True)):
+                                       user: User = UserDep()):
     games = await get_games(group.id, user.id, uncompleted_only=True, limit=10, reverse_order=True)
     if len(games) != 0:
         msgs = []
