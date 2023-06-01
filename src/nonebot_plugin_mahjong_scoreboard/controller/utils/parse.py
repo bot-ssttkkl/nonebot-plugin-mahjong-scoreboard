@@ -78,3 +78,9 @@ def try_parse_wind(text: str) -> Optional[Wind]:
     if text == "北":
         return Wind.north
     return None
+
+
+def try_parse_game_code(text: str) -> Optional[int]:
+    if text.startswith("对局"):
+        return parse_int_or_error(text.removeprefix("对局"), "对局编号")
+    return None

@@ -267,7 +267,7 @@ async def revert_record(game_code: int,
             record = r
             break
     else:
-        raise BadRequestError("你还没有记录过这场对局")
+        raise BadRequestError("用户还没有记录过这场对局")
 
     if game.state == GameState.completed and game.season_id:
         await season_repo.revert_season_user_point_by_game(game)

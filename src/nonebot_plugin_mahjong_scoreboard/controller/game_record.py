@@ -11,7 +11,7 @@ from nonebot_plugin_session import Session
 from .interceptor import handle_error
 from .mapper.game_mapper import map_game
 from .utils.dep import GroupDep, UserDep, UnaryArg, SessionDep, SplitCommandArgs, SenderUserDep
-from .utils.parse import parse_int_or_error, try_parse_wind, parse_float_or_error
+from .utils.parse import parse_int_or_error, try_parse_wind, parse_float_or_error, try_parse_game_code
 from ..errors import BadRequestError
 from ..model import Group, User
 from ..model.enums import PlayerAndWind, GameState, Wind
@@ -74,8 +74,7 @@ async def parse_record_args(args=SplitCommandArgs(), game_code=GameCodeFromGroup
         if arg.type == "text":
             text = arg.data["text"]
             if text.startswith("对局"):
-                game_code = text[len("对局"):]
-                game_code = parse_int_or_error(game_code, "对局编号")
+                game_code = parse_int_or_error(text.removeprefix("对局"), "对局编号")
             elif text.endswith("风"):
                 wind = try_parse_wind(text[:len("风")])
             elif text.endswith("家"):
@@ -123,7 +122,7 @@ async def revert_record(matcher: Matcher,
                         user: User = UserDep(),
                         operator: User = SenderUserDep(),
                         latest_game_code=GameCodeFromGroupLatest(),
-                        game_code=UnaryArg(parser=lambda x: parse_int_or_error(x, '对局编号'))):
+                        game_code=UnaryArg(parser=try_parse_game_code)):
     if game_code is None:
         game_code = latest_game_code
 
@@ -155,7 +154,7 @@ async def parse_set_record_point_args(args=SplitCommandArgs(),
         if arg.type == "text":
             text = arg.data["text"]
             if text.startswith("对局"):
-                game_code = parse_int_or_error(text[len("对局"):], '对局编号')
+                game_code = parse_int_or_error(text.removeprefix("对局"), "对局编号")
             else:
                 point = text
 
@@ -189,7 +188,7 @@ delete_game_matcher = on_command("删除对局", priority=5)
 @delete_game_matcher.handle()
 @handle_error()
 async def delete_game(matcher: Matcher, group: Group = GroupDep(), operator: User = SenderUserDep(),
-                      game_code=UnaryArg(parser=lambda x: parse_int_or_error(x, '对局编号'))):
+                      game_code=UnaryArg(parser=try_parse_game_code)):
     if game_code is None:
         raise BadRequestError("请指定对局编号")
 
@@ -222,7 +221,7 @@ async def parse_make_game_progress_args(args=SplitCommandArgs(),
         if arg.type == 'text':
             text = arg.data["text"]
             if text.startswith("对局"):
-                game_code = parse_int_or_error(text[len("对局"):], '对局编号')
+                game_code = parse_int_or_error(text.removeprefix("对局"), "对局编号")
             elif text == '完成' or text == '已完成':
                 completed = True
             else:
@@ -279,7 +278,7 @@ async def parse_set_game_comment_args(args=SplitCommandArgs(ignore_empty=False),
         if arg.type == 'text':
             text = arg.data["text"]
             if game_code is None and text.startswith("对局"):
-                game_code = parse_int_or_error(text[len("对局"):], '对局编号')
+                game_code = parse_int_or_error(text.removeprefix("对局"), "对局编号")
             else:
                 comment.write(text)
                 comment.write(" ")

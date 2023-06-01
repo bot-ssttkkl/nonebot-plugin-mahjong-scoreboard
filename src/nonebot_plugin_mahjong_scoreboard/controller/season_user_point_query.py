@@ -30,7 +30,7 @@ async def query_season_point(matcher: Matcher, season: Season = RunningSeasonDep
                              user: User = UserDep()):
     sup = await get_season_user_point(season.id, user.id)
     if sup is None:
-        raise BadRequestError("你还没有参加过对局")
+        raise BadRequestError("用户还没有参加过对局")
 
     msg = await map_season_user_point(sup, season)
     await matcher.send(msg)
