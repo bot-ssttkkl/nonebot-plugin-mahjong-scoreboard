@@ -80,7 +80,8 @@ def require_platform_group_id(matcher_type: Type[Matcher], *, dest: str = "platf
 def require_platform_user_id(matcher_type: Type[Matcher], *, dest: str = "platform_user_id",
                              lookup_matcher_state: bool = True,
                              lookup_matcher_state_key: Optional[str] = "command_args_store",
-                             sender_as_default_on_group_message: bool = True):
+                             sender_as_default_on_group_message: bool = True,
+                             ask_on_group_message: bool = False):
     """
     私聊环境下向用户询问用户号，群聊环境下则使用消息中的艾特或是发送者。保存到matcher.state[dest]
     """
@@ -102,6 +103,7 @@ def require_platform_user_id(matcher_type: Type[Matcher], *, dest: str = "platfo
         if platform_user_id is not None:
             matcher.state[dest] = platform_user_id
 
-    require_arg(matcher_type, dest, "用户ID", parser=_parse_platform_id)
+    if ask_on_group_message:
+        require_arg(matcher_type, dest, "用户ID", parser=_parse_platform_id)
 
     return matcher_type

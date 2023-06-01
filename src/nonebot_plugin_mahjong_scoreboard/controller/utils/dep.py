@@ -28,7 +28,7 @@ def SessionDep():
 
 def GroupDep(*, lookup_matcher_state: bool = True,
              lookup_matcher_state_key: Optional[str] = "platform_group_id",
-             raise_on_private_message: bool = True):
+             raise_on_missing: bool = True):
     @handle_error()
     async def dependency(matcher: Matcher, session=SessionDep()):
         platform_group_id = None
@@ -37,8 +37,11 @@ def GroupDep(*, lookup_matcher_state: bool = True,
         if platform_group_id is None:
             platform_group_id = get_platform_group_id(session)
 
-        if platform_group_id is None and raise_on_private_message:
-            raise BadRequestError("该指令仅限群聊环境中使用")
+        if platform_group_id is None:
+            if raise_on_missing:
+                raise BadRequestError("该指令仅限群聊环境中使用")
+            else:
+                return None
 
         if "db_mutex" not in matcher.state:
             matcher.state["db_mutex"] = Lock()
@@ -49,13 +52,22 @@ def GroupDep(*, lookup_matcher_state: bool = True,
 
 
 def UserDep(*, lookup_matcher_state: bool = True,
-            lookup_matcher_state_key: Optional[str] = None):
+            lookup_matcher_state_key: Optional[str] = None,
+            use_event_sender: bool = True,
+            raise_on_missing: bool = True):
+    @handle_error()
     async def dependency(matcher: Matcher, session=SessionDep()):
         platform_user_id = None
         if lookup_matcher_state:
             platform_user_id = matcher.state.get(lookup_matcher_state_key)
-        if platform_user_id is None:
+        if platform_user_id is None and use_event_sender:
             platform_user_id = get_platform_user_id(session)
+
+        if platform_user_id is None:
+            if raise_on_missing:
+                raise BadRequestError("请指定用户")
+            else:
+                return None
 
         if "db_mutex" not in matcher.state:
             matcher.state["db_mutex"] = Lock()
@@ -85,8 +97,9 @@ def RunningSeasonDep(*, lookup_matcher_state: bool = True,
 def UnaryArg(*, lookup_matcher_state: bool = False,
              lookup_matcher_state_key: Optional[str] = "command_args_store",
              parser: Optional[Callable[[str], any]] = None):
-    def dependency(args=SplitCommandArgs(lookup_matcher_state=lookup_matcher_state,
-                                         lookup_matcher_state_key=lookup_matcher_state_key)):
+    @handle_error()
+    async def dependency(args=SplitCommandArgs(lookup_matcher_state=lookup_matcher_state,
+                                               lookup_matcher_state_key=lookup_matcher_state_key)):
         x = None
 
         for arg in args:
