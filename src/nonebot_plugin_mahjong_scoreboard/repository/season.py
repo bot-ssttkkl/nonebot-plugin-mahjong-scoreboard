@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import Optional, List, overload, Literal, Tuple, Union
+from typing import Optional, List
 
 from sqlalchemy import update, select, and_, delete, func
 from sqlalchemy.sql.functions import count
 
 from .base import Repository
-from .data_model import GameOrm, GameRecordOrm, SeasonOrm, SeasonUserPointOrm, SeasonUserPointChangeLogOrm
+from .data_model import GameOrm, SeasonOrm, SeasonUserPointOrm, SeasonUserPointChangeLogOrm
 from ..errors import BadRequestError
 from ..model.enums import GameState, SeasonUserPointChangeType
 from ..utils.rank import ranked
@@ -80,47 +80,9 @@ class SeasonRepository(Repository[SeasonOrm]):
         sup = (await self.session.execute(stmt)).scalars().all()
         return sup
 
-    @overload
-    async def get_season_user_point_change_logs(self, season_id: Optional[int] = ...,
-                                                user_id: Optional[int] = ...,
-                                                *, offset: Optional[int] = ...,
-                                                limit: Optional[int] = ...,
-                                                reverse_order: bool = ...,
-                                                join_game_and_record: Literal[False] = ...) \
-            -> List[SeasonUserPointChangeLogOrm]:
-        ...
-
-    @overload
-    async def get_season_user_point_change_logs(self, season_id: Optional[int] = ...,
-                                                user_id: Optional[int] = ...,
-                                                *, offset: Optional[int] = ...,
-                                                limit: Optional[int] = ...,
-                                                reverse_order: bool = ...,
-                                                join_game_and_record: Literal[True] = ...) \
-            -> List[Tuple[SeasonUserPointChangeLogOrm, GameOrm, GameRecordOrm]]:
-        ...
-
     async def get_season_user_point_change_logs(self, season_id: Optional[int] = None,
-                                                user_id: Optional[int] = None,
-                                                *, offset: Optional[int] = None,
-                                                limit: Optional[int] = None,
-                                                reverse_order: bool = False,
-                                                join_game_and_record: bool = False) \
-            -> Union[
-                List[SeasonUserPointChangeLogOrm],
-                List[Tuple[SeasonUserPointChangeLogOrm, GameOrm, GameRecordOrm]]
-            ]:
-        if not join_game_and_record:
-            stmt = select(SeasonUserPointChangeLogOrm)
-        else:
-            stmt = (select(SeasonUserPointChangeLogOrm, GameOrm, GameRecordOrm)
-                    .join_from(SeasonUserPointChangeLogOrm, GameOrm,
-                               SeasonUserPointChangeLogOrm.related_game_id == GameOrm.id)
-                    .join_from(SeasonUserPointChangeLogOrm, GameRecordOrm,
-                               and_(
-                                   SeasonUserPointChangeLogOrm.related_game_id == GameRecordOrm.game_id,
-                                   SeasonUserPointChangeLogOrm.user_id == GameRecordOrm.user_id
-                               )))
+                                                user_id: Optional[int] = None) -> List[SeasonUserPointChangeLogOrm]:
+        stmt = select(SeasonUserPointChangeLogOrm, func.count(SeasonUserPointChangeLogOrm.id).over().label("total"))
 
         if season_id is not None:
             stmt = stmt.where(SeasonUserPointChangeLogOrm.season_id == season_id)
@@ -128,18 +90,9 @@ class SeasonRepository(Repository[SeasonOrm]):
         if user_id is not None:
             stmt = stmt.where(SeasonUserPointChangeLogOrm.user_id == user_id)
 
-        if reverse_order:
-            stmt = stmt.order_by(SeasonUserPointChangeLogOrm.id.desc())
-        else:
-            stmt = stmt.order_by(SeasonUserPointChangeLogOrm.id)
-
-        stmt = stmt.offset(offset).limit(limit)
-
         result = (await self.session.execute(stmt)).all()
-        if join_game_and_record:
-            return [(a, b, c) for (a, b, c) in result]
-        else:
-            return [x for (x,) in result]
+        data = [row[0] for row in result]
+        return data
 
     async def change_season_user_point_manually(self, season_id: int,
                                                 user_id: int,

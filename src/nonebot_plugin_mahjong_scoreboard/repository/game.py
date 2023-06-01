@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple, overload
 
-from sqlalchemy import update, Select, select
+from sqlalchemy import update, Select, select, func
 from sqlalchemy.orm import selectinload
 
 from .base import Repository
 from .data_model import GameOrm, GameProgressOrm, GameRecordOrm
+from .pagination import Page
 from ..model.enums import GameState
 
 
@@ -64,14 +65,14 @@ class GameRepository(Repository[GameOrm]):
                   offset: Optional[int] = None,
                   limit: Optional[int] = None,
                   reverse_order: bool = False,
-                  time_span: Optional[Tuple[datetime, datetime]] = None) -> List[GameOrm]:
+                  time_span: Optional[Tuple[datetime, datetime]] = None) -> Page[GameOrm]:
         ...
 
     async def get(self, group_id: Optional[int] = None,
                   user_id: Optional[int] = None,
                   season_id: Optional[int] = None,
-                  **kwargs) -> List[GameOrm]:
-        stmt = select(GameOrm)
+                  **kwargs) -> Page[GameOrm]:
+        stmt = select(GameOrm, func.count(GameOrm.id).over().label("total"))
 
         if group_id is not None:
             stmt = stmt.where(GameOrm.group_id == group_id)
@@ -84,8 +85,14 @@ class GameRepository(Repository[GameOrm]):
 
         stmt = self._build_game_query(stmt, **kwargs)
 
-        result = await self.session.execute(stmt)
-        return [row[0] for row in result]
+        result = (await self.session.execute(stmt)).all()
+
+        if len(result) > 0:
+            data = [row[0] for row in result]
+            total = result[0][1]
+            return Page(data=data, total=total)
+        else:
+            return Page(data=[], total=0)
 
     async def get_progress(self, game_id: int) -> Optional[GameProgressOrm]:
         return await self.session.get(GameProgressOrm, game_id)

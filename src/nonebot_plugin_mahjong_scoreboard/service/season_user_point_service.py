@@ -5,6 +5,7 @@ from .mapper import map_season_user_point, map_season_user_point_change_log
 from ..errors import BadRequestError
 from ..model import SeasonUserPoint, SeasonUserPointChangeLog
 from ..repository import data_source
+from ..repository.pagination import Page
 from ..repository.season import SeasonRepository
 
 
@@ -35,14 +36,10 @@ async def get_season_user_points(season_id: int) -> List[SeasonUserPoint]:
 
 
 async def get_season_user_point_change_logs(season_id: Optional[int] = None,
-                                            user_id: Optional[int] = None,
-                                            *, offset: Optional[int] = None,
-                                            limit: Optional[int] = None,
-                                            reverse_order: bool = False) -> List[SeasonUserPointChangeLog]:
+                                            user_id: Optional[int] = None) -> List[SeasonUserPointChangeLog]:
     session = data_source.session()
     repo = SeasonRepository(session)
-    logs = await repo.get_season_user_point_change_logs(season_id, user_id, offset=offset, limit=limit,
-                                                        reverse_order=reverse_order)
+    logs = await repo.get_season_user_point_change_logs(season_id, user_id)
     logs = [await map_season_user_point_change_log(x, session) for x in logs]
     return logs
 
