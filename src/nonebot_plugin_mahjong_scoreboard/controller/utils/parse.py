@@ -26,7 +26,7 @@ def parse_int_or_error(raw: Union[int, str, None],
 
         return x
     except ValueError:
-        comment = []
+        comment = [f"输入的{desc}不合法", f"输入值：{raw}"]
         if min is not None:
             comment.append(f"最小值：{min}")
         if max is not None:
@@ -56,7 +56,7 @@ def parse_float_or_error(raw: Union[float, int, str, None], desc: str) -> float:
     try:
         return float(raw)
     except ValueError:
-        raise BadRequestError(f"输入的{desc}不合法")
+        raise BadRequestError(f"输入的{desc}不合法，输入值：{raw}")
 
 
 async def parse_float_or_reject(raw: Union[float, int, str, None], desc: str) -> float:
