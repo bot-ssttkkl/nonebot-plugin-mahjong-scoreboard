@@ -23,9 +23,7 @@ _✨ NoneBot 日麻记分器插件 ✨_
   <img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="python">
 </p>
 
-支持适配器：[OneBot V11](https://onebot.adapters.nonebot.dev/)
-
-支持驱动器：[FastAPI](https://v2.nonebot.dev/docs/tutorial/choose-driver)
+支持适配器：[OneBot V11](https://onebot.adapters.nonebot.dev/)、[QQ Guild](https://github.com/nonebot/adapter-qqguild)
 
 ## 功能
 
