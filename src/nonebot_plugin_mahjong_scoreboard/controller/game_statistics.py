@@ -1,12 +1,13 @@
 # ========== 查询最近走势 ==========
 from io import StringIO
 
-from nonebot import on_command, Bot
+from nonebot import Bot
 from nonebot.internal.matcher import Matcher, current_bot
 from nonebot_plugin_session import Session
 
 from .interceptor import handle_error
 from .mapper import map_point, digit_mapping, percentile_str, map_real_point
+from .mg import matcher_group
 from .utils.dep import GroupDep, SessionDep, RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from ..errors import BadRequestError
@@ -16,7 +17,7 @@ from ..service.game_service import get_game_statistics, get_games, get_season_ga
 from ..utils.session import get_platform_group_id
 
 # ============ 查询最近走势 ============
-query_season_user_trend_matcher = on_command("查询最近走势", aliases={"最近走势", "走势"}, priority=5)
+query_season_user_trend_matcher = matcher_group.on_command("查询最近走势", aliases={"最近走势", "走势"}, priority=5)
 
 require_store_command_args(query_season_user_trend_matcher)
 require_platform_group_id(query_season_user_trend_matcher)
@@ -68,7 +69,7 @@ async def map_game_statistics(game_statistics: GameStatistics, user: User, group
         return sio.getvalue().strip()
 
 
-query_user_statistics_matcher = on_command("对战数据", priority=5)
+query_user_statistics_matcher = matcher_group.on_command("对战数据", priority=5)
 
 require_store_command_args(query_user_statistics_matcher)
 require_platform_group_id(query_user_statistics_matcher)
@@ -85,7 +86,7 @@ async def query_user_statistics(matcher: Matcher, group: Group = GroupDep(),
 
 
 # ============ 赛季对战数据 ============
-query_season_user_statistics_matcher = on_command("赛季对战数据", priority=5)
+query_season_user_statistics_matcher = matcher_group.on_command("赛季对战数据", priority=5)
 
 require_store_command_args(query_season_user_statistics_matcher)
 require_platform_group_id(query_season_user_statistics_matcher)

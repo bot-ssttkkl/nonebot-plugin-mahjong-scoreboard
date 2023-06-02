@@ -1,11 +1,12 @@
-from nonebot import on_command, Bot
+from nonebot import Bot
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 from nonebot_plugin_session import Session
 
 from .interceptor import handle_error
 from .mapper.season_user_point_mapper import map_season_user_point
-from .utils.dep import UserDep, GroupDep, RunningSeasonDep, SessionDep, UnaryArg, SenderUserDep, GroupAdminDep
+from .mg import matcher_group
+from .utils.dep import UserDep, GroupDep, RunningSeasonDep, SessionDep, UnaryArg, SenderUserDep, IsGroupAdminDep
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from .utils.parse import parse_float_or_error
 from ..model import Group, User, Season
@@ -14,7 +15,7 @@ from ..service.season_user_point_service import reset_season_user_point, change_
 from ..utils.session import get_platform_group_id
 
 # ========== 设置用户PT ==========
-set_season_user_point_matcher = on_command("设置用户PT", aliases={"设置用户pt", "设置PT", "设置pt"}, priority=5)
+set_season_user_point_matcher = matcher_group.on_command("设置用户PT", aliases={"设置用户pt", "设置PT", "设置pt"}, priority=5)
 
 require_store_command_args(set_season_user_point_matcher)
 require_platform_group_id(set_season_user_point_matcher)
@@ -26,7 +27,7 @@ require_platform_user_id(set_season_user_point_matcher, use_sender_on_group_mess
 async def set_season_user_point_confirm(bot: Bot, matcher: Matcher, session: Session = SessionDep(),
                                         user: User = UserDep(use_sender=False),
                                         pt=UnaryArg(parser=lambda x: parse_float_or_error(x, 'PT')),
-                                        group_admin=GroupAdminDep()):
+                                        group_admin=IsGroupAdminDep()):
     await matcher.pause(
         f"确定设置用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
         f"PT为{pt}吗？(y/n)")
@@ -53,7 +54,7 @@ async def set_season_user_point_end(event: Event, matcher: Matcher,
 
 
 # ========== 重置用户PT ==========
-reset_season_user_point_matcher = on_command("重置用户PT", aliases={"重置用户pt", "重置PT", "重置pt"}, priority=5)
+reset_season_user_point_matcher = matcher_group.on_command("重置用户PT", aliases={"重置用户pt", "重置PT", "重置pt"}, priority=5)
 
 require_store_command_args(reset_season_user_point_matcher)
 require_platform_group_id(reset_season_user_point_matcher)
@@ -64,7 +65,7 @@ require_platform_user_id(reset_season_user_point_matcher, use_sender_on_group_me
 @handle_error()
 async def reset_season_user_point_confirm(bot: Bot, matcher: Matcher, session: Session = SessionDep(),
                                           user: User = UserDep(use_sender=False),
-                                          group_admin=GroupAdminDep()):
+                                          group_admin=IsGroupAdminDep()):
     await matcher.pause(
         f"确定重置用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
         f"PT吗？(y/n)")

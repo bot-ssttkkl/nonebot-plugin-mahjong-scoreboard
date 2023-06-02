@@ -1,12 +1,13 @@
 from datetime import datetime, date, timedelta, time
 
-from nonebot import on_command, Bot
+from nonebot import Bot
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 
 from .interceptor import handle_error
 from .mapper.game_mapper import map_game, map_game_lite
 from .mapper.pagination_mapper import map_pagination
+from .mg import matcher_group
 from .utils.dep import GroupDep, UnaryArg, UserDep
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from .utils.parse import parse_int_or_error
@@ -18,7 +19,7 @@ from ..service import game_service
 from ..service.game_service import get_games
 
 # =============== 查询对局 ===============
-query_by_code_matcher = on_command("查询对局", aliases={"对局"}, priority=5)
+query_by_code_matcher = matcher_group.on_command("查询对局", aliases={"对局"}, priority=5)
 
 require_store_command_args(query_by_code_matcher)
 require_platform_group_id(query_by_code_matcher)
@@ -40,7 +41,7 @@ async def query_by_code(matcher: Matcher, group: Group = GroupDep(),
 
 
 # ========== 个人最近对局 ==========
-query_user_recent_games_matcher = on_command("个人最近对局", priority=5)
+query_user_recent_games_matcher = matcher_group.on_command("个人最近对局", priority=5)
 
 require_store_command_args(query_user_recent_games_matcher)
 require_platform_group_id(query_user_recent_games_matcher)
@@ -67,7 +68,7 @@ async def query_user_recent_games(bot: Bot, event: Event,
 
 
 # ========== 群最近对局 ==========
-query_group_recent_games_matcher = on_command("群最近对局", aliases={"最近对局"}, priority=5)
+query_group_recent_games_matcher = matcher_group.on_command("群最近对局", aliases={"最近对局"}, priority=5)
 
 require_store_command_args(query_group_recent_games_matcher)
 require_platform_group_id(query_group_recent_games_matcher)
@@ -90,7 +91,7 @@ async def query_group_recent_games(bot: Bot, event: Event, group=GroupDep()):
 
 
 # ========== 个人未完成对局 ==========
-query_user_uncompleted_games_matcher = on_command("个人未完成对局", priority=5)
+query_user_uncompleted_games_matcher = matcher_group.on_command("个人未完成对局", priority=5)
 
 require_store_command_args(query_user_uncompleted_games_matcher)
 require_platform_group_id(query_user_uncompleted_games_matcher)
@@ -114,7 +115,7 @@ async def query_user_uncompleted_games(bot: Bot, event: Event,
 
 
 # ========== 群未完成对局 ==========
-query_group_uncompleted_games_matcher = on_command("群未完成对局", aliases={"未完成对局"}, priority=5)
+query_group_uncompleted_games_matcher = matcher_group.on_command("群未完成对局", aliases={"未完成对局"}, priority=5)
 
 require_store_command_args(query_group_uncompleted_games_matcher)
 require_platform_group_id(query_group_uncompleted_games_matcher)

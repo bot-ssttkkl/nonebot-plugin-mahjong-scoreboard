@@ -1,6 +1,6 @@
 from io import StringIO
 
-from nonebot import on_command, Bot
+from nonebot import Bot
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher, current_bot
 
@@ -8,6 +8,7 @@ from .interceptor import handle_error
 from .mapper import season_state_mapping, map_point
 from .mapper.pagination_mapper import map_pagination
 from .mapper.season_user_point_mapper import map_season_user_point
+from .mg import matcher_group
 from .utils.dep import RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from ..errors import BadRequestError
@@ -17,7 +18,7 @@ from ..platform.send_messages import send_msgs
 from ..service.season_user_point_service import get_season_user_point, get_season_user_points
 
 # ========== 查询PT ==========
-query_season_point_matcher = on_command("查询PT", aliases={"查询pt", "PT", "pt"}, priority=5)
+query_season_point_matcher = matcher_group.on_command("查询PT", aliases={"查询pt", "PT", "pt"}, priority=5)
 
 require_store_command_args(query_season_point_matcher)
 require_platform_group_id(query_season_point_matcher)
@@ -37,7 +38,7 @@ async def query_season_point(matcher: Matcher, season: Season = RunningSeasonDep
 
 
 # ========== 查询榜单 ==========
-query_season_ranking_matcher = on_command("查询榜单", aliases={"榜单"}, priority=5)
+query_season_ranking_matcher = matcher_group.on_command("查询榜单", aliases={"榜单"}, priority=5)
 
 require_store_command_args(query_season_ranking_matcher)
 require_platform_group_id(query_season_ranking_matcher)

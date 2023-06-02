@@ -2,12 +2,12 @@ from datetime import datetime
 from io import StringIO
 
 import tzlocal
-from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent
 from nonebot_plugin_gocqhttp_cross_machine_upload_file import upload_file
 
 from .interceptor import handle_error
 from .mapper.season_user_point_csv_mapper import write_season_user_point_change_logs_csv
+from .mg import matcher_group
 from .utils.dep import SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
 from ..errors import BadRequestError
@@ -17,7 +17,7 @@ from ..service.season_user_point_service import get_season_user_point_change_log
 from ..utils.date import encode_date
 
 # ========== 导出榜单 ==========
-export_season_ranking_matcher = on_command("导出榜单", priority=5)
+export_season_ranking_matcher = matcher_group.on_command("导出榜单", priority=5)
 
 require_store_command_args(export_season_ranking_matcher)
 require_platform_group_id(export_season_ranking_matcher)

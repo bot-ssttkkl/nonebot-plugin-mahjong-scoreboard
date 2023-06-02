@@ -5,7 +5,6 @@ from .mapper import map_season_user_point, map_season_user_point_change_log
 from ..errors import BadRequestError
 from ..model import SeasonUserPoint, SeasonUserPointChangeLog
 from ..repository import data_source
-from ..repository.pagination import Page
 from ..repository.season import SeasonRepository
 
 

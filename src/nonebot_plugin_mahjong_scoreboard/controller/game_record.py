@@ -3,13 +3,13 @@ from io import StringIO
 from typing import Optional, NamedTuple
 
 from cachetools import TTLCache
-from nonebot import on_command
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import Depends
 from nonebot_plugin_session import Session
 
 from .interceptor import handle_error
 from .mapper.game_mapper import map_game
+from .mg import matcher_group
 from .utils.dep import GroupDep, UserDep, UnaryArg, SessionDep, SplitCommandArgs, SenderUserDep
 from .utils.parse import parse_int_or_error, try_parse_wind, parse_float_or_error, try_parse_game_code
 from ..errors import BadRequestError
@@ -32,7 +32,7 @@ def GameCodeFromGroupLatest():
 
 
 # =============== 新建对局 ===============
-new_game_matcher = on_command("新建对局", aliases={"新对局"}, priority=5)
+new_game_matcher = matcher_group.on_command("新建对局", aliases={"新对局"}, priority=5)
 
 
 @new_game_matcher.handle()
@@ -56,7 +56,7 @@ async def new_game(matcher: Matcher, player_and_wind=UnaryArg(), session: Sessio
 
 
 # =============== 结算 ===============
-record_matcher = on_command("结算对局", aliases={"结算"}, priority=5)
+record_matcher = matcher_group.on_command("结算对局", aliases={"结算"}, priority=5)
 
 
 class RecordArgs(NamedTuple):
@@ -112,7 +112,7 @@ async def record(matcher: Matcher,
 
 
 # =============== 撤销结算 ===============
-revert_record_matcher = on_command("撤销结算对局", aliases={"撤销结算"}, priority=5)
+revert_record_matcher = matcher_group.on_command("撤销结算对局", aliases={"撤销结算"}, priority=5)
 
 
 @revert_record_matcher.handle()
@@ -137,7 +137,7 @@ async def revert_record(matcher: Matcher,
 
 
 # =============== 设置对局PT ===============
-set_record_point_matcher = on_command("设置对局PT", aliases={"对局PT"}, priority=5)
+set_record_point_matcher = matcher_group.on_command("设置对局PT", aliases={"对局PT"}, priority=5)
 
 
 class SetRecordPointArgs(NamedTuple):
@@ -182,7 +182,7 @@ async def set_record_point(matcher: Matcher,
 
 
 # =============== 删除对局 ===============
-delete_game_matcher = on_command("删除对局", priority=5)
+delete_game_matcher = matcher_group.on_command("删除对局", priority=5)
 
 
 @delete_game_matcher.handle()
@@ -198,7 +198,7 @@ async def delete_game(matcher: Matcher, group: Group = GroupDep(), operator: Use
 
 
 # =============== 设置对局进度 ===============
-make_game_progress_matcher = on_command("设置对局进度", aliases={"对局进度"}, priority=5)
+make_game_progress_matcher = matcher_group.on_command("设置对局进度", aliases={"对局进度"}, priority=5)
 
 round_honba_pattern = r"([东南])([一二三四1234])局([0123456789零一两二三四五六七八九十百千万亿]+)本场"
 
@@ -261,7 +261,7 @@ async def make_game_progress(matcher: Matcher, group: Group = GroupDep(), operat
 
 
 # ========== 设置对局备注 ===========
-set_game_comment_matcher = on_command("设置对局备注", aliases={"对局备注"}, priority=5)
+set_game_comment_matcher = matcher_group.on_command("设置对局备注", aliases={"对局备注"}, priority=5)
 
 
 class SetGameCommentArgs(NamedTuple):

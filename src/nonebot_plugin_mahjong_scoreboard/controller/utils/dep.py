@@ -178,7 +178,7 @@ def SeasonFromUnaryArgOrRunningSeason(*, unary_arg_lookup_matcher_state: bool = 
     return Depends(dependency)
 
 
-def GroupAdminDep(raise_on_false: bool = True):
+def IsGroupAdminDep(raise_on_false: bool = True):
     @handle_error()
     async def dependency(group=GroupDep(), sender=SenderUserDep()):
         admin = await is_group_admin(sender.id, group.id)

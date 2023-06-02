@@ -1,18 +1,18 @@
 from io import StringIO
 
-from nonebot import on_command
 from nonebot.internal.matcher import Matcher
 
 from .interceptor import handle_error
 from .mapper import season_state_mapping
 from .mapper.season_mapper import map_season
+from .mg import matcher_group
 from .utils.dep import GroupDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
 from ..model import Group, Season
 from ..service.season_service import get_group_seasons
 
 # ========== 查询赛季 ==========
-query_season_matcher = on_command("查询赛季", aliases={"赛季", "当前赛季"}, priority=5)
+query_season_matcher = matcher_group.on_command("查询赛季", aliases={"赛季", "当前赛季"}, priority=10)
 
 require_store_command_args(query_season_matcher)
 require_platform_group_id(query_season_matcher)
@@ -27,7 +27,7 @@ async def query_running_season(matcher: Matcher,
 
 
 # ========== 查询所有赛季 ==========
-query_all_seasons_matcher = on_command("查询所有赛季", aliases={"所有赛季"}, priority=5)
+query_all_seasons_matcher = matcher_group.on_command("查询所有赛季", aliases={"所有赛季"}, priority=5)
 
 require_store_command_args(query_all_seasons_matcher)
 require_platform_group_id(query_all_seasons_matcher)
