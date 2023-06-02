@@ -1,6 +1,6 @@
 from typing import List
 
-from nonebot.adapters.qqguild import Message, MessageSegment
+from nonebot.internal.adapter import Message, MessageSegment
 
 
 def split_message(message: Message, ignore_empty: bool = True) -> List[MessageSegment]:
@@ -9,9 +9,8 @@ def split_message(message: Message, ignore_empty: bool = True) -> List[MessageSe
         if seg.type == "text":
             for text in seg.data["text"].split(" "):
                 if not ignore_empty or text:
-                    result.append(MessageSegment.text(text))
+                    result.append(type(seg).text(text))
         else:
             result.append(seg)
 
     return result
-
