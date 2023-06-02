@@ -1,14 +1,15 @@
 import re
 
-from nonebot import on_command
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
 from .interceptor import handle_interruption, handle_error
 from .mapper.season_mapper import map_season
-from .utils.dep import GroupDep, UnaryArg, RunningSeasonDep, SenderUserDep, GroupAdminDep
-from .utils.general_handlers import hint_for_question_flow_on_first, require_store_command_args
+from .mg import matcher_group
+from .utils.dep import GroupDep, UnaryArg, RunningSeasonDep, SenderUserDep, IsGroupAdminDep
+from .utils.general_handlers import hint_for_question_flow_on_first, require_platform_group_id, \
+    require_store_command_args
 from .utils.parse import parse_int_or_reject
 from ..errors import BadRequestError
 from ..model import Group, Season, User, SeasonConfig
@@ -17,9 +18,11 @@ from ..service import season_service
 from ..service.season_service import get_season_by_code, new_season, start_season, finish_season
 
 # ========== 新赛季 ==========
-new_season_matcher = on_command("新建赛季", aliases={"新赛季"}, priority=5)
+new_season_matcher = matcher_group.on_command("新建赛季", aliases={"新赛季"}, priority=5)
 
 new_season_matcher.append_handler(hint_for_question_flow_on_first)
+
+require_platform_group_id(new_season_matcher)
 
 
 @new_season_matcher.got("code", "赛季代号？")
@@ -28,7 +31,7 @@ new_season_matcher.append_handler(hint_for_question_flow_on_first)
 async def new_season_got_code(matcher: Matcher,
                               raw_arg=ArgPlainText("code"),
                               group: Group = GroupDep(),
-                              group_admin=GroupAdminDep()):
+                              group_admin=IsGroupAdminDep()):
     match_result = re.match(r"[_a-zA-Z]\w*", raw_arg)
     if match_result is None:
         await matcher.reject("赛季代号不合法。请重新输入。（赛季代号只允许包含字母、数字和下划线，且必须以字母或下划线开头）")
@@ -204,14 +207,17 @@ async def new_season_start(event: Event, matcher: Matcher, operator: User = Send
 
 
 # ========== 开启赛季 ==========
-start_season_matcher = on_command("开启赛季", priority=5)
+start_season_matcher = matcher_group.on_command("开启赛季", priority=5)
+
+require_store_command_args(start_season_matcher)
+require_platform_group_id(start_season_matcher)
 
 
 @start_season_matcher.handle()
 @handle_error()
 async def start_season_matcher_confirm(matcher: Matcher, group: Group = GroupDep(),
                                        season_code=UnaryArg(),
-                                       group_admin=GroupAdminDep()):
+                                       group_admin=IsGroupAdminDep()):
     if season_code is None:
         raise BadRequestError("请指定赛季编号。使用“/新赛季”指令创建赛季")
 
@@ -241,13 +247,16 @@ async def start_season_end(event: Event, matcher: Matcher, operator: User = Send
 
 
 # ========== 结束赛季 ==========
-finish_season_matcher = on_command("结束赛季", priority=5)
+finish_season_matcher = matcher_group.on_command("结束赛季", priority=5)
+
+require_store_command_args(finish_season_matcher)
+require_platform_group_id(finish_season_matcher)
 
 
 @finish_season_matcher.handle()
 @handle_error()
 async def finish_season_confirm(matcher: Matcher, season: Season = RunningSeasonDep(),
-                                group_admin=GroupAdminDep()):
+                                group_admin=IsGroupAdminDep()):
     matcher.state["season"] = season
     msg = map_season(season)
     msg += "\n\n结束赛季将删除赛季的所有未完成对局，并且无法再修改赛季的已完成对局。\n确定结束赛季吗？(y/n)"
@@ -265,14 +274,17 @@ async def finish_season_end(event: Event, matcher: Matcher, operator: User = Sen
 
 
 # ========== 删除赛季 ==========
-remove_season_matcher = on_command("删除赛季", priority=5)
+remove_season_matcher = matcher_group.on_command("删除赛季", priority=5)
+
+require_store_command_args(remove_season_matcher)
+require_platform_group_id(remove_season_matcher)
 
 
 @remove_season_matcher.handle()
 @handle_error()
 async def remove_season_confirm(matcher: Matcher, group: Group = GroupDep(),
                                 season_code=UnaryArg(),
-                                group_admin=GroupAdminDep()):
+                                group_admin=IsGroupAdminDep()):
     if season_code is None:
         raise BadRequestError("请指定赛季编号")
 

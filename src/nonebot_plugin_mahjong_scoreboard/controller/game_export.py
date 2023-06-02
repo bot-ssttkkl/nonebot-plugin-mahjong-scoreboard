@@ -2,11 +2,11 @@ from datetime import datetime
 from io import StringIO
 
 import tzlocal
-from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent
 
 from .interceptor import handle_error
 from .mapper.game_csv_mapper import write_games_csv
+from .mg import matcher_group
 from .utils.dep import GroupDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
 from ..errors import BadRequestError
@@ -17,7 +17,7 @@ from ..service.game_service import get_games
 from ..utils.date import encode_date
 
 # ========== 导出赛季对局 ==========
-export_season_games_matcher = on_command("导出赛季对局", aliases={"导出对局"}, priority=5)
+export_season_games_matcher = matcher_group.on_command("导出赛季对局", aliases={"导出对局"}, priority=5)
 
 require_store_command_args(export_season_games_matcher)
 require_platform_group_id(export_season_games_matcher)
@@ -48,7 +48,7 @@ async def export_season_games(bot: Bot, event: MessageEvent, group: Group = Grou
 
 
 # ========== 导出所有对局 ==========
-export_group_games_matcher = on_command("导出所有对局", priority=5)
+export_group_games_matcher = matcher_group.on_command("导出所有对局", priority=5)
 
 require_store_command_args(export_season_games_matcher)
 require_platform_group_id(export_season_games_matcher)

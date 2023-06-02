@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import List, Optional, Tuple, overload
+from typing import Optional, Tuple, overload
 
 from sqlalchemy import update, Select, select, func
 from sqlalchemy.orm import selectinload
