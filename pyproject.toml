@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nonebot-plugin-mahjong-scoreboard"
-version = "0.4.0.post1"
+version = "0.4.1.post2"
 description = "日麻寄分器（NoneBot插件）"
 authors = ["ssttkkl <huang.wen.long@hotmail.com>"]
 readme = "README.MD"
@@ -12,16 +12,16 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-nonebot2 = "^2.0.0rc4"
+nonebot2 = "^2.0.0"
 nonebot-adapter-onebot = "^2.2.2"
 nonebot_plugin_apscheduler = "^0.2.0"
+nonebot-plugin-gocqhttp-cross-machine-upload-file = "^0.1.5"
+nonebot-plugin-localstore = "^0.4.1"
 nonebot-plugin-sqlalchemy = "^0.2.1"
 nonebot-plugin-session = "^0.0.3"
-nonebot-plugin-gocqhttp-cross-machine-upload-file = "^0.1.5"
 aiosqlite = ">=0.17,<0.19"
 tzlocal = "^4.2"
 cachetools = "^5.2.0"
-nonebot-plugin-localstore = "^0.4.1"
 
 [tool.poetry.group.dev.dependencies]
 nonebot2 = { extras = ["httpx", "fastapi"], version = "^2.0.0rc3" }
