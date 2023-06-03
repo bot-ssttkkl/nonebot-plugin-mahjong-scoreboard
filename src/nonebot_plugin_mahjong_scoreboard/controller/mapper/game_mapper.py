@@ -93,8 +93,13 @@ async def map_game_lite(game: Game) -> str:
             io.write(f"[{game_state_mapping[game.state]}]")
 
         for r in sorted(game.records, key=lambda r: r.raw_point, reverse=True):
-            io.write(f"  {await get_user_nickname(bot, r.user.platform_user_id, game.group.platform_group_id)}")
+            io.write("  ")
+            if r.wind is not None:
+                io.write(f"[{wind_mapping[r.wind]}]")
+            io.write(f"{await get_user_nickname(bot, r.user.platform_user_id, game.group.platform_group_id)}")
             if game.state == GameState.completed:
                 io.write(f"({map_point(r.raw_point, r.point_scale)})")
+            else:
+                io.write(f"({r.score}点)")
 
         return io.getvalue().strip()
