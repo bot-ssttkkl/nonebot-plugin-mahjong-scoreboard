@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from .group_service import is_group_admin
 from .mapper import map_season_user_point, map_season_user_point_change_log
-from ..errors import BadRequestError
+from ..errors import ResultError
 from ..model import SeasonUserPoint, SeasonUserPointChangeLog
 from ..repository import data_source
 from ..repository.season import SeasonRepository
@@ -48,7 +48,7 @@ async def reset_season_user_point(season_id: int,
                                   user_id: int,
                                   operator_user_id: int):
     if not await is_group_admin(operator_user_id, group_id):
-        raise BadRequestError("没有权限")
+        raise ResultError("没有权限")
 
     session = data_source.session()
     repo = SeasonRepository(session)
@@ -62,7 +62,7 @@ async def change_season_user_point_manually(season_id: int,
                                             point: float,
                                             operator_user_id: int) -> SeasonUserPoint:
     if not await is_group_admin(operator_user_id, group_id):
-        raise BadRequestError("没有权限")
+        raise ResultError("没有权限")
 
     session = data_source.session()
     repo = SeasonRepository(session)

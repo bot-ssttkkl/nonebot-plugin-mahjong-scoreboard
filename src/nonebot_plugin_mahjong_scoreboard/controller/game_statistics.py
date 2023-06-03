@@ -10,14 +10,16 @@ from .mapper import map_point, digit_mapping, percentile_str, map_real_point
 from .mg import matcher_group
 from .utils.dep import GroupDep, SessionDep, RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
-from ..errors import BadRequestError
+from ..errors import ResultError
 from ..model import GameStatistics, Group, Season, User
 from ..platform.get_user_nickname import get_user_nickname
 from ..service.game_service import get_game_statistics, get_games, get_season_game_statistics
+from ..utils.nonebot import default_cmd_start
 from ..utils.session import get_platform_group_id
 
 # ============ 查询最近走势 ============
-query_season_user_trend_matcher = matcher_group.on_command("查询最近走势", aliases={"最近走势", "走势"}, priority=5)
+query_season_user_trend_matcher = matcher_group.on_command("最近走势", aliases={"走势"}, priority=5)
+query_season_user_trend_matcher.__help_info__ = f"{default_cmd_start}最近走势 [@<用户>]"
 
 require_store_command_args(query_season_user_trend_matcher)
 require_platform_group_id(query_season_user_trend_matcher)
@@ -49,7 +51,7 @@ async def query_season_user_trend(bot: Bot, matcher: Matcher, group: Group = Gro
 
             await matcher.send(sio.getvalue().strip())
     else:
-        raise BadRequestError("用户还没有参加过对局")
+        raise ResultError("用户还没有参加过对局")
 
 
 # ============ 对战数据 ============
@@ -70,6 +72,7 @@ async def map_game_statistics(game_statistics: GameStatistics, user: User, group
 
 
 query_user_statistics_matcher = matcher_group.on_command("对战数据", priority=5)
+query_user_statistics_matcher.__help_info__ = f"{default_cmd_start}对战数据 [@<用户>]"
 
 require_store_command_args(query_user_statistics_matcher)
 require_platform_group_id(query_user_statistics_matcher)
@@ -87,6 +90,7 @@ async def query_user_statistics(matcher: Matcher, group: Group = GroupDep(),
 
 # ============ 赛季对战数据 ============
 query_season_user_statistics_matcher = matcher_group.on_command("赛季对战数据", priority=5)
+query_season_user_statistics_matcher.__help_info__ = f"{default_cmd_start}赛季对战数据 [<赛季代号>] [@<用户>]"
 
 require_store_command_args(query_season_user_statistics_matcher)
 require_platform_group_id(query_season_user_statistics_matcher)

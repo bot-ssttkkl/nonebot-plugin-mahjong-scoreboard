@@ -11,15 +11,17 @@ from .mg import matcher_group
 from .utils.dep import GroupDep, UnaryArg, UserDep
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from .utils.parse import parse_int_or_error
-from ..errors import BadRequestError
+from ..errors import BadRequestError, ResultError
 from ..model import Group, User
 from ..platform.get_user_nickname import get_user_nickname
 from ..platform.send_messages import send_msgs
 from ..service import game_service
 from ..service.game_service import get_games
+from ..utils.nonebot import default_cmd_start
 
 # =============== 查询对局 ===============
 query_by_code_matcher = matcher_group.on_command("查询对局", aliases={"对局"}, priority=5)
+query_by_code_matcher.__help_info__ = f"{default_cmd_start}查询对局 [<编号>]"
 
 require_store_command_args(query_by_code_matcher)
 require_platform_group_id(query_by_code_matcher)
@@ -34,7 +36,7 @@ async def query_by_code(matcher: Matcher, group: Group = GroupDep(),
 
     game = await game_service.get_game(game_code, group.id)
     if game is None:
-        raise BadRequestError("未找到指定对局")
+        raise ResultError("未找到指定对局")
 
     msg = await map_game(game, detailed=True)
     await matcher.send(msg)
@@ -42,6 +44,7 @@ async def query_by_code(matcher: Matcher, group: Group = GroupDep(),
 
 # ========== 个人最近对局 ==========
 query_user_recent_games_matcher = matcher_group.on_command("个人最近对局", priority=5)
+query_user_recent_games_matcher.__help_info__ = f"{default_cmd_start}个人最近对局 [@<用户>]"
 
 require_store_command_args(query_user_recent_games_matcher)
 require_platform_group_id(query_user_recent_games_matcher)
@@ -64,11 +67,12 @@ async def query_user_recent_games(bot: Bot, event: Event,
 
         await send_msgs(bot, event, msgs)
     else:
-        raise BadRequestError("用户最近七天还没有进行过对局")
+        raise ResultError("用户最近七天还没有进行过对局")
 
 
 # ========== 群最近对局 ==========
 query_group_recent_games_matcher = matcher_group.on_command("群最近对局", aliases={"最近对局"}, priority=5)
+query_group_recent_games_matcher.__help_info__ = f"{default_cmd_start}群最近对局"
 
 require_store_command_args(query_group_recent_games_matcher)
 require_platform_group_id(query_group_recent_games_matcher)
@@ -87,11 +91,12 @@ async def query_group_recent_games(bot: Bot, event: Event, group=GroupDep()):
 
         await send_msgs(bot, event, msgs)
     else:
-        raise BadRequestError("本群最近七天还没有进行过对局")
+        raise ResultError("本群最近七天还没有进行过对局")
 
 
 # ========== 个人未完成对局 ==========
 query_user_uncompleted_games_matcher = matcher_group.on_command("个人未完成对局", priority=5)
+query_user_uncompleted_games_matcher.__help_info__ = f"{default_cmd_start}个人未完成对局 [@<用户>]"
 
 require_store_command_args(query_user_uncompleted_games_matcher)
 require_platform_group_id(query_user_uncompleted_games_matcher)
@@ -111,11 +116,12 @@ async def query_user_uncompleted_games(bot: Bot, event: Event,
 
         await send_msgs(bot, event, msgs)
     else:
-        raise BadRequestError("用户没有未完成的对局")
+        raise ResultError("用户没有未完成的对局")
 
 
 # ========== 群未完成对局 ==========
 query_group_uncompleted_games_matcher = matcher_group.on_command("群未完成对局", aliases={"未完成对局"}, priority=5)
+query_group_uncompleted_games_matcher.__help_info__ = f"{default_cmd_start}群未完成对局"
 
 require_store_command_args(query_group_uncompleted_games_matcher)
 require_platform_group_id(query_group_uncompleted_games_matcher)
@@ -131,4 +137,4 @@ async def query_group_uncompleted_games(bot: Bot, event: Event, group=GroupDep()
 
         await send_msgs(bot, event, msgs)
     else:
-        raise BadRequestError("本群没有未完成的对局")
+        raise ResultError("本群没有未完成的对局")

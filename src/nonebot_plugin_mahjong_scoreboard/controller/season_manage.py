@@ -11,14 +11,16 @@ from .utils.dep import GroupDep, UnaryArg, RunningSeasonDep, SenderUserDep, IsGr
 from .utils.general_handlers import hint_for_question_flow_on_first, require_platform_group_id, \
     require_store_command_args
 from .utils.parse import parse_int_or_reject
-from ..errors import BadRequestError
+from ..errors import BadRequestError, ResultError
 from ..model import Group, Season, User, SeasonConfig
 from ..model.enums import SeasonState
 from ..service import season_service
 from ..service.season_service import get_season_by_code, new_season, start_season, finish_season
+from ..utils.nonebot import default_cmd_start
 
 # ========== 新赛季 ==========
 new_season_matcher = matcher_group.on_command("新建赛季", aliases={"新赛季"}, priority=5)
+new_season_matcher.__help_info__ = f"{default_cmd_start}新建赛季"
 
 new_season_matcher.append_handler(hint_for_question_flow_on_first)
 
@@ -113,7 +115,7 @@ async def new_season_got_east_game_enabled(matcher: Matcher,
         matcher.set_arg("east_game_horse_point", Message())
 
     if not matcher.state["south_game_enabled"] and not matcher.state["east_game_enabled"]:
-        raise BadRequestError("半庄战、东风战至少需要开启一种")
+        raise ResultError("半庄战、东风战至少需要开启一种")
 
 
 @new_season_matcher.got("east_game_origin_point", "东风战返点？")
@@ -208,6 +210,7 @@ async def new_season_start(event: Event, matcher: Matcher, operator: User = Send
 
 # ========== 开启赛季 ==========
 start_season_matcher = matcher_group.on_command("开启赛季", priority=5)
+start_season_matcher.__help_info__ = f"{default_cmd_start}开启赛季 [<代号>]"
 
 require_store_command_args(start_season_matcher)
 require_platform_group_id(start_season_matcher)
@@ -223,7 +226,7 @@ async def start_season_matcher_confirm(matcher: Matcher, group: Group = GroupDep
 
     season = await get_season_by_code(season_code, group.id)
     if season is None:
-        raise BadRequestError("找不到该赛季。使用“/新赛季”指令创建赛季")
+        raise ResultError("找不到该赛季。使用“/新赛季”指令创建赛季")
 
     matcher.state["season"] = season
 
@@ -248,6 +251,7 @@ async def start_season_end(event: Event, matcher: Matcher, operator: User = Send
 
 # ========== 结束赛季 ==========
 finish_season_matcher = matcher_group.on_command("结束赛季", priority=5)
+finish_season_matcher.__help_info__ = f"{default_cmd_start}结束赛季"
 
 require_store_command_args(finish_season_matcher)
 require_platform_group_id(finish_season_matcher)
@@ -275,6 +279,7 @@ async def finish_season_end(event: Event, matcher: Matcher, operator: User = Sen
 
 # ========== 删除赛季 ==========
 remove_season_matcher = matcher_group.on_command("删除赛季", priority=5)
+remove_season_matcher.__help_info__ = f"{default_cmd_start}删除赛季 [<代号>]"
 
 require_store_command_args(remove_season_matcher)
 require_platform_group_id(remove_season_matcher)
@@ -290,7 +295,7 @@ async def remove_season_confirm(matcher: Matcher, group: Group = GroupDep(),
 
     season = await get_season_by_code(season_code, group.id)
     if season is None:
-        raise BadRequestError("找不到该赛季")
+        raise ResultError("找不到该赛季")
 
     matcher.state["season"] = season
 

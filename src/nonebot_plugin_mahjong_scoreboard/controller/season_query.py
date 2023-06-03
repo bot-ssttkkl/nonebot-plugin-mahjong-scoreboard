@@ -10,9 +10,11 @@ from .utils.dep import GroupDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
 from ..model import Group, Season
 from ..service.season_service import get_group_seasons
+from ..utils.nonebot import default_cmd_start
 
 # ========== 查询赛季 ==========
 query_season_matcher = matcher_group.on_command("查询赛季", aliases={"赛季", "当前赛季"}, priority=10)
+query_season_matcher.__help_info__ = f"{default_cmd_start}查询赛季 [<代号>]"
 
 require_store_command_args(query_season_matcher)
 require_platform_group_id(query_season_matcher)
@@ -28,6 +30,7 @@ async def query_running_season(matcher: Matcher,
 
 # ========== 查询所有赛季 ==========
 query_all_seasons_matcher = matcher_group.on_command("查询所有赛季", aliases={"所有赛季"}, priority=5)
+query_all_seasons_matcher.__help_info__ = f"{default_cmd_start}查询所有赛季"
 
 require_store_command_args(query_all_seasons_matcher)
 require_platform_group_id(query_all_seasons_matcher)

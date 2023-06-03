@@ -13,44 +13,49 @@ require("nonebot_plugin_sqlalchemy")
 require("nonebot_plugin_apscheduler")
 require("nonebot_plugin_gocqhttp_cross_machine_upload_file")
 
+from .controller import game_record, game_query, game_export, season_query, season_manage, season_user_point_query, \
+    season_user_point_export, season_user_point_manage, game_statistics
+
 from .utils.nonebot import default_cmd_start
 
 help_text = f"""
 对局：
-- {default_cmd_start}新建对局 [四人南|四人东]
-- {default_cmd_start}结算对局 <成绩> [对局<编号>] [@<用户>] [<自风>]
-- {default_cmd_start}撤销结算对局 [对局<编号>] [@<用户>]
-- {default_cmd_start}设置对局PT <PT> [对局<编号>] [@<用户>]
-- {default_cmd_start}删除对局 [对局<编号>]
-- {default_cmd_start}设置对局进度 <东/南x局y本场 或 完成> [对局<编号>]
+- {game_record.new_game_matcher.__help_info__}
+- {game_record.record_matcher.__help_info__}
+- {game_record.revert_record_matcher.__help_info__}
+- {game_record.set_record_point_matcher.__help_info__}
+- {game_record.delete_game_matcher.__help_info__}
+- {game_record.make_game_progress_matcher.__help_info__}
+- {game_record.set_game_comment_matcher.__help_info__}
 
 对局查询：
-- {default_cmd_start}查询对局 [<编号>]
-- {default_cmd_start}个人最近对局 [@<用户>]
-- {default_cmd_start}群最近对局
-- {default_cmd_start}个人未完成对局 [@<用户>]
-- {default_cmd_start}群未完成对局
-- {default_cmd_start}导出赛季对局 [<代号>]
-- {default_cmd_start}导出所有对局
+- {game_query.query_by_code_matcher.__help_info__}
+- {game_query.query_user_recent_games_matcher.__help_info__}
+- {game_query.query_group_recent_games_matcher.__help_info__}
+- {game_query.query_user_uncompleted_games_matcher.__help_info__}
+- {game_query.query_group_uncompleted_games_matcher.__help_info__}
+- {game_export.export_season_games_matcher.__help_info__}
+- {game_export.export_group_games_matcher.__help_info__}
 
 赛季：
-- {default_cmd_start}查询赛季 [<代号>]
-- {default_cmd_start}查询所有赛季
-- {default_cmd_start}新建赛季
-- {default_cmd_start}开启赛季 [<代号>]
-- {default_cmd_start}结束赛季
-- {default_cmd_start}删除赛季 [<代号>]
+- {season_query.query_season_matcher}
+- {season_query.query_all_seasons_matcher}
+- {season_manage.new_season_matcher}
+- {season_manage.start_season_matcher}
+- {season_manage.finish_season_matcher}
+- {season_manage.remove_season_matcher}
 
 赛季查询：
-- {default_cmd_start}查询榜单 [<赛季代号>]
-- {default_cmd_start}导出榜单 [<赛季代号>]
-- {default_cmd_start}查询PT [@<用户>]
-- {default_cmd_start}设置PT <PT> [@<用户>]
+- {season_user_point_query.query_season_ranking_matcher}
+- {season_user_point_export.export_season_ranking_matcher}
+- {season_user_point_query.query_season_point_matcher}
+- {season_user_point_manage.set_season_user_point_matcher}
+- {season_user_point_manage.reset_season_user_point_matcher}
 
 数据统计：
-- {default_cmd_start}对战数据
-- {default_cmd_start}赛季对战数据 [<赛季代号>]
-- {default_cmd_start}最近走势 [@<用户>]
+- {game_statistics.query_user_statistics_matcher}
+- {game_statistics.query_season_user_statistics_matcher}
+- {game_statistics.query_season_user_trend_matcher}
 
 以上命令格式中，以<>包裹的表示一个参数，以[]包裹的表示一个可选项。
 
@@ -65,4 +70,4 @@ __plugin_meta__ = PluginMetadata(
     usage=help_text
 )
 
-from . import controller
+__all__ = ("__plugin_meta__",)

@@ -10,7 +10,7 @@ from nonebot_plugin_session import extract_session
 
 from .message import split_message
 from ..interceptor import handle_error
-from ...errors import BadRequestError
+from ...errors import BadRequestError, ResultError
 from ...model import Group
 from ...platform.mention import extract_mention_user
 from ...service.group_service import get_group, is_group_admin
@@ -115,7 +115,7 @@ def RunningSeasonDep(*, group_lookup_matcher_state: bool = True,
         async with matcher.state["db_mutex"]:
             season = await get_group_running_season(group.id)
             if season is None and raise_on_missing:
-                raise BadRequestError("当前没有运行中的赛季")
+                raise ResultError("当前没有运行中的赛季")
             return season
 
     return Depends(dependency)
@@ -168,11 +168,11 @@ def SeasonFromUnaryArgOrRunningSeason(*, unary_arg_lookup_matcher_state: bool = 
             if season_code:
                 season = await get_season_by_code(season_code, group.id)
                 if season is None:
-                    raise BadRequestError("找不到指定赛季")
+                    raise ResultError("找不到指定赛季")
             else:
                 season = await get_group_running_season(group.id)
                 if season is None:
-                    raise BadRequestError("当前没有运行中的赛季")
+                    raise ResultError("当前没有运行中的赛季")
             return season
 
     return Depends(dependency)
@@ -183,7 +183,7 @@ def IsGroupAdminDep(raise_on_false: bool = True):
     async def dependency(group=GroupDep(), sender=SenderUserDep()):
         admin = await is_group_admin(sender.id, group.id)
         if not admin and raise_on_false:
-            raise BadRequestError("权限不足")
+            raise ResultError("权限不足")
         return admin
 
     return dependency

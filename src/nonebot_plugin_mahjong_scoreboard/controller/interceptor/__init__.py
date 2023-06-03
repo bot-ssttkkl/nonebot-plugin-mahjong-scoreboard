@@ -4,7 +4,7 @@ from nonebot import logger
 from nonebot.exception import MatcherException, ActionFailed
 from nonebot.internal.matcher import current_event, current_matcher
 
-from ...errors import BadRequestError
+from ...errors import BadRequestError, ResultError
 
 
 def handle_error():
@@ -17,6 +17,8 @@ def handle_error():
             except MatcherException as e:
                 raise e
             except BadRequestError as e:
+                await matcher.finish(f"{e.message}\n\n指令用法：{matcher.__help_info__}")
+            except ResultError as e:
                 await matcher.finish(e.message)
             except ActionFailed as e:
                 # 避免当发送消息错误时再尝试发送

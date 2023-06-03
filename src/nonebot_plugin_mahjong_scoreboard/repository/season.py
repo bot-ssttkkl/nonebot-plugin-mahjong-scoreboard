@@ -6,7 +6,7 @@ from sqlalchemy.sql.functions import count
 
 from .base import Repository
 from .data_model import GameOrm, SeasonOrm, SeasonUserPointOrm, SeasonUserPointChangeLogOrm
-from ..errors import BadRequestError
+from ..errors import ResultError
 from ..model.enums import GameState, SeasonUserPointChangeType
 from ..utils.rank import ranked
 
@@ -159,7 +159,7 @@ class SeasonRepository(Repository[SeasonOrm]):
             cnt = (await self.session.execute(stmt)).scalar_one()
 
             if cnt != 0:
-                raise BadRequestError("撤销结算失败，在该对局之后该用户PT发生了改变")
+                raise ResultError("撤销结算失败，在该对局之后该用户PT发生了改变")
 
             user_point.point -= change_log.change_point
             await self.session.delete(change_log)
