@@ -14,7 +14,7 @@ require("nonebot_plugin_apscheduler")
 require("nonebot_plugin_gocqhttp_cross_machine_upload_file")
 
 from .config import Config
-from .controller import game_record, game_query, game_export, season_query, season_manage, season_user_point_query, \
+from .matchers import game_record, game_query, game_export, season_query, season_manage, season_user_point_query, \
     season_user_point_export, season_user_point_manage, game_statistics
 from .utils.nonebot import default_cmd_start
 

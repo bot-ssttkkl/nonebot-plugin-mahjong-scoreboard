@@ -1,6 +1,7 @@
 from asyncio import Lock
 from typing import Optional, Callable
 
+from mahjong_scoreboard_model import Group
 from nonebot import Bot
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
@@ -11,7 +12,6 @@ from nonebot_plugin_session import extract_session
 from .message import split_message
 from ..interceptor import handle_error
 from ...errors import BadRequestError, ResultError
-from ...model import Group
 from ...platform.mention import extract_mention_user
 from ...service.group_service import get_group, is_group_admin
 from ...service.season_service import get_group_running_season, get_season_by_code
@@ -58,10 +58,7 @@ def GroupDep(*, lookup_matcher_state: bool = True,
             else:
                 return None
 
-        if "db_mutex" not in matcher.state:
-            matcher.state["db_mutex"] = Lock()
-        async with matcher.state["db_mutex"]:
-            return await get_group(platform_group_id)
+        return await get_group(platform_group_id)
 
     return Depends(dependency)
 

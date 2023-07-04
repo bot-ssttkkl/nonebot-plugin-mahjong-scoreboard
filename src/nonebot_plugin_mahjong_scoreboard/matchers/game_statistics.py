@@ -1,6 +1,6 @@
-# ========== 查询最近走势 ==========
 from io import StringIO
 
+from mahjong_scoreboard_model import GameStatistics, Group, Season, User
 from nonebot import Bot
 from nonebot.internal.matcher import Matcher, current_bot
 from nonebot_plugin_session import Session
@@ -11,7 +11,6 @@ from .mg import matcher_group
 from .utils.dep import GroupDep, SessionDep, RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from ..errors import ResultError
-from ..model import GameStatistics, Group, Season, User
 from ..platform.get_user_nickname import get_user_nickname
 from ..service.game_service import get_game_statistics, get_games, get_season_game_statistics
 from ..utils.nonebot import default_cmd_start
@@ -60,7 +59,8 @@ async def map_game_statistics(game_statistics: GameStatistics, user: User, group
     with StringIO() as sio:
         sio.write(f"用户[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]的对战数据：\n")
 
-        sio.write(f"  对局数：{game_statistics.total} （半庄：{game_statistics.total_south}、东风：{game_statistics.total_east}）\n")
+        sio.write(
+            f"  对局数：{game_statistics.total} （半庄：{game_statistics.total_south}、东风：{game_statistics.total_east}）\n")
         for i, rate in enumerate(game_statistics.rates):
             sio.write(f"  {digit_mapping[i + 1]}位率：{percentile_str(rate)}\n")
         sio.write(f"  平均顺位：{round(game_statistics.avg_rank, 2)}\n")

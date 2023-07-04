@@ -1,5 +1,6 @@
 from io import StringIO
 
+from mahjong_scoreboard_model import Season, User, SeasonUserPoint
 from nonebot import Bot
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher, current_bot
@@ -12,7 +13,6 @@ from .mg import matcher_group
 from .utils.dep import RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from ..errors import ResultError
-from ..model import Season, User, SeasonUserPoint
 from ..platform.get_user_nickname import get_user_nickname
 from ..platform.send_messages import send_msgs
 from ..service.season_user_point_service import get_season_user_point, get_season_user_points

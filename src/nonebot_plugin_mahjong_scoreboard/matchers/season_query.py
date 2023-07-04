@@ -1,5 +1,6 @@
 from io import StringIO
 
+from mahjong_scoreboard_model import Group, Season
 from nonebot.internal.matcher import Matcher
 
 from .interceptor import handle_error
@@ -8,7 +9,6 @@ from .mapper.season_mapper import map_season
 from .mg import matcher_group
 from .utils.dep import GroupDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
-from ..model import Group, Season
 from ..service.season_service import get_group_seasons
 from ..utils.nonebot import default_cmd_start
 

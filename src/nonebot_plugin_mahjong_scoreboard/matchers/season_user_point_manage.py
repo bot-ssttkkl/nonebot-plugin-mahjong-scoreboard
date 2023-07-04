@@ -1,3 +1,4 @@
+from mahjong_scoreboard_model import Group, User, Season
 from nonebot import Bot
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
@@ -9,14 +10,14 @@ from .mg import matcher_group
 from .utils.dep import UserDep, GroupDep, RunningSeasonDep, SessionDep, UnaryArg, SenderUserDep, IsGroupAdminDep
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from .utils.parse import parse_float_or_error
-from ..model import Group, User, Season
 from ..platform.get_user_nickname import get_user_nickname
 from ..service.season_user_point_service import reset_season_user_point, change_season_user_point_manually
 from ..utils.nonebot import default_cmd_start
 from ..utils.session import get_platform_group_id
 
 # ========== 设置用户PT ==========
-set_season_user_point_matcher = matcher_group.on_command("设置用户PT", aliases={"设置用户pt", "设置PT", "设置pt"}, priority=5)
+set_season_user_point_matcher = matcher_group.on_command("设置用户PT", aliases={"设置用户pt", "设置PT", "设置pt"},
+                                                         priority=5)
 set_season_user_point_matcher.__help_info__ = f"{default_cmd_start}设置PT <PT> [@<用户>]"
 
 require_store_command_args(set_season_user_point_matcher)
@@ -56,7 +57,8 @@ async def set_season_user_point_end(event: Event, matcher: Matcher,
 
 
 # ========== 重置用户PT ==========
-reset_season_user_point_matcher = matcher_group.on_command("重置用户PT", aliases={"重置用户pt", "重置PT", "重置pt"}, priority=5)
+reset_season_user_point_matcher = matcher_group.on_command("重置用户PT", aliases={"重置用户pt", "重置PT", "重置pt"},
+                                                           priority=5)
 reset_season_user_point_matcher.__help_info__ = f"{default_cmd_start}重置PT [@<用户>]"
 
 require_store_command_args(reset_season_user_point_matcher)

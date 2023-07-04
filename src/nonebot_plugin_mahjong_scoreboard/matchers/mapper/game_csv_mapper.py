@@ -3,9 +3,9 @@ from typing import TextIO, Iterable
 
 from nonebot.internal.matcher import current_bot
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import game_state_mapping, \
+from nonebot_plugin_mahjong_scoreboard.matchers.mapper import game_state_mapping, \
     player_and_wind_mapping, map_datetime, map_point, wind_mapping
-from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game_progress
+from nonebot_plugin_mahjong_scoreboard.matchers.mapper.game_mapper import map_game_progress
 from nonebot_plugin_mahjong_scoreboard.model import Game
 from nonebot_plugin_mahjong_scoreboard.model.enums import GameState
 from nonebot_plugin_mahjong_scoreboard.platform.get_user_nickname import get_user_nickname

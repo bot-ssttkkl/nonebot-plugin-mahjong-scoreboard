@@ -1,5 +1,6 @@
 import re
 
+from mahjong_scoreboard_model import Group, Season, User, SeasonConfig, SeasonState
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
@@ -12,8 +13,6 @@ from .utils.general_handlers import hint_for_question_flow_on_first, require_pla
     require_store_command_args
 from .utils.parse import parse_int_or_reject
 from ..errors import BadRequestError, ResultError
-from ..model import Group, Season, User, SeasonConfig
-from ..model.enums import SeasonState
 from ..service import season_service
 from ..service.season_service import get_season_by_code, new_season, start_season, finish_season
 from ..utils.nonebot import default_cmd_start
@@ -150,7 +149,8 @@ async def new_season_got_east_game_horse_point(matcher: Matcher,
     matcher.state["east_game_horse_point"] = li
 
 
-@new_season_matcher.got("point_precision", "PT精度？（输入x，则精度为10^x。例如：输入0，保留整数部分；输入-1，保留小数点后一位）")
+@new_season_matcher.got("point_precision",
+                        "PT精度？（输入x，则精度为10^x。例如：输入0，保留整数部分；输入-1，保留小数点后一位）")
 @handle_error()
 @handle_interruption()
 async def new_season_got_point_precision(matcher: Matcher,

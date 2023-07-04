@@ -1,32 +1,22 @@
-from pathlib import Path
-
-import nonebot_plugin_localstore as store
+from injector import Module, singleton, provider
 from nonebot import get_driver
-from pydantic import BaseSettings, root_validator
+from pydantic import BaseSettings
 
-
-def _get_default_sql_conn_url():
-    # 旧版本的sqlite数据库在working directory
-    data_file = Path("mahjong_scoreboard.db")
-    if not data_file.exists():
-        data_file = store.get_data_file("nonebot_plugin_mahjong_scoreboard", "mahjong_scoreboard.db")
-
-    return "sqlite+aiosqlite:///" + str(data_file)
+from nonebot_plugin_mahjong_scoreboard.inj import add_module
 
 
 class Config(BaseSettings):
-    mahjong_scoreboard_database_conn_url: str
+    mahjong_scoreboard_api_baseurl: str = "http://localhost:8000"
+    mahjong_scoreboard_api_secret: str = "secret"
     mahjong_scoreboard_send_forward_message: bool = True
-    mahjong_scoreboard_enable_permission_check: bool = True
-
-    @root_validator(pre=True, allow_reuse=True)
-    def default_sql_conn_url(cls, values):
-        if "mahjong_scoreboard_database_conn_url" not in values:
-            values["mahjong_scoreboard_database_conn_url"] = _get_default_sql_conn_url()
-        return values
 
     class Config:
         extra = "ignore"
 
 
-conf = Config(**get_driver().config.dict())
+@add_module
+class ConfigModule(Module):
+    @singleton
+    @provider
+    def provide_config(self) -> Config:
+        return Config(**get_driver().config.dict())

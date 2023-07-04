@@ -2,6 +2,7 @@ from datetime import datetime
 from io import StringIO
 
 import tzlocal
+from mahjong_scoreboard_model import Group, Season, SeasonState
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent
 
 from .interceptor import handle_error
@@ -10,8 +11,6 @@ from .mg import matcher_group
 from .utils.dep import GroupDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
 from ..errors import ResultError
-from ..model import Group, Season
-from ..model.enums import SeasonState
 from ..platform.upload_file import upload_file
 from ..service.game_service import get_games
 from ..utils.date import encode_date

@@ -1,5 +1,6 @@
 from datetime import datetime, date, timedelta, time
 
+from mahjong_scoreboard_model import Group, User
 from nonebot import Bot
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
@@ -12,7 +13,6 @@ from .utils.dep import GroupDep, UnaryArg, UserDep
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from .utils.parse import parse_int_or_error
 from ..errors import BadRequestError, ResultError
-from ..model import Group, User
 from ..platform.get_user_nickname import get_user_nickname
 from ..platform.send_messages import send_msgs
 from ..service import game_service
