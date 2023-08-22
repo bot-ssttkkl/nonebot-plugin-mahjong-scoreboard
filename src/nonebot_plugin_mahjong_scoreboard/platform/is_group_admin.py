@@ -1,7 +1,7 @@
 from nonebot import Bot, logger
 from nonebot.exception import ActionFailed
 
-from nonebot_plugin_mahjong_scoreboard.utils.session import get_real_id
+from nonebot_plugin_mahjong_scoreboard.model.platform_id import PlatformId
 
 try:
     from nonebot.adapters.qqguild import Bot as QQGuildBot
@@ -14,9 +14,9 @@ except ImportError:
     OneBotV11Bot = None
 
 
-async def is_group_admin(bot: Bot, platform_user_id: str, platform_group_id: str) -> bool:
-    user_id = get_real_id(platform_user_id)
-    group_id = get_real_id(platform_group_id)
+async def is_group_admin(bot: Bot,  platform_user_id: PlatformId, platform_group_id: PlatformId) -> bool:
+    user_id = platform_user_id.real_id
+    group_id = platform_group_id.real_id
 
     try:
         if QQGuildBot is not None and isinstance(bot, QQGuildBot):

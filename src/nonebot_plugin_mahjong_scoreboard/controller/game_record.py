@@ -17,7 +17,7 @@ from ..model import Group, User
 from ..model.enums import PlayerAndWind, GameState, Wind
 from ..service import game_service
 from ..utils.nonebot import default_cmd_start
-from ..utils.session import get_platform_group_id
+from ..model.platform_id import get_platform_group_id
 
 group_latest_game_code = TTLCache[str, int](4096, 7200)
 

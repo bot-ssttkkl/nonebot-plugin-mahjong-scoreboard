@@ -13,7 +13,7 @@ from ..model import Group, User, Season
 from ..platform.get_user_nickname import get_user_nickname
 from ..service.season_user_point_service import reset_season_user_point, change_season_user_point_manually
 from ..utils.nonebot import default_cmd_start
-from ..utils.session import get_platform_group_id
+from ..model.platform_id import get_platform_group_id
 
 # ========== 设置用户PT ==========
 set_season_user_point_matcher = matcher_group.on_command("设置用户PT", aliases={"设置用户pt", "设置PT", "设置pt"}, priority=5)

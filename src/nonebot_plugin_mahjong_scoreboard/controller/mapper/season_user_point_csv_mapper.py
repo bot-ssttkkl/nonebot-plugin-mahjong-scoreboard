@@ -7,7 +7,6 @@ from nonebot_plugin_mahjong_scoreboard.controller.mapper import map_datetime
 from nonebot_plugin_mahjong_scoreboard.model import Season, SeasonUserPointChangeLog
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonUserPointChangeType
 from nonebot_plugin_mahjong_scoreboard.platform.get_user_nickname import get_user_nickname
-from nonebot_plugin_mahjong_scoreboard.utils.session import get_real_id
 
 
 def _ensure_size(li: list, new_size: int, default):

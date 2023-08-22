@@ -15,7 +15,7 @@ from ..model import GameStatistics, Group, Season, User
 from ..platform.get_user_nickname import get_user_nickname
 from ..service.game_service import get_game_statistics, get_games, get_season_game_statistics
 from ..utils.nonebot import default_cmd_start
-from ..utils.session import get_platform_group_id
+from ..model.platform_id import get_platform_group_id
 
 # ============ 查询最近走势 ============
 query_season_user_trend_matcher = matcher_group.on_command("最近走势", aliases={"走势"}, priority=5)
