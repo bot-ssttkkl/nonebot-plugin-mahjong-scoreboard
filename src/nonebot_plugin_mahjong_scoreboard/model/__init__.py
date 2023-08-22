@@ -4,16 +4,17 @@ from typing import Optional, NamedTuple, List
 from pydantic import BaseModel, conlist, Field
 
 from .enums import PlayerAndWind, GameState, Wind, SeasonState, SeasonUserPointChangeType
+from .platform_id import PlatformId
 
 
 class User(BaseModel):
     id: int
-    platform_user_id: str
+    platform_user_id: PlatformId
 
 
 class Group(BaseModel):
     id: int
-    platform_group_id: str
+    platform_group_id: PlatformId
 
 
 class SeasonConfig(BaseModel):

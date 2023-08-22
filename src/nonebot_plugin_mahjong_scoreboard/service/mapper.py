@@ -2,7 +2,8 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..model import Game, Season, Group, User, SeasonUserPoint, GameProgress, GameRecord, SeasonUserPointChangeLog
+from ..model import Game, Season, Group, User, SeasonUserPoint, GameProgress, GameRecord, SeasonUserPointChangeLog, \
+    PlatformId
 from ..repository.data_model import GameOrm, GameProgressOrm, GameRecordOrm, GroupOrm, SeasonOrm, SeasonUserPointOrm, \
     UserOrm, SeasonUserPointChangeLogOrm
 
@@ -10,13 +11,13 @@ from ..repository.data_model import GameOrm, GameProgressOrm, GameRecordOrm, Gro
 async def map_group(group: Optional[GroupOrm], session: AsyncSession) -> Optional[Group]:
     if group is None:
         return None
-    return Group(id=group.id, platform_group_id=group.platform_group_id)
+    return Group(id=group.id, platform_group_id=PlatformId.parse(group.platform_group_id))
 
 
 async def map_user(user: Optional[UserOrm], session: AsyncSession) -> Optional[User]:
     if user is None:
         return None
-    return User(id=user.id, platform_user_id=user.platform_user_id)
+    return User(id=user.id, platform_user_id=PlatformId.parse(user.platform_user_id))
 
 
 async def map_season(season: Optional[SeasonOrm], session: AsyncSession) -> Optional[Season]:

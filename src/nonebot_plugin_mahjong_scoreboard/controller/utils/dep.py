@@ -16,7 +16,7 @@ from ...platform.mention import extract_mention_user
 from ...service.group_service import get_group, is_group_admin
 from ...service.season_service import get_group_running_season, get_season_by_code
 from ...service.user_service import get_user
-from ...utils.session import get_platform_group_id, get_platform_user_id
+from ...model.platform_id import get_platform_group_id, get_platform_user_id
 
 
 def SplitCommandArgs(*, lookup_matcher_state: bool = True,

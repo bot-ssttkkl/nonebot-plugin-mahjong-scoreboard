@@ -7,7 +7,7 @@ from nonebot_plugin_session import Session, extract_session
 
 from .dep import SessionDep, MentionUserArg
 from ..interceptor import handle_error, handle_interruption
-from ...utils.session import get_platform_group_id, get_platform_user_id
+from ...model.platform_id import get_platform_group_id, get_platform_user_id, PlatformId
 
 
 async def hint_for_question_flow_on_first():
@@ -54,10 +54,10 @@ def require_arg(matcher_type: Type[Matcher], dest: str, desc: str,
     return matcher_type
 
 
-def _parse_platform_id(raw_id: str) -> str:
+def _parse_platform_id(raw_id: str) -> PlatformId:
     # 实际上QQ频道不会调用到这里
     session = extract_session(current_bot.get(), current_event.get())
-    return f"{session.platform}_{session.bot_type}_{raw_id}"
+    return PlatformId(session.platform, session.bot_type, raw_id)
 
 
 def require_platform_group_id(matcher_type: Type[Matcher], *, dest: str = "platform_group_id"):

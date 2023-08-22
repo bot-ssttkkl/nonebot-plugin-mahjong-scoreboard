@@ -3,6 +3,7 @@ from nonebot.internal.matcher import current_bot
 from .mapper import map_group
 from ..config import conf
 from ..model import Group
+from ..model.platform_id import PlatformId
 from ..platform.is_group_admin import is_group_admin as platform_is_group_admin
 from ..repository import data_source
 from ..repository.data_model import GroupOrm
@@ -10,10 +11,10 @@ from ..repository.group import GroupRepository
 from ..repository.user import UserOrm
 
 
-async def get_group(platform_group_id: str) -> Group:
+async def get_group(platform_group_id: PlatformId) -> Group:
     session = data_source.session()
     repo = GroupRepository(session)
-    group = await repo.get(platform_group_id)
+    group = await repo.get(str(platform_group_id))
     return await map_group(group, session)
 
 

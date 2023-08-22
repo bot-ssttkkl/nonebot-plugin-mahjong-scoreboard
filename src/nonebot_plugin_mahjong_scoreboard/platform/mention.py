@@ -2,6 +2,8 @@ from typing import Optional
 
 from nonebot.internal.adapter import MessageSegment
 
+from nonebot_plugin_mahjong_scoreboard.model.platform_id import PlatformId
+
 try:
     from nonebot.adapters.qqguild import MessageSegment as QQGuildMessageSegment
 except ImportError:
@@ -13,12 +15,12 @@ except ImportError:
     OneBotV11MessageSegment = None
 
 
-def extract_mention_user(seg: MessageSegment) -> Optional[str]:
+def extract_mention_user(seg: MessageSegment) -> Optional[PlatformId]:
     if isinstance(seg, QQGuildMessageSegment):
         if seg.type == 'mention_user':
-            return f"qqguild_QQ Guild_{seg.data['user_id']}"
+            return PlatformId("qqguild", "QQ Guild", seg.data['user_id'])
     elif isinstance(seg, OneBotV11MessageSegment):
         if seg.type == 'at':
-            return f"qq_OneBot V11_{seg.data['qq']}"
+            return PlatformId("qq", "OneBot V11", seg.data['qq'])
 
     return None
