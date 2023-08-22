@@ -5,7 +5,7 @@ from nonebot.internal.matcher import current_bot
 from . import player_and_wind_mapping, game_state_mapping, digit_mapping, wind_mapping, map_datetime, map_point
 from ...model import Game, GameProgress
 from ...model.enums import GameState
-from ...platform.get_user_nickname import get_user_nickname
+from ...platform import func
 from ...utils.rank import ranked
 
 
@@ -38,7 +38,7 @@ async def map_game(game: Game, *, detailed: bool = False) -> str:
             io.write(f'所属赛季：{season_name}\n')
 
             io.write(
-                f'创建者：{await get_user_nickname(bot, game.promoter.platform_user_id, game.group.platform_group_id)}\n')
+                f'创建者：{await func(bot).get_user_nickname(bot, game.promoter.platform_user_id, game.group.platform_group_id)}\n')
 
         # 状态：未完成
         io.write(f'状态：{game_state_mapping[game.state]}')
@@ -63,7 +63,7 @@ async def map_game(game: Game, *, detailed: bool = False) -> str:
                 io.write(f'#{rank}')
                 if r.wind is not None:
                     io.write(f' [{wind_mapping[r.wind]}]')
-                io.write(f'    {await get_user_nickname(bot, r.user.platform_user_id, game.group.platform_group_id)}'
+                io.write(f'    {await func(bot).get_user_nickname(bot, r.user.platform_user_id, game.group.platform_group_id)}'
                          f'    {r.score}点')
 
                 if game.state == GameState.completed:
@@ -96,7 +96,7 @@ async def map_game_lite(game: Game) -> str:
             io.write("  ")
             if r.wind is not None:
                 io.write(f"[{wind_mapping[r.wind]}]")
-            io.write(f"{await get_user_nickname(bot, r.user.platform_user_id, game.group.platform_group_id)}")
+            io.write(f"{await func(bot).get_user_nickname(bot, r.user.platform_user_id, game.group.platform_group_id)}")
             if game.state == GameState.completed:
                 io.write(f"({map_point(r.raw_point, r.point_scale)})")
             else:

@@ -12,7 +12,7 @@ from .utils.general_handlers import require_store_command_args, require_platform
 from ..errors import ResultError
 from ..model import Group, Season
 from ..model.enums import SeasonState
-from ..platform.upload_file import upload_file
+from ..platform import func
 from ..service.game_service import get_games
 from ..utils.date import encode_date
 from ..utils.nonebot import default_cmd_start
@@ -46,7 +46,7 @@ async def export_season_games(bot: Bot, event: MessageEvent, group: Group = Grou
         await write_games_csv(sio, games.data)
 
         data = sio.getvalue().encode("utf_8_sig")
-        await upload_file(bot, event, filename, data)
+        await func(bot).upload_file(bot, event, filename, data)
 
 
 # ========== 导出所有对局 ==========
@@ -72,4 +72,4 @@ async def export_group_games(bot: Bot, event: MessageEvent, group: Group = Group
         await write_games_csv(sio, games.data)
 
         data = sio.getvalue().encode("utf_8_sig")
-        await upload_file(bot, event, filename, data)
+        await func(bot).upload_file(bot, event, filename, data)

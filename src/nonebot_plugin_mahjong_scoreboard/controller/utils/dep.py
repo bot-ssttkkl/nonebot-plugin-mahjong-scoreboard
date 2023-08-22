@@ -12,11 +12,11 @@ from .message import split_message
 from ..interceptor import handle_error
 from ...errors import BadRequestError, ResultError
 from ...model import Group
-from ...platform.mention import extract_mention_user
+from ...model.platform_id import get_platform_group_id, get_platform_user_id
+from ...platform import func
 from ...service.group_service import get_group, is_group_admin
 from ...service.season_service import get_group_running_season, get_season_by_code
 from ...service.user_service import get_user
-from ...model.platform_id import get_platform_group_id, get_platform_user_id
 
 
 def SplitCommandArgs(*, lookup_matcher_state: bool = True,
@@ -144,10 +144,11 @@ def UnaryArg(*, lookup_matcher_state: bool = True,
 
 def MentionUserArg(*, lookup_matcher_state: bool = True,
                    lookup_matcher_state_key: str = "command_args_store"):
-    def dependency(args=SplitCommandArgs(lookup_matcher_state=lookup_matcher_state,
+    def dependency(bot: Bot,
+                   args=SplitCommandArgs(lookup_matcher_state=lookup_matcher_state,
                                          lookup_matcher_state_key=lookup_matcher_state_key)):
         for arg in args:
-            x = extract_mention_user(arg)
+            x = func(bot).extract_mention_user(arg)
             if x is not None:
                 return x
 
