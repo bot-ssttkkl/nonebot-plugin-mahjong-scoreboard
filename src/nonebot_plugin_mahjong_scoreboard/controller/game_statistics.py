@@ -12,7 +12,7 @@ from .utils.dep import GroupDep, SessionDep, RunningSeasonDep, UserDep, SeasonFr
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from ..errors import ResultError
 from ..model import GameStatistics, Group, Season, User
-from ..platform.get_user_nickname import get_user_nickname
+from ..platform import func
 from ..service.game_service import get_game_statistics, get_games, get_season_game_statistics
 from ..utils.nonebot import default_cmd_start
 from ..model.platform_id import get_platform_group_id
@@ -36,7 +36,7 @@ async def query_season_user_trend(bot: Bot, matcher: Matcher, group: Group = Gro
 
     if games.total != 0:
         with StringIO() as sio:
-            sio.write(f"用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
+            sio.write(f"用户[{await func(bot).get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
                       f"的最近走势如下：\n")
 
             for game in games.data:
@@ -58,7 +58,7 @@ async def query_season_user_trend(bot: Bot, matcher: Matcher, group: Group = Gro
 async def map_game_statistics(game_statistics: GameStatistics, user: User, group: Group) -> str:
     bot = current_bot.get()
     with StringIO() as sio:
-        sio.write(f"用户[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]的对战数据：\n")
+        sio.write(f"用户[{await func(bot).get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]的对战数据：\n")
 
         sio.write(f"  对局数：{game_statistics.total} （半庄：{game_statistics.total_south}、东风：{game_statistics.total_east}）\n")
         for i, rate in enumerate(game_statistics.rates):

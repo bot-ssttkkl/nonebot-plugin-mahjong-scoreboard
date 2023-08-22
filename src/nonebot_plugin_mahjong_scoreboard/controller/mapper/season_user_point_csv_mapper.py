@@ -6,7 +6,7 @@ from nonebot.internal.matcher import current_bot
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import map_datetime
 from nonebot_plugin_mahjong_scoreboard.model import Season, SeasonUserPointChangeLog
 from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonUserPointChangeType
-from nonebot_plugin_mahjong_scoreboard.platform.get_user_nickname import get_user_nickname
+from nonebot_plugin_mahjong_scoreboard.platform import func
 
 
 def _ensure_size(li: list, new_size: int, default):
@@ -29,8 +29,8 @@ async def write_season_user_point_change_logs_csv(f: TextIO, logs: Iterable[Seas
     # 初步绘制表格
     for log in logs:
         if log.user.id not in user_idx:
-            table.append([f"{await get_user_nickname(bot, log.user.platform_user_id, season.group.platform_group_id)}"
-                          f" ({get_real_id(log.user.platform_user_id)})", ""])
+            table.append([f"{await func(bot).get_user_nickname(bot, log.user.platform_user_id, season.group.platform_group_id)}"
+                          f" ({log.user.platform_user_id.real_id})", ""])
             user_idx[log.user.id] = len(table) - 1
 
         if log.change_type == SeasonUserPointChangeType.game:

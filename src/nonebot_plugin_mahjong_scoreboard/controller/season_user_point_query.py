@@ -13,8 +13,7 @@ from .utils.dep import RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSea
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from ..errors import ResultError
 from ..model import Season, User, SeasonUserPoint
-from ..platform.get_user_nickname import get_user_nickname
-from ..platform.send_messages import send_msgs
+from ..platform import func
 from ..service.season_user_point_service import get_season_user_point, get_season_user_points
 from ..utils.nonebot import default_cmd_start
 
@@ -50,7 +49,7 @@ require_platform_group_id(query_season_ranking_matcher)
 async def map_sup(sup: SeasonUserPoint, season: Season):
     bot = current_bot.get()
     line = f"#{sup.rank}  " \
-           f"{await get_user_nickname(bot, sup.user.platform_user_id, season.group.platform_group_id)}    " \
+           f"{await func(bot).get_user_nickname(bot, sup.user.platform_user_id, season.group.platform_group_id)}    " \
            f"{map_point(sup.point, season.config.point_precision)}"
     return line
 
@@ -73,4 +72,4 @@ async def query_season_ranking(bot: Bot, event: Event,
 
         msgs.insert(0, sio.getvalue().strip())
 
-    await send_msgs(bot, event, msgs)
+    await func(bot).send_msgs(bot, event, msgs)

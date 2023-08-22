@@ -13,8 +13,7 @@ from .utils.general_handlers import require_store_command_args, require_platform
 from .utils.parse import parse_int_or_error
 from ..errors import BadRequestError, ResultError
 from ..model import Group, User
-from ..platform.get_user_nickname import get_user_nickname
-from ..platform.send_messages import send_msgs
+from ..platform import func
 from ..service import game_service
 from ..service.game_service import get_games
 from ..utils.nonebot import default_cmd_start
@@ -62,10 +61,10 @@ async def query_user_recent_games(bot: Bot, event: Event,
     games = await get_games(group.id, user.id, reverse_order=True, time_span=(start_time, end_time))
     msgs = await map_pagination(games.data, map_game_lite)
     if games.total != 0:
-        msgs.insert(0, f"以下是[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]"
+        msgs.insert(0, f"以下是[{await func(bot).get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]"
                        f"最近七天的对局：")
 
-        await send_msgs(bot, event, msgs)
+        await func(bot).send_msgs(bot, event, msgs)
     else:
         raise ResultError("用户最近七天还没有进行过对局")
 
@@ -89,7 +88,7 @@ async def query_group_recent_games(bot: Bot, event: Event, group=GroupDep()):
     if games.total != 0:
         msgs.insert(0, f"以下是本群最近七天的对局：")
 
-        await send_msgs(bot, event, msgs)
+        await func(bot).send_msgs(bot, event, msgs)
     else:
         raise ResultError("本群最近七天还没有进行过对局")
 
@@ -111,10 +110,10 @@ async def query_user_uncompleted_games(bot: Bot, event: Event,
     games = await get_games(group.id, user.id, uncompleted_only=True, reverse_order=True)
     msgs = await map_pagination(games.data, map_game_lite)
     if games.total != 0:
-        msgs.insert(0, f"以下是[{await get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]"
+        msgs.insert(0, f"以下是[{await func(bot).get_user_nickname(bot, user.platform_user_id, group.platform_group_id)}]"
                        f"的未完成对局：")
 
-        await send_msgs(bot, event, msgs)
+        await func(bot).send_msgs(bot, event, msgs)
     else:
         raise ResultError("用户没有未完成的对局")
 
@@ -135,6 +134,6 @@ async def query_group_uncompleted_games(bot: Bot, event: Event, group=GroupDep()
     if games.total != 0:
         msgs.insert(0, f"以下是本群的未完成对局：")
 
-        await send_msgs(bot, event, msgs)
+        await func(bot).send_msgs(bot, event, msgs)
     else:
         raise ResultError("本群没有未完成的对局")
