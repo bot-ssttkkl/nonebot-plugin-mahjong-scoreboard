@@ -65,9 +65,7 @@ def map_season(season: Season, detailed: bool = False) -> str:
                 if season.config.rank_point_policy & RankPointPolicy.absolute_rank_point \
                         or season.config.rank_point_policy & RankPointPolicy.horse_point:
                     io.write('  顺位点：[')
-                    for i in season.config.south_game_horse_point:
-                        io.write(str(i))
-                        io.write(' ')
+                    io.write(' '.join(map(str, season.config.south_game_horse_point)))
                     io.write(']')
                 if season.config.rank_point_policy & RankPointPolicy.overwater:
                     io.write('  水上顺位点：')
@@ -85,14 +83,12 @@ def map_season(season: Season, detailed: bool = False) -> str:
             io.write('东风战：')
             if season.config.east_game_enabled:
                 io.write(f'起点：{season.config.east_game_initial_point}')
-                if season.config.rank_point_policy & RankPointPolicy.first_rank_prize:
-                    io.write(f'  返点：{season.config.east_game_origin_point}')
+                io.write(f'  返点：{season.config.east_game_origin_point}')
                 if season.config.rank_point_policy & RankPointPolicy.absolute_rank_point \
                         or season.config.rank_point_policy & RankPointPolicy.horse_point:
-                    io.write('  顺位点：')
-                    for i in season.config.east_game_horse_point:
-                        io.write(str(i))
-                        io.write(' ')
+                    io.write('  顺位点：[')
+                    io.write(' '.join(map(str, season.config.east_game_horse_point)))
+                    io.write(']')
                 if season.config.rank_point_policy & RankPointPolicy.overwater:
                     io.write('  水上顺位点：')
                     for i, arr_1d in enumerate(season.config.east_game_overwater_point):
