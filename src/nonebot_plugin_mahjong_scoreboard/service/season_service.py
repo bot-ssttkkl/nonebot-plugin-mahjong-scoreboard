@@ -5,8 +5,7 @@ from .game_service import delete_uncompleted_season_games
 from .group_service import is_group_admin
 from .mapper import map_season
 from ..errors import ResultError, BadRequestError
-from ..model import Season, SeasonConfig
-from ..model.enums import SeasonState
+from ..model import Season, SeasonConfig, SeasonState
 from ..repository import data_source
 from ..repository.data_model import GroupOrm, SeasonOrm
 from ..repository.season import SeasonRepository

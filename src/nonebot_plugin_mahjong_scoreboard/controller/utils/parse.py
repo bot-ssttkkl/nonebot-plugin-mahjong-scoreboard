@@ -3,7 +3,7 @@ from typing import Optional, Union
 from nonebot.internal.matcher import current_matcher
 
 from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
-from nonebot_plugin_mahjong_scoreboard.model.enums import Wind
+from nonebot_plugin_mahjong_scoreboard.model import Wind
 from nonebot_plugin_mahjong_scoreboard.utils.integer import decode_integer
 
 

@@ -4,8 +4,7 @@ from typing import TextIO, Iterable, List
 from nonebot.internal.matcher import current_bot
 
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import map_datetime
-from nonebot_plugin_mahjong_scoreboard.model import Season, SeasonUserPointChangeLog
-from nonebot_plugin_mahjong_scoreboard.model.enums import SeasonUserPointChangeType
+from nonebot_plugin_mahjong_scoreboard.model import Season, SeasonUserPointChangeLog, SeasonUserPointChangeType
 from nonebot_plugin_mahjong_scoreboard.platform import func
 
 

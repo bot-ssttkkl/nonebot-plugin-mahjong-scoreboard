@@ -1,6 +1,6 @@
 from typing import Optional
 
-from nonebot_plugin_mahjong_scoreboard.model.platform_id import PlatformId
+from nonebot_plugin_mahjong_scoreboard.model.identity import PlatformId
 from nonebot_plugin_mahjong_scoreboard.platform.func_registry import func
 
 try:

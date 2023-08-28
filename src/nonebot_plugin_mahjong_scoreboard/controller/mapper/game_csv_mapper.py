@@ -6,8 +6,7 @@ from nonebot.internal.matcher import current_bot
 from nonebot_plugin_mahjong_scoreboard.controller.mapper import game_state_mapping, \
     player_and_wind_mapping, map_datetime, map_point, wind_mapping
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game_progress
-from nonebot_plugin_mahjong_scoreboard.model import Game
-from nonebot_plugin_mahjong_scoreboard.model.enums import GameState
+from nonebot_plugin_mahjong_scoreboard.model import Game, GameState
 from nonebot_plugin_mahjong_scoreboard.platform import func
 
 
@@ -39,8 +38,9 @@ async def write_games_csv(f: TextIO, games: Iterable[Game]):
             row.append("")
 
         if g.promoter is not None:
-            row.append(f"{await func(bot).get_user_nickname(bot, g.promoter.platform_user_id, g.group.platform_group_id)}"
-                       f" ({g.promoter.platform_user_id.real_id})")
+            row.append(
+                f"{await func(bot).get_user_nickname(bot, g.promoter.platform_user_id, g.group.platform_group_id)}"
+                f" ({g.promoter.platform_user_id.real_id})")
         else:
             row.append("")
 

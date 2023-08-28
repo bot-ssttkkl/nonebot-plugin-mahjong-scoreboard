@@ -1,6 +1,7 @@
 from typing import Optional, NamedTuple
 
 from nonebot_plugin_session import Session, SessionIdType
+from pydantic import BaseModel
 
 
 class PlatformId(NamedTuple):
@@ -28,3 +29,16 @@ def get_platform_group_id(session: Session) -> Optional[PlatformId]:
         return res
     else:
         return None
+
+
+class User(BaseModel):
+    id: int
+    platform_user_id: PlatformId
+
+
+class Group(BaseModel):
+    id: int
+    platform_group_id: PlatformId
+
+
+__all__ = ("PlatformId", "User", "Group")

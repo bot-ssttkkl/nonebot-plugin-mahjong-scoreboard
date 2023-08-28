@@ -12,7 +12,7 @@ from .message import split_message
 from ..interceptor import handle_error
 from ...errors import BadRequestError, ResultError
 from ...model import Group
-from ...model.platform_id import get_platform_group_id, get_platform_user_id
+from ...model.identity import get_platform_group_id, get_platform_user_id
 from ...platform import func
 from ...service.group_service import get_group, is_group_admin
 from ...service.season_service import get_group_running_season, get_season_by_code

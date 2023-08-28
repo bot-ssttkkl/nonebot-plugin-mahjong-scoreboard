@@ -7,7 +7,7 @@ from nonebot_plugin_session import Session, extract_session
 
 from .dep import SessionDep, MentionUserArg
 from ..interceptor import handle_error, handle_interruption
-from ...model.platform_id import get_platform_group_id, get_platform_user_id, PlatformId
+from ...model.identity import get_platform_group_id, get_platform_user_id, PlatformId
 
 
 async def hint_for_question_flow_on_first():

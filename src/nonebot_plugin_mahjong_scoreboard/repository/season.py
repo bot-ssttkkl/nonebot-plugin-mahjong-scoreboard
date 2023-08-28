@@ -7,7 +7,7 @@ from sqlalchemy.sql.functions import count
 from .base import Repository
 from .data_model import GameOrm, SeasonOrm, SeasonUserPointOrm, SeasonUserPointChangeLogOrm
 from ..errors import ResultError
-from ..model.enums import GameState, SeasonUserPointChangeType
+from ..model import GameState, SeasonUserPointChangeType
 from ..utils.rank import ranked
 
 

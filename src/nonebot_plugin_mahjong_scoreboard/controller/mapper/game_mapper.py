@@ -3,8 +3,7 @@ from io import StringIO
 from nonebot.internal.matcher import current_bot
 
 from . import player_and_wind_mapping, game_state_mapping, digit_mapping, wind_mapping, map_datetime, map_point
-from ...model import Game, GameProgress
-from ...model.enums import GameState
+from ...model import Game, GameProgress, GameState
 from ...platform import func
 from ...utils.rank import ranked
 
@@ -63,8 +62,9 @@ async def map_game(game: Game, *, detailed: bool = False) -> str:
                 io.write(f'#{rank}')
                 if r.wind is not None:
                     io.write(f' [{wind_mapping[r.wind]}]')
-                io.write(f'    {await func(bot).get_user_nickname(bot, r.user.platform_user_id, game.group.platform_group_id)}'
-                         f'    {r.score}点')
+                io.write(
+                    f'    {await func(bot).get_user_nickname(bot, r.user.platform_user_id, game.group.platform_group_id)}'
+                    f'    {r.score}点')
 
                 if game.state == GameState.completed:
                     point_text = map_point(r.raw_point, r.point_scale)
