@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nonebot-plugin-mahjong-scoreboard"
-version = "0.4.1.post4"
+version = "0.5.0.dev1"
 description = "日麻寄分器（NoneBot插件）"
 authors = ["ssttkkl <huang.wen.long@hotmail.com>"]
 readme = "README.MD"
@@ -22,7 +22,6 @@ nonebot-plugin-session = ">=0.0.3"
 aiosqlite = ">=0.17,<0.19"
 tzlocal = ">=4.2"
 cachetools = ">=5.2.0"
-nonebot-plugin-userinfo = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 nonebot2 = { extras = ["httpx", "fastapi"], version = "^2.0.0rc3" }
