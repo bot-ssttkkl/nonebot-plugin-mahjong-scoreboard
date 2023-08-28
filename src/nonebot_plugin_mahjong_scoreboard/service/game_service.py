@@ -228,7 +228,7 @@ async def _handle_full_recorded_game(game: GameOrm):
         else:
             raise ValueError("invalid players and wind")
 
-        horse_point = [(origin_point - initial_point) * (10 ** (-point_scale - 3)), 0, 0, 0]
+        horse_point = [(origin_point - initial_point) * (10 ** (-point_scale - 3)) * 4, 0, 0, 0]
         # 同分平分头名赏
         _handle_horse_point(horse_point, indexed_record)
 
