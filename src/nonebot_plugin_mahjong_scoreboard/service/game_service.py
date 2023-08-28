@@ -11,8 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .group_service import is_group_admin
 from .mapper import map_game
 from ..errors import ResultError
-from ..model import Game, GameStatistics
-from ..model.enums import GameState, PlayerAndWind, Wind, SeasonState
+from ..model import Game, GameStatistics, GameState, PlayerAndWind, Wind, SeasonState, RankPointPolicy
 from ..repository import data_source
 from ..repository.data_model import GroupOrm, GameOrm, GameRecordOrm, GameProgressOrm, SeasonOrm
 from ..repository.game import GameRepository
@@ -164,12 +163,6 @@ async def _handle_full_recorded_game(game: GameOrm):
     if progress is not None:
         return
 
-    # 总分校验
-    sum_score = sum(map(lambda r: r.score, game.records))
-    if sum_score != 25000 * 4:
-        game.state = GameState.invalid_total_point
-        return
-
     game.state = GameState.completed
     game.complete_time = datetime.utcnow()
 
@@ -178,24 +171,106 @@ async def _handle_full_recorded_game(game: GameOrm):
         return
 
     season = await season_repo.get_by_pk(game.season_id)
+
+    # 总分校验
+    sum_score = sum(map(lambda r: r.score, game.records))
     if game.player_and_wind == PlayerAndWind.four_men_east:
-        horse_point = season.config.east_game_horse_point
-        origin_point = season.config.east_game_origin_point
+        except_sum_score = season.config.east_game_initial_point * 4
     elif game.player_and_wind == PlayerAndWind.four_men_south:
-        horse_point = season.config.south_game_horse_point
-        origin_point = season.config.south_game_origin_point
+        except_sum_score = season.config.south_game_initial_point * 4
     else:
         raise ValueError("invalid players and wind")
 
-    point_scale = season.config.point_precision
-    horse_point = list(map(lambda x: x * (10 ** -point_scale), horse_point))
+    if sum_score != except_sum_score:
+        game.state = GameState.invalid_total_point
+        return
 
-    # 降序排序（带上原索引）
+    point_scale = season.config.point_precision
+
+    # 分数降序排序（带上原索引）
     indexed_record: List[Tuple[GameRecordOrm, int]] = [(r, i) for i, r in enumerate(game.records)]
     # 先按照score降序，若score相同则按照风排序（顺序：东南西北None）
     indexed_record.sort(key=lambda tup: (-tup[0].score, tup[0].wind is None, tup[0].wind))
 
-    # 处理同分
+    if season.config.rank_point_policy & RankPointPolicy.absolute_rank_point \
+            or season.config.rank_point_policy & RankPointPolicy.horse_point:
+        # 绝对顺位点 或 马点
+        if game.player_and_wind == PlayerAndWind.four_men_east:
+            horse_point = season.config.east_game_horse_point
+            origin_point = season.config.east_game_origin_point
+        elif game.player_and_wind == PlayerAndWind.four_men_south:
+            horse_point = season.config.south_game_horse_point
+            origin_point = season.config.south_game_origin_point
+        else:
+            raise ValueError("invalid players and wind")
+
+        # 同分平分顺位点
+        _handle_horse_point(horse_point, indexed_record)
+
+        if season.config.rank_point_policy & RankPointPolicy.absolute_rank_point:
+            # 绝对顺位点
+            for i, (r, j) in enumerate(indexed_record):
+                r.raw_point = horse_point[i]
+        else:
+            # 马点
+            # （点数-返点+马点）/1000，切上
+            for i, (r, j) in enumerate(indexed_record):
+                r.raw_point = ceil(horse_point[i] + (r.score - origin_point) * (10 ** (-point_scale - 3)))
+
+    if season.config.rank_point_policy & RankPointPolicy.first_rank_prize:
+        # 头名赏
+        if game.player_and_wind == PlayerAndWind.four_men_east:
+            initial_point = season.config.east_game_initial_point
+            origin_point = season.config.east_game_origin_point
+        elif game.player_and_wind == PlayerAndWind.four_men_south:
+            initial_point = season.config.south_game_initial_point
+            origin_point = season.config.south_game_origin_point
+        else:
+            raise ValueError("invalid players and wind")
+
+        horse_point = [(origin_point - initial_point) * (10 ** (-point_scale - 3)), 0, 0, 0]
+        # 同分平分头名赏
+        _handle_horse_point(horse_point, indexed_record)
+
+        for i, (r, j) in enumerate(indexed_record):
+            r.raw_point += horse_point[i]
+
+    if season.config.rank_point_policy & RankPointPolicy.overwater:
+        # 水上顺位点
+        overwater_num = 0
+        for r in game.records:
+            if r.score >= 30000:
+                overwater_num += 1
+
+        # 头名赏
+        if game.player_and_wind == PlayerAndWind.four_men_east:
+            horse_point = season.config.east_game_overwater_point[overwater_num]
+            origin_point = season.config.east_game_origin_point
+        elif game.player_and_wind == PlayerAndWind.four_men_south:
+            horse_point = season.config.south_game_overwater_point[overwater_num]
+            origin_point = season.config.south_game_origin_point
+        else:
+            raise ValueError("invalid players and wind")
+
+        # 同分平分顺位点
+        _handle_horse_point(horse_point, indexed_record)
+
+        # （点数-返点+马点）/1000，切上
+        for i, (r, j) in enumerate(indexed_record):
+            r.raw_point = ceil(horse_point[i] + (r.score - origin_point) * (10 ** (-point_scale - 3)))
+
+    # 计算排名
+    rank = 0
+    for i, (r, j) in enumerate(indexed_record):
+        r.point_scale = point_scale
+        if i == 0 or indexed_record[i - 1][0].raw_point != r.raw_point:
+            rank += 1
+        r.rank = rank
+
+    await season_repo.change_season_user_point_by_game(game)
+
+
+def _handle_horse_point(horse_point: List[int], indexed_record: List[Tuple[GameRecordOrm, int]]):
     # 四人幸终
     if indexed_record[0][0].score == indexed_record[1][0].score == \
             indexed_record[2][0].score == indexed_record[3][0].score:
@@ -219,18 +294,6 @@ async def _handle_full_recorded_game(game: GameOrm):
     # 三四位同分
     elif indexed_record[2][0].score == indexed_record[3][0].score:
         _divide_horse_point(horse_point, 2, 3)
-
-    rank = 0
-    for i, (r, j) in enumerate(indexed_record):
-        # （点数-返点+马点）/1000，切上
-        r.raw_point = ceil(horse_point[i] + (r.score - origin_point) * (10 ** (-point_scale - 3)))
-        r.point_scale = point_scale
-
-        if i == 0 or indexed_record[i - 1][0].raw_point != r.raw_point:
-            rank += 1
-        r.rank = rank
-
-    await season_repo.change_season_user_point_by_game(game)
 
 
 def _divide_horse_point(horse_point: List[int], start: int, end: int):

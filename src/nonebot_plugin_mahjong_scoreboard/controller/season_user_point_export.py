@@ -11,8 +11,7 @@ from .mg import matcher_group
 from .utils.dep import SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
 from ..errors import ResultError
-from ..model import Season
-from ..model.enums import SeasonState
+from ..model import Season, SeasonState
 from ..service.season_user_point_service import get_season_user_point_change_logs
 from ..utils.date import encode_date
 from ..utils.nonebot import default_cmd_start

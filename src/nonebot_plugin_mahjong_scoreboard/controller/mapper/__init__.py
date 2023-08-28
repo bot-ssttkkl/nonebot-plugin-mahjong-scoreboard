@@ -4,7 +4,7 @@ from typing import Union
 import pytz
 import tzlocal
 
-from nonebot_plugin_mahjong_scoreboard.model.enums import PlayerAndWind, GameState, SeasonState, Wind
+from ...model import PlayerAndWind, GameState, SeasonState, Wind
 
 player_and_wind_mapping = {
     PlayerAndWind.four_men_east: '四人东',
@@ -51,7 +51,7 @@ def percentile_str(x: float, ndigits: int = 2) -> str:
 
 
 def map_point(raw_point: Union[int, float], scale: int = 0) -> str:
-    return map_real_point(raw_point * 10 ** scale, scale)
+    return map_real_point(raw_point * 10 ** scale, max(0, -scale))
 
 
 def map_real_point(point: Union[int, float], precision: int = 0) -> str:

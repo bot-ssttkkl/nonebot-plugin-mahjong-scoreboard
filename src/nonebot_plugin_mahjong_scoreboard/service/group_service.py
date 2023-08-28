@@ -3,7 +3,7 @@ from nonebot.internal.matcher import current_bot
 from .mapper import map_group
 from ..config import conf
 from ..model import Group
-from ..model.platform_id import PlatformId
+from ..model.identity import PlatformId
 from ..platform import func
 from ..repository import data_source
 from ..repository.data_model import GroupOrm
@@ -27,4 +27,6 @@ async def is_group_admin(user_id: int, group_id: int) -> bool:
     group = await session.get(GroupOrm, group_id)
 
     bot = current_bot.get()
-    return await func(bot).is_group_admin(bot, user.platform_user_id, group.platform_group_id)
+    return await func(bot).is_group_admin(bot,
+                                          PlatformId.parse(user.platform_user_id),
+                                          PlatformId.parse(group.platform_group_id))

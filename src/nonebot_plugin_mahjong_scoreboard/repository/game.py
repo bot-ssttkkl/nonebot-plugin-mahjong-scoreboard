@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from .base import Repository
 from .data_model import GameOrm, GameProgressOrm, GameRecordOrm
 from .pagination import Page
-from ..model.enums import GameState
+from ..model import GameState
 
 
 class GameRepository(Repository[GameOrm]):

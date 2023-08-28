@@ -1,5 +1,5 @@
 from .func_registry import func
-from ..model.platform_id import PlatformId
+from ..model.identity import PlatformId
 
 try:
     from nonebot.adapters.qqguild import Bot as QQGuildBot

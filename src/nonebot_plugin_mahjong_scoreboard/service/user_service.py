@@ -1,6 +1,6 @@
 from .mapper import map_user
 from ..model import User
-from ..model.platform_id import PlatformId
+from ..model.identity import PlatformId
 from ..repository import data_source
 from ..repository.user import UserRepository
 

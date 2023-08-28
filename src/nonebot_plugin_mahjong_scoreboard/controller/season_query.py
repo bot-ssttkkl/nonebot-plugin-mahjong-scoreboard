@@ -24,7 +24,7 @@ require_platform_group_id(query_season_matcher)
 @handle_error()
 async def query_running_season(matcher: Matcher,
                                season: Season = SeasonFromUnaryArgOrRunningSeason()):
-    msg = map_season(season)
+    msg = map_season(season, detailed=True)
     await matcher.send(msg)
 
 

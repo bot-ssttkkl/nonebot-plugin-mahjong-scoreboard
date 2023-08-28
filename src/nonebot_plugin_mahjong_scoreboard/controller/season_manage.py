@@ -5,15 +5,14 @@ from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 
 from .interceptor import handle_interruption, handle_error
-from .mapper.season_mapper import map_season
+from .mapper.season_mapper import map_season, map_rank_point_policy
 from .mg import matcher_group
 from .utils.dep import GroupDep, UnaryArg, RunningSeasonDep, SenderUserDep, IsGroupAdminDep
 from .utils.general_handlers import hint_for_question_flow_on_first, require_platform_group_id, \
     require_store_command_args
 from .utils.parse import parse_int_or_reject
 from ..errors import BadRequestError, ResultError
-from ..model import Group, Season, User, SeasonConfig
-from ..model.enums import SeasonState
+from ..model import Group, Season, User, SeasonConfig, SeasonState, RankPointPolicy
 from ..service import season_service
 from ..service.season_service import get_season_by_code, new_season, start_season, finish_season
 from ..utils.nonebot import default_cmd_start
@@ -53,103 +52,6 @@ async def new_season_got_name(matcher: Matcher,
     matcher.state["name"] = raw_arg
 
 
-@new_season_matcher.got("south_game_enabled", "是否开启半庄战？(y/n)")
-@handle_error()
-@handle_interruption()
-async def new_season_got_east_game_enabled(matcher: Matcher,
-                                           event: Event,
-                                           raw_arg=ArgPlainText("south_game_enabled")):
-    Message = type(event.get_message())
-    if raw_arg == 'y':
-        matcher.state["south_game_enabled"] = True
-    else:
-        matcher.state["south_game_enabled"] = False
-        matcher.set_arg("south_game_origin_point", Message())
-        matcher.set_arg("south_game_horse_point", Message())
-
-
-@new_season_matcher.got("south_game_origin_point", "半庄战返点？")
-@handle_error()
-@handle_interruption()
-async def new_season_got_south_game_origin_point(matcher: Matcher,
-                                                 raw_arg=ArgPlainText("south_game_origin_point")):
-    if not matcher.state["south_game_enabled"]:
-        matcher.state["south_game_origin_point"] = None
-        return
-
-    pt = await parse_int_or_reject(raw_arg, "半庄战返点")
-    matcher.state["south_game_origin_point"] = pt
-
-
-@new_season_matcher.got("south_game_horse_point", "半庄战马点？通过空格分割")
-@handle_error()
-@handle_interruption()
-async def new_season_got_south_game_horse_point(matcher: Matcher,
-                                                raw_arg=ArgPlainText("south_game_horse_point")):
-    if not matcher.state["south_game_enabled"]:
-        return
-
-    try:
-        li = list(map(float, raw_arg.split(' ')))
-    except ValueError:
-        await matcher.reject("输入的半庄战马点不合法。请重新输入")
-        return
-
-    if len(li) != 4:
-        await matcher.reject("输入的半庄战马点不合法。请重新输入")
-    matcher.state["south_game_horse_point"] = li
-
-
-@new_season_matcher.got("east_game_enabled", "是否开启东风战？(y/n)")
-@handle_error()
-@handle_interruption()
-async def new_season_got_east_game_enabled(matcher: Matcher,
-                                           event: Event,
-                                           raw_arg=ArgPlainText("east_game_enabled")):
-    Message = type(event.get_message())
-    if raw_arg == 'y':
-        matcher.state["east_game_enabled"] = True
-    else:
-        matcher.state["east_game_enabled"] = False
-        matcher.set_arg("east_game_origin_point", Message())
-        matcher.set_arg("east_game_horse_point", Message())
-
-    if not matcher.state["south_game_enabled"] and not matcher.state["east_game_enabled"]:
-        raise ResultError("半庄战、东风战至少需要开启一种")
-
-
-@new_season_matcher.got("east_game_origin_point", "东风战返点？")
-@handle_error()
-@handle_interruption()
-async def new_season_got_south_game_origin_point(matcher: Matcher,
-                                                 raw_arg=ArgPlainText("east_game_origin_point")):
-    if not matcher.state["east_game_enabled"]:
-        matcher.state["east_game_origin_point"] = None
-        return
-
-    pt = await parse_int_or_reject(raw_arg, "东风战返点")
-    matcher.state["east_game_origin_point"] = pt
-
-
-@new_season_matcher.got("east_game_horse_point", "东风战马点？通过空格分割")
-@handle_error()
-@handle_interruption()
-async def new_season_got_east_game_horse_point(matcher: Matcher,
-                                               raw_arg=ArgPlainText("east_game_horse_point")):
-    if not matcher.state["east_game_enabled"]:
-        return
-
-    try:
-        li = list(map(float, raw_arg.split(' ')))
-    except ValueError:
-        await matcher.reject("输入的东风战马点不合法。请重新输入")
-        return
-
-    if len(li) != 4:
-        await matcher.reject("输入的东风战马点不合法。请重新输入")
-    matcher.state["east_game_horse_point"] = li
-
-
 @new_season_matcher.got("point_precision", "PT精度？（输入x，则精度为10^x。例如：输入0，保留整数部分；输入-1，保留小数点后一位）")
 @handle_error()
 @handle_interruption()
@@ -159,17 +61,164 @@ async def new_season_got_point_precision(matcher: Matcher,
     matcher.state["point_precision"] = precision
 
 
+@new_season_matcher.got("rank_point_policy",
+                        "顺位PT策略？通过空格分割\n" +
+                        "\n".join(map(lambda x: f"{x[0] + 1}. {map_rank_point_policy(x[1], with_description=True)}",
+                                      enumerate(list(RankPointPolicy)))))
+@handle_error()
+@handle_interruption()
+async def new_season_got_rank_point_policy(matcher: Matcher,
+                                           raw_arg=ArgPlainText("rank_point_policy")):
+    try:
+        li = list(map(int, raw_arg.split(' ')))
+    except ValueError:
+        await matcher.reject("输入的顺位点策略不合法。请重新输入")
+        return
+
+    policy = 0
+
+    for x in li:
+        if x < 1 or x > 4:
+            await matcher.reject("输入的顺位点策略不合法。请重新输入")
+        policy |= 1 << (x - 1)
+
+    if policy & RankPointPolicy.absolute_rank_point and policy != RankPointPolicy.absolute_rank_point:
+        await matcher.reject("输入的顺位点策略不合法（绝对顺位点与其他策略互斥）。请重新输入")
+
+    if policy & RankPointPolicy.overwater and policy != RankPointPolicy.overwater:
+        await matcher.reject("输入的顺位点策略不合法（水上顺位点与其他策略互斥）。请重新输入")
+
+    matcher.state["rank_point_policy"] = policy
+
+
+def config(game_type: str, game_type_prompt: str):
+    @new_season_matcher.got(f"{game_type}_game_enabled", f"是否开启{game_type_prompt}战？(y/n)")
+    @handle_error()
+    @handle_interruption()
+    async def new_season_got_game_enabled(matcher: Matcher,
+                                          event: Event,
+                                          raw_arg=ArgPlainText(f"{game_type}_game_enabled")):
+        Message = type(event.get_message())
+        if raw_arg == 'y':
+            matcher.state[f"{game_type}_game_enabled"] = True
+
+            policy = matcher.state["rank_point_policy"]
+            if not (policy & RankPointPolicy.absolute_rank_point) and not (policy & RankPointPolicy.horse_point):
+                # 无绝对顺位点与马点时不询问顺位点
+                matcher.set_arg(f"{game_type}_game_horse_point", Message())
+                matcher.state[f"{game_type}_game_horse_point_skip"] = True
+            if not (policy & RankPointPolicy.overwater):
+                # 无水上顺位点时不询问水上顺位点
+                matcher.set_arg(f"{game_type}_game_overwater_point", Message())
+                matcher.state[f"{game_type}_game_overwater_point_skip"] = True
+        else:
+            matcher.state[f"{game_type}_game_enabled"] = False
+
+            # 跳过询问
+            matcher.set_arg(f"{game_type}_game_initial_point", Message())
+            matcher.set_arg(f"{game_type}_game_origin_point", Message())
+            matcher.set_arg(f"{game_type}_game_horse_point", Message())
+            matcher.set_arg(f"{game_type}_game_overwater_point", Message())
+
+    @new_season_matcher.got(f"{game_type}_game_initial_point", f"{game_type_prompt}战起点？")
+    @handle_error()
+    @handle_interruption()
+    async def new_season_got_game_initial_point(matcher: Matcher,
+                                                raw_arg=ArgPlainText(f"{game_type}_game_initial_point")):
+        if not matcher.state[f"{game_type}_game_enabled"]:
+            matcher.state[f"{game_type}_game_initial_point"] = None
+            return
+
+        pt = await parse_int_or_reject(raw_arg, f"{game_type_prompt}战起点")
+        matcher.state[f"{game_type}_game_initial_point"] = pt
+
+    @new_season_matcher.got(f"{game_type}_game_origin_point",
+                            f"{game_type_prompt}战返点？"
+                            "（若启用了头名赏策略，多于起点的部分将作为头名赏）")
+    @handle_error()
+    @handle_interruption()
+    async def new_season_got_game_origin_point(matcher: Matcher,
+                                               raw_arg=ArgPlainText(f"{game_type}_game_origin_point")):
+        if not matcher.state[f"{game_type}_game_enabled"]:
+            matcher.state[f"{game_type}_game_origin_point"] = None
+            return
+
+        pt = await parse_int_or_reject(raw_arg, f"{game_type_prompt}战返点",
+                                       min=matcher.state[f"{game_type}_game_initial_point"])
+        matcher.state[f"{game_type}_game_origin_point"] = pt
+
+    @new_season_matcher.got(f"{game_type}_game_horse_point", f"{game_type_prompt}战顺位点？通过空格分割")
+    @handle_error()
+    @handle_interruption()
+    async def new_season_got_game_horse_point(matcher: Matcher,
+                                              raw_arg=ArgPlainText(f"{game_type}_game_horse_point")):
+        if not matcher.state[f"{game_type}_game_enabled"] or matcher.state.get(f"{game_type}_game_horse_point_skip"):
+            return
+
+        try:
+            li = list(map(float, raw_arg.split(' ')))
+        except ValueError:
+            await matcher.reject(f"输入的{game_type_prompt}战顺位点不合法。请重新输入")
+            return
+
+        if len(li) != 4:
+            await matcher.reject(f"输入的{game_type_prompt}战顺位点不合法。请重新输入")
+
+        scale = 10 ** -matcher.state["point_precision"]
+        matcher.state[f"{game_type}_game_horse_point"] = [
+            x * scale
+            for x in li
+        ]
+
+    @new_season_matcher.got(f"{game_type}_game_overwater_point",
+                            f"{game_type_prompt}战水上顺位点？通过空格分割\n"
+                            f"以30000分为基准，30000分以上为水上，30000分以下为水下。"
+                            f"分别输入水上人数为0人时一二三四位的顺位点、为1人时一二三四位的顺位点、"
+                            f"为2人时一二三四位的顺位点、为3人时一二三四位的顺位点。（共16个数字）")
+    @handle_error()
+    @handle_interruption()
+    async def new_season_got_game_overwater_point(matcher: Matcher,
+                                                  raw_arg=ArgPlainText(f"{game_type}_game_overwater_point")):
+        if not matcher.state[f"{game_type}_game_enabled"] or matcher.state.get(
+                f"{game_type}_game_overwater_point_skip"):
+            return
+
+        try:
+            li = list(map(float, raw_arg.split(' ')))
+        except ValueError:
+            await matcher.reject(f"输入的{game_type_prompt}战水上顺位点不合法。请重新输入")
+            return
+
+        if len(li) != 16:
+            await matcher.reject(f"输入的{game_type_prompt}战水上顺位点不合法。请重新输入")
+
+        scale = 10 ** -matcher.state["point_precision"]
+        matcher.state[f"{game_type}_game_overwater_point"] = [
+            [li[i] * scale, li[i + 1] * scale, li[i + 2] * scale, li[i + 3] * scale]
+            for i in range(0, 16, 4)
+        ]
+
+
+config("south", "半庄")
+config("east", "东风")
+
+
 @new_season_matcher.handle()
 @handle_error()
 @handle_interruption()
 async def new_season_confirm(matcher: Matcher, group: Group = GroupDep()):
     matcher.state["season_config"] = SeasonConfig(
+        rank_point_policy=matcher.state["rank_point_policy"],
         south_game_enabled=matcher.state["south_game_enabled"],
+        south_game_initial_point=matcher.state.get("south_game_initial_point"),
         south_game_origin_point=matcher.state.get("south_game_origin_point"),
         south_game_horse_point=matcher.state.get("south_game_horse_point"),
+        south_game_overwater_point=matcher.state.get("south_game_overwater_point"),
         east_game_enabled=matcher.state["east_game_enabled"],
+        east_game_initial_point=matcher.state.get("east_game_initial_point"),
         east_game_origin_point=matcher.state.get("east_game_origin_point"),
         east_game_horse_point=matcher.state.get("east_game_horse_point"),
+        east_game_overwater_point=matcher.state.get("east_game_overwater_point"),
         point_precision=matcher.state["point_precision"]
     )
 
