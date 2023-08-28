@@ -4,7 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from .data_source import data_source
 
-APP_DB_VERSION = 3
+APP_DB_VERSION = 4
 
 
 @data_source.registry.mapped
@@ -42,15 +42,15 @@ async def initialize_metainfo():
             # 判断是否初次建库
             blank_database = not await conn.run_sync(lambda conn: inspect(conn).has_table("games"))
             if blank_database:
-                result = MetaInfoOrm(key="db_version", value=APP_DB_VERSION)
+                insert_db_version = APP_DB_VERSION
+            else:
+                insert_db_version = 1
+
+            stmt = select(MetaInfoOrm).where(MetaInfoOrm.key == "db_version")
+            result = (await session.execute(stmt)).scalar_one_or_none()
+            if result is None:
+                result = MetaInfoOrm(key="db_version", value=insert_db_version)
                 session.add(result)
                 await session.commit()
-            else:
-                stmt = select(MetaInfoOrm).where(MetaInfoOrm.key == "db_version")
-                result = (await session.execute(stmt)).scalar_one_or_none()
-                if result is None:
-                    result = MetaInfoOrm(key="db_version", value=1)
-                    session.add(result)
-                    await session.commit()
 
         await conn.commit()
