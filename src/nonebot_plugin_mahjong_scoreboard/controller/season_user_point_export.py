@@ -3,7 +3,6 @@ from io import StringIO
 
 import tzlocal
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent
-from nonebot_plugin_gocqhttp_cross_machine_upload_file import upload_file
 
 from .interceptor import handle_error
 from .mapper.season_user_point_csv_mapper import write_season_user_point_change_logs_csv
@@ -12,6 +11,7 @@ from .utils.dep import SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
 from ..errors import ResultError
 from ..model import Season, SeasonState
+from ..platform import func
 from ..service.season_user_point_service import get_season_user_point_change_logs
 from ..utils.date import encode_date
 from ..utils.nonebot import default_cmd_start
@@ -45,4 +45,4 @@ async def export_season_ranking(bot: Bot, event: MessageEvent,
         await write_season_user_point_change_logs_csv(sio, logs, season)
 
         data = sio.getvalue().encode("utf_8_sig")
-        await upload_file(bot, event, filename, data)
+        await func(bot).upload_file(bot, event, filename, data)
