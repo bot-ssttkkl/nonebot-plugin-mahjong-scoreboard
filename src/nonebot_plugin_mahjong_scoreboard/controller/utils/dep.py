@@ -7,13 +7,13 @@ from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import Depends
 from nonebot.params import CommandArg
 from nonebot_plugin_session import extract_session
+from ssttkkl_nonebot_utils.errors.errors import BadRequestError, QueryError
+from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
+from ssttkkl_nonebot_utils.platform import platform_func
 
 from .message import split_message
-from ..interceptor import handle_error
-from ...errors import BadRequestError, ResultError
 from ...model import Group
 from ...model.identity import get_platform_group_id, get_platform_user_id
-from ...platform import func
 from ...service.group_service import get_group, is_group_admin
 from ...service.season_service import get_group_running_season, get_season_by_code
 from ...service.user_service import get_user
@@ -115,7 +115,7 @@ def RunningSeasonDep(*, group_lookup_matcher_state: bool = True,
         async with matcher.state["db_mutex"]:
             season = await get_group_running_season(group.id)
             if season is None and raise_on_missing:
-                raise ResultError("当前没有运行中的赛季")
+                raise QueryError("当前没有运行中的赛季")
             return season
 
     return Depends(dependency)
@@ -148,7 +148,7 @@ def MentionUserArg(*, lookup_matcher_state: bool = True,
                    args=SplitCommandArgs(lookup_matcher_state=lookup_matcher_state,
                                          lookup_matcher_state_key=lookup_matcher_state_key)):
         for arg in args:
-            x = func(bot).extract_mention_user(arg)
+            x = platform_func(bot).extract_mention_user(arg)
             if x is not None:
                 return x
 
@@ -169,11 +169,11 @@ def SeasonFromUnaryArgOrRunningSeason(*, unary_arg_lookup_matcher_state: bool = 
             if season_code:
                 season = await get_season_by_code(season_code, group.id)
                 if season is None:
-                    raise ResultError("找不到指定赛季")
+                    raise QueryError("找不到指定赛季")
             else:
                 season = await get_group_running_season(group.id)
                 if season is None:
-                    raise ResultError("当前没有运行中的赛季")
+                    raise QueryError("当前没有运行中的赛季")
             return season
 
     return Depends(dependency)
@@ -184,7 +184,7 @@ def IsGroupAdminDep(raise_on_false: bool = True):
     async def dependency(group=GroupDep(), sender=SenderUserDep()):
         admin = await is_group_admin(sender.id, group.id)
         if not admin and raise_on_false:
-            raise ResultError("权限不足")
+            raise QueryError("权限不足")
         return admin
 
     return dependency

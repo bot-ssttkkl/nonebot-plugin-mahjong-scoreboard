@@ -3,15 +3,15 @@ from io import StringIO
 
 import tzlocal
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent
+from ssttkkl_nonebot_utils.errors.errors import QueryError
+from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
+from ssttkkl_nonebot_utils.platform import platform_func
 
-from .interceptor import handle_error
 from .mapper.game_csv_mapper import write_games_csv
 from .mg import matcher_group
 from .utils.dep import GroupDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
-from ..errors import ResultError
 from ..model import Group, Season, SeasonState
-from ..platform import func
 from ..service.game_service import get_games
 from ..utils.date import encode_date
 from ..utils.nonebot import default_cmd_start
@@ -31,7 +31,7 @@ async def export_season_games(bot: Bot, event: MessageEvent, group: Group = Grou
     games = await get_games(group_id=group.id, season_id=season.id)
 
     if games.total == 0:
-        raise ResultError("本赛季还没有创建过对局")
+        raise QueryError("本赛季还没有创建过对局")
 
     filename = f"赛季对局 {season.name}"
     if season.state == SeasonState.finished:
@@ -45,7 +45,7 @@ async def export_season_games(bot: Bot, event: MessageEvent, group: Group = Grou
         await write_games_csv(sio, games.data)
 
         data = sio.getvalue().encode("utf_8_sig")
-        await func(bot).upload_file(bot, event, filename, data)
+        await platform_func(bot).upload_file(bot, event, filename, data)
 
 
 # ========== 导出所有对局 ==========
@@ -62,7 +62,7 @@ async def export_group_games(bot: Bot, event: MessageEvent, group: Group = Group
     games = await get_games(group.id)
 
     if games.total == 0:
-        raise ResultError("本群还没有创建过对局")
+        raise QueryError("本群还没有创建过对局")
 
     now = datetime.now(tzlocal.get_localzone())
     filename = f"所有对局（截至{encode_date(now)}）.csv"
@@ -71,4 +71,4 @@ async def export_group_games(bot: Bot, event: MessageEvent, group: Group = Group
         await write_games_csv(sio, games.data)
 
         data = sio.getvalue().encode("utf_8_sig")
-        await func(bot).upload_file(bot, event, filename, data)
+        await platform_func(bot).upload_file(bot, event, filename, data)

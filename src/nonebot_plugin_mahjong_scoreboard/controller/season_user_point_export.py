@@ -3,15 +3,15 @@ from io import StringIO
 
 import tzlocal
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent
+from ssttkkl_nonebot_utils.errors.errors import QueryError
+from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
+from ssttkkl_nonebot_utils.platform import platform_func
 
-from .interceptor import handle_error
 from .mapper.season_user_point_csv_mapper import write_season_user_point_change_logs_csv
 from .mg import matcher_group
 from .utils.dep import SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
-from ..errors import ResultError
 from ..model import Season, SeasonState
-from ..platform import func
 from ..service.season_user_point_service import get_season_user_point_change_logs
 from ..utils.date import encode_date
 from ..utils.nonebot import default_cmd_start
@@ -31,7 +31,7 @@ async def export_season_ranking(bot: Bot, event: MessageEvent,
     logs = await get_season_user_point_change_logs(season.id)
 
     if len(logs) == 0:
-        raise ResultError("还没有用户参与该赛季")
+        raise QueryError("还没有用户参与该赛季")
 
     filename = f"赛季榜单 {season.name}"
     if season.state == SeasonState.finished:
@@ -45,4 +45,4 @@ async def export_season_ranking(bot: Bot, event: MessageEvent,
         await write_season_user_point_change_logs_csv(sio, logs, season)
 
         data = sio.getvalue().encode("utf_8_sig")
-        await func(bot).upload_file(bot, event, filename, data)
+        await platform_func(bot).upload_file(bot, event, filename, data)

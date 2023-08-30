@@ -11,7 +11,7 @@ require("nonebot_plugin_localstore")
 require("nonebot_plugin_session")
 require("nonebot_plugin_sqlalchemy")
 require("nonebot_plugin_apscheduler")
-require("nonebot_plugin_gocqhttp_cross_machine_upload_file")
+require("ssttkkl_nonebot_utils")
 
 from .config import Config
 from .controller import game_record, game_query, game_export, season_query, season_manage, season_user_point_query, \

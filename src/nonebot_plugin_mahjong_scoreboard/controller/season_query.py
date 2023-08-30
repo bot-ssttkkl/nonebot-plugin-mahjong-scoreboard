@@ -1,8 +1,8 @@
 from io import StringIO
 
 from nonebot.internal.matcher import Matcher
+from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
 
-from .interceptor import handle_error
 from .mapper import season_state_mapping
 from .mapper.season_mapper import map_season
 from .mg import matcher_group

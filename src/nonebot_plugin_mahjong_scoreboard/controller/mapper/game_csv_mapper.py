@@ -7,7 +7,7 @@ from nonebot_plugin_mahjong_scoreboard.controller.mapper import game_state_mappi
     player_and_wind_mapping, map_datetime, map_point, wind_mapping
 from nonebot_plugin_mahjong_scoreboard.controller.mapper.game_mapper import map_game_progress
 from nonebot_plugin_mahjong_scoreboard.model import Game, GameState
-from nonebot_plugin_mahjong_scoreboard.platform import func
+from nonebot_plugin_mahjong_scoreboard.utils.nickname import get_user_nickname
 
 
 async def write_games_csv(f: TextIO, games: Iterable[Game]):
@@ -39,13 +39,13 @@ async def write_games_csv(f: TextIO, games: Iterable[Game]):
 
         if g.promoter is not None:
             row.append(
-                f"{await func(bot).get_user_nickname(bot, g.promoter.platform_user_id, g.group.platform_group_id)}"
+                f"{await get_user_nickname(bot, g.promoter.platform_user_id, g.group.platform_group_id)}"
                 f" ({g.promoter.platform_user_id.real_id})")
         else:
             row.append("")
 
         for r in sorted(g.records, key=lambda x: x.raw_point, reverse=True):
-            row.extend([f"{await func(bot).get_user_nickname(bot, r.user.platform_user_id, g.group.platform_group_id)}"
+            row.extend([f"{await get_user_nickname(bot, r.user.platform_user_id, g.group.platform_group_id)}"
                         f" ({r.user.platform_user_id.real_id})",
                         r.score,
                         map_point(r.raw_point, r.point_scale) if g.state == GameState.completed else '',

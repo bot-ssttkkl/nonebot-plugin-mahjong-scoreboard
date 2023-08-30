@@ -3,15 +3,16 @@ import re
 from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
+from ssttkkl_nonebot_utils.errors.errors import BadRequestError, QueryError
+from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
 
-from .interceptor import handle_interruption, handle_error
+from .interceptor import handle_interruption
 from .mapper.season_mapper import map_season, map_rank_point_policy
 from .mg import matcher_group
 from .utils.dep import GroupDep, UnaryArg, RunningSeasonDep, SenderUserDep, IsGroupAdminDep
 from .utils.general_handlers import hint_for_question_flow_on_first, require_platform_group_id, \
     require_store_command_args
 from .utils.parse import parse_int_or_reject
-from ..errors import BadRequestError, ResultError
 from ..model import Group, Season, User, SeasonConfig, SeasonState, RankPointPolicy
 from ..service import season_service
 from ..service.season_service import get_season_by_code, new_season, start_season, finish_season
@@ -275,7 +276,7 @@ async def start_season_matcher_confirm(matcher: Matcher, group: Group = GroupDep
 
     season = await get_season_by_code(season_code, group.id)
     if season is None:
-        raise ResultError("找不到该赛季。使用“/新赛季”指令创建赛季")
+        raise QueryError("找不到该赛季。使用“/新赛季”指令创建赛季")
 
     matcher.state["season"] = season
 
@@ -344,7 +345,7 @@ async def remove_season_confirm(matcher: Matcher, group: Group = GroupDep(),
 
     season = await get_season_by_code(season_code, group.id)
     if season is None:
-        raise ResultError("找不到该赛季")
+        raise QueryError("找不到该赛季")
 
     matcher.state["season"] = season
 
