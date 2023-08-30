@@ -1,10 +1,9 @@
 from typing import Optional, Union
 
 from nonebot.internal.matcher import current_matcher
-
-from nonebot_plugin_mahjong_scoreboard.errors import BadRequestError
 from nonebot_plugin_mahjong_scoreboard.model import Wind
 from nonebot_plugin_mahjong_scoreboard.utils.integer import decode_integer
+from ssttkkl_nonebot_utils.errors.errors import BadRequestError
 
 
 def parse_int_or_error(raw: Union[int, str, None],

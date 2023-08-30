@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Optional, List
 
+from ssttkkl_nonebot_utils.errors.errors import BadRequestError, QueryError
+
 from .game_service import delete_uncompleted_season_games
 from .group_service import is_group_admin
 from .mapper import map_season
-from ..errors import ResultError, BadRequestError
 from ..model import Season, SeasonConfig, SeasonState
 from ..repository import data_source
 from ..repository.data_model import GroupOrm, SeasonOrm
@@ -74,9 +75,9 @@ async def start_season(season_id: int, operator_user_id: int):
 
     group: GroupOrm = await session.get(GroupOrm, season.group_id)
     if season.state != SeasonState.initial:
-        raise ResultError("该赛季已经开启或已经结束")
+        raise QueryError("该赛季已经开启或已经结束")
     if group.running_season_id:
-        raise ResultError("当前已经有开启的赛季")
+        raise QueryError("当前已经有开启的赛季")
 
     season.state = SeasonState.running
     season.start_time = datetime.utcnow()
@@ -96,7 +97,7 @@ async def finish_season(season_id: int, operator_user_id: int):
     await _ensure_permission(season, operator_user_id)
 
     if season.state != SeasonState.running:
-        raise ResultError("该赛季尚未开启或已经结束")
+        raise QueryError("该赛季尚未开启或已经结束")
 
     await delete_uncompleted_season_games(season.id)
 
@@ -120,7 +121,7 @@ async def remove_season(season_id: int, operator_user_id: int):
     await _ensure_permission(season, operator_user_id)
 
     if season.state != SeasonState.initial:
-        raise ResultError("该赛季已经开启或已经结束")
+        raise QueryError("该赛季已经开启或已经结束")
 
     season.accessible = False
     season.delete_time = datetime.utcnow()

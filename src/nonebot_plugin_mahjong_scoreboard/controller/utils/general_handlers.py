@@ -4,9 +4,10 @@ from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import current_matcher, Matcher, current_bot, current_event
 from nonebot.params import CommandArg
 from nonebot_plugin_session import Session, extract_session
+from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
 
 from .dep import SessionDep, MentionUserArg
-from ..interceptor import handle_error, handle_interruption
+from ..interceptor import handle_interruption
 from ...model.identity import get_platform_group_id, get_platform_user_id, PlatformId
 
 

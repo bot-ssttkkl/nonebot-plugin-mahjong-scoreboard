@@ -7,10 +7,10 @@ from nonebot import logger
 from nonebot_plugin_apscheduler import scheduler
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from ssttkkl_nonebot_utils.errors.errors import QueryError
 
 from .group_service import is_group_admin
 from .mapper import map_game
-from ..errors import ResultError
 from ..model import Game, GameStatistics, GameState, PlayerAndWind, Wind, SeasonState, RankPointPolicy
 from ..repository import data_source
 from ..repository.data_model import GroupOrm, GameOrm, GameRecordOrm, GameProgressOrm, SeasonOrm
@@ -36,7 +36,7 @@ async def _ensure_updatable(game: GameOrm):
     if game.season_id is not None:
         season = await repo.get_by_pk(game.season_id)
         if season.state != SeasonState.running:
-            raise ResultError("赛季已经结束，无法再修改对局")
+            raise QueryError("赛季已经结束，无法再修改对局")
 
 
 async def _ensure_permission(game: GameOrm, group_id: int, operator_user_id: int):
@@ -46,7 +46,7 @@ async def _ensure_permission(game: GameOrm, group_id: int, operator_user_id: int
         if not completed_before_24h or await is_group_admin(operator_user_id, group_id):
             return
 
-        raise ResultError("对局已完成超过24小时，需要管理员权限才能操作")
+        raise QueryError("对局已完成超过24小时，需要管理员权限才能操作")
 
 
 async def new_game(promoter_user_id: int,
@@ -85,7 +85,7 @@ async def new_game(promoter_user_id: int,
             season = await season_repo.get_by_pk(group.running_season_id)
             if player_and_wind == PlayerAndWind.four_men_south and not season.config.south_game_enabled \
                     or player_and_wind == PlayerAndWind.four_men_east and not season.config.east_game_enabled:
-                raise ResultError("当前赛季未开放此类型对局")
+                raise QueryError("当前赛季未开放此类型对局")
 
     game = GameOrm(code=game_code,
                    group_id=group_id,
@@ -121,7 +121,7 @@ async def record_game(game_code: int,
 
     game = await game_repo.get_by_code(game_code, group_id)
     if game is None:
-        raise ResultError("未找到指定对局")
+        raise QueryError("未找到指定对局")
 
     await _ensure_updatable(game)
     await _ensure_permission(game, group_id, operator_user_id)
@@ -132,7 +132,7 @@ async def record_game(game_code: int,
             break
     else:
         if len(game.records) == 4:
-            raise ResultError("这场对局已经存在4人记录")
+            raise QueryError("这场对局已经存在4人记录")
 
         record = GameRecordOrm(game_id=game.id, user_id=user_id)
         session.add(record)
@@ -320,7 +320,7 @@ async def revert_record(game_code: int,
 
     game = await game_repo.get_by_code(game_code, group_id)
     if game is None:
-        raise ResultError("未找到指定对局")
+        raise QueryError("未找到指定对局")
 
     await _ensure_updatable(game)
     await _ensure_permission(game, group_id, operator_user_id)
@@ -330,7 +330,7 @@ async def revert_record(game_code: int,
             record = r
             break
     else:
-        raise ResultError("用户还没有记录过这场对局")
+        raise QueryError("用户还没有记录过这场对局")
 
     if game.state == GameState.completed and game.season_id:
         await season_repo.revert_season_user_point_by_game(game)
@@ -354,12 +354,12 @@ async def delete_game(game_code: int,
 
     game = await game_repo.get_by_code(game_code, group_id)
     if game is None:
-        raise ResultError("未找到指定对局")
+        raise QueryError("未找到指定对局")
 
     await _ensure_updatable(game)
 
     if not await is_group_admin(operator_user_id, group_id):
-        raise ResultError("需要管理员权限进行该操作")
+        raise QueryError("需要管理员权限进行该操作")
 
     if game.state == GameState.completed and game.season_id:
         await season_repo.revert_season_user_point_by_game(game)
@@ -385,7 +385,7 @@ async def make_game_progress(game_code: int, round: int, honba: int,
 
     game = await game_repo.get_by_code(game_code, group_id)
     if game is None:
-        raise ResultError("未找到指定对局")
+        raise QueryError("未找到指定对局")
 
     await _ensure_updatable(game)
     await _ensure_permission(game, group_id, operator_user_id)
@@ -416,7 +416,7 @@ async def remove_game_progress(game_code: int, group_id: int):
 
     game = await game_repo.get_by_code(game_code, group_id)
     if game is None:
-        raise ResultError("未找到指定对局")
+        raise QueryError("未找到指定对局")
 
     await _ensure_updatable(game)
 
@@ -442,7 +442,7 @@ async def set_record_point(game_code: int, group_id: int, user_id: int, point: f
 
     game = await game_repo.get_by_code(game_code, group_id)
     if game is None:
-        raise ResultError("未找到指定对局")
+        raise QueryError("未找到指定对局")
 
     await _ensure_updatable(game)
     await _ensure_permission(game, group_id, operator_user_id)
@@ -452,13 +452,13 @@ async def set_record_point(game_code: int, group_id: int, user_id: int, point: f
             record = r
             break
     else:
-        raise ResultError("用户还没有记录过这场对局")
+        raise QueryError("用户还没有记录过这场对局")
 
     if game.state != GameState.completed:
-        raise ResultError("这场对局未处于完成状态")
+        raise QueryError("这场对局未处于完成状态")
 
     if game.season_id is None:
-        raise ResultError("这场对局不属于赛季")
+        raise QueryError("这场对局不属于赛季")
 
     await season_repo.revert_season_user_point_by_game(game)
 
@@ -480,7 +480,7 @@ async def set_game_comment(game_code: int, group_id: int, comment: str, operator
 
     game = await game_repo.get_by_code(game_code, group_id)
     if game is None:
-        raise ResultError("未找到指定对局")
+        raise QueryError("未找到指定对局")
 
     await _ensure_updatable(game)
     await _ensure_permission(game, group_id, operator_user_id)
@@ -516,7 +516,7 @@ async def get_games(group_id: int, user_id: Optional[int] = None, season_id: Opt
 def _get_game_statistics_by_games(games: List[GameOrm], user_id: int,
                                   is_same_season: bool = False) -> GameStatistics:
     if len(games) == 0:
-        raise ResultError("用户还没有进行对局")
+        raise QueryError("用户还没有进行对局")
 
     total = len(games)
 

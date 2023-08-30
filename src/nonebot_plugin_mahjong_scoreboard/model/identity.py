@@ -1,6 +1,7 @@
 from typing import Optional, NamedTuple
 
-from nonebot_plugin_session import Session, SessionIdType
+from nonebot import Bot
+from nonebot_plugin_session import Session, SessionIdType, SessionLevel
 from pydantic import BaseModel
 
 
@@ -29,6 +30,31 @@ def get_platform_group_id(session: Session) -> Optional[PlatformId]:
         return res
     else:
         return None
+
+
+def convert_platform_id_to_session(bot: Bot, platform_user_id: PlatformId,
+                                   platform_group_id: Optional[PlatformId]) -> Session:
+    id1 = platform_user_id.real_id
+    id2 = None
+    id3 = None
+    if platform_group_id is not None:
+        id_seg = platform_group_id.real_id.split("_", maxsplit=1)
+        if len(id_seg) != 1:
+            id2 = id_seg[1]
+            id3 = id_seg[0]
+        else:
+            id2 = id_seg[0]
+
+    level = SessionLevel.LEVEL0
+    if id2 is None and id3 is None:
+        level = SessionLevel.LEVEL1
+    elif id3 is None:
+        level = SessionLevel.LEVEL2
+    else:
+        level = SessionLevel.LEVEL3
+
+    return Session(bot_id=bot.self_id, bot_type=platform_user_id.bot_type, platform=platform_user_id.platform,
+                   level=level, id1=id1, id2=id2, id3=id3)
 
 
 class User(BaseModel):
