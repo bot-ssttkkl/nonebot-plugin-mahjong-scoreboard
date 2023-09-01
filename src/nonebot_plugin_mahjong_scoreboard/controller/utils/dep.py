@@ -6,7 +6,7 @@ from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import Depends
 from nonebot.params import CommandArg
-from nonebot_plugin_session import extract_session
+from nonebot_plugin_session import extract_session, Session
 from ssttkkl_nonebot_utils.errors.errors import BadRequestError, QueryError
 from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
 from ssttkkl_nonebot_utils.platform import platform_func
@@ -75,12 +75,15 @@ def UserDep(*, lookup_matcher_state: bool = True,
             raise_on_missing: bool = True):
     # 优先级：消息中的提及、matcher.state、事件发送者
     @handle_error()
-    async def dependency(matcher: Matcher, session=SessionDep(),
-                         mention=MentionUserArg(lookup_matcher_state=mention_user_arg_lookup_matcher_state,
-                                                lookup_matcher_state_key=mention_user_arg_lookup_matcher_state_key)):
+    async def dependency(matcher: Matcher,
+                         session: Session = SessionDep(),
+                         mention: Optional[Session] = MentionUserArg(
+                             lookup_matcher_state=mention_user_arg_lookup_matcher_state,
+                             lookup_matcher_state_key=mention_user_arg_lookup_matcher_state_key
+                         )):
         platform_user_id = None
         if use_mention_user_arg and mention is not None:
-            platform_user_id = mention
+            platform_user_id = get_platform_user_id(mention)
         if platform_user_id is None and lookup_matcher_state:
             platform_user_id = matcher.state.get(lookup_matcher_state_key)
         if platform_user_id is None and use_sender:
