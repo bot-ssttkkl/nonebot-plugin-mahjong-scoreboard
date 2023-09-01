@@ -30,4 +30,4 @@ async def is_group_admin(user_id: int, group_id: int) -> bool:
     session = convert_platform_id_to_session(bot, PlatformId.parse(user.platform_user_id),
                                              PlatformId.parse(group.platform_group_id))
 
-    return await platform_func(bot).is_group_admin(bot, session)
+    return await platform_func(bot).is_group_admin(session)

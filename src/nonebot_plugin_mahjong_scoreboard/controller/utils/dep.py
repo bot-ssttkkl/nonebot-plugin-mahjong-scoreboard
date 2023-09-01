@@ -145,12 +145,13 @@ def UnaryArg(*, lookup_matcher_state: bool = True,
 def MentionUserArg(*, lookup_matcher_state: bool = True,
                    lookup_matcher_state_key: str = "command_args_store"):
     def dependency(bot: Bot,
+                   event: Event,
                    args=SplitCommandArgs(lookup_matcher_state=lookup_matcher_state,
                                          lookup_matcher_state_key=lookup_matcher_state_key)):
         for arg in args:
             x = platform_func(bot).extract_mention_user(arg)
             if x is not None:
-                return x
+                return extract_session(bot, event).copy(update=dict(id1=x))
 
         return None
 
