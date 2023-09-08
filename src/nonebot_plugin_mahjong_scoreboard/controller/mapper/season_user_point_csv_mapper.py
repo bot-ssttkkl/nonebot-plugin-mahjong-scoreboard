@@ -27,7 +27,7 @@ async def write_season_user_point_change_logs_csv(f: TextIO, logs: Iterable[Seas
     scale = season.config.point_precision
 
     # 初步绘制表格
-    for log in logs:
+    for log in sorted(logs, key=lambda l: l.create_time):
         if log.user.id not in user_idx:
             table.append([f"{await get_user_nickname(bot, log.user.platform_user_id, season.group.platform_group_id)}"
                           f" ({log.user.platform_user_id.real_id})", ""])

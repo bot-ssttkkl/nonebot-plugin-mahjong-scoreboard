@@ -90,6 +90,8 @@ class SeasonRepository(Repository[SeasonOrm]):
         if user_id is not None:
             stmt = stmt.where(SeasonUserPointChangeLogOrm.user_id == user_id)
 
+        stmt.order_by(SeasonUserPointChangeLogOrm.create_time)
+
         result = (await self.session.execute(stmt)).all()
         data = [row[0] for row in result]
         return data
@@ -98,9 +100,10 @@ class SeasonRepository(Repository[SeasonOrm]):
                                                 user_id: int,
                                                 point: float) -> SeasonUserPointOrm:
         season = await self.get_by_pk(season_id)
-        sup = await self.get_season_user_point(season_id, user_id, insert_on_missing=True)
+        point = int(point * (10 ** -season.config.point_precision))
 
-        sup.point = int(point * (10 ** -season.config.point_precision))
+        sup = await self.get_season_user_point(season_id, user_id, insert_on_missing=True)
+        sup.point = point
 
         log = SeasonUserPointChangeLogOrm(season_id=season.id, user_id=user_id,
                                           change_type=SeasonUserPointChangeType.manually,
