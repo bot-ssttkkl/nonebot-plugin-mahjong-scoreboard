@@ -2,15 +2,15 @@ from datetime import datetime
 from io import StringIO
 
 import tzlocal
-from nonebot.adapters.onebot.v11 import Bot, MessageEvent
+from nonebot import Bot
 from ssttkkl_nonebot_utils.errors.errors import QueryError
 from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
-from ssttkkl_nonebot_utils.platform import platform_func
 
 from .mapper.game_csv_mapper import write_games_csv
 from .mg import matcher_group
 from .utils.dep import GroupDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
+from .utils.send_csv import send_csv
 from ..model import Group, Season, SeasonState
 from ..service.game_service import get_games
 from ..utils.date import encode_date
@@ -26,7 +26,7 @@ require_platform_group_id(export_season_games_matcher)
 
 @export_season_games_matcher.handle()
 @handle_error()
-async def export_season_games(bot: Bot, event: MessageEvent, group: Group = GroupDep(),
+async def export_season_games(group: Group = GroupDep(),
                               season: Season = SeasonFromUnaryArgOrRunningSeason()):
     games = await get_games(group_id=group.id, season_id=season.id)
 
@@ -43,9 +43,8 @@ async def export_season_games(bot: Bot, event: MessageEvent, group: Group = Grou
 
     with StringIO() as sio:
         await write_games_csv(sio, games.data)
-
-        data = sio.getvalue().encode("utf_8_sig")
-        await platform_func(bot).upload_file(bot, event, filename, data)
+        sio.seek(0)
+        await send_csv(sio, filename)
 
 
 # ========== 导出所有对局 ==========
@@ -58,7 +57,7 @@ require_platform_group_id(export_season_games_matcher)
 
 @export_group_games_matcher.handle()
 @handle_error()
-async def export_group_games(bot: Bot, event: MessageEvent, group: Group = GroupDep()):
+async def export_group_games(group: Group = GroupDep()):
     games = await get_games(group.id)
 
     if games.total == 0:
@@ -69,6 +68,5 @@ async def export_group_games(bot: Bot, event: MessageEvent, group: Group = Group
 
     with StringIO() as sio:
         await write_games_csv(sio, games.data)
-
-        data = sio.getvalue().encode("utf_8_sig")
-        await platform_func(bot).upload_file(bot, event, filename, data)
+        sio.seek(0)
+        await send_csv(sio, filename)
