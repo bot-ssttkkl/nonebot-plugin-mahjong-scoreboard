@@ -1,4 +1,5 @@
 import csv
+from pathlib import Path
 from typing import TextIO
 
 from nonebot import require, logger
@@ -16,6 +17,9 @@ def try_import() -> bool:
         logger.opt(exception=e).error("请安装 nonebot-plugin-mahjong-scoreboard[htmlrender]")
 
 
+template_path = str(Path(__file__).parent.parent / "templates")
+
+
 def pad_row(row, num: int):
     row = [*row]
 
@@ -27,7 +31,7 @@ def pad_row(row, num: int):
 
 async def convert_csv_to_pic(f: TextIO) -> bytes:
     from prettytable import PrettyTable
-    from nonebot_plugin_htmlrender import html_to_pic
+    from nonebot_plugin_htmlrender import template_to_pic
 
     reader = csv.reader(f)
 
@@ -42,7 +46,11 @@ async def convert_csv_to_pic(f: TextIO) -> bytes:
     t.add_rows(rows[1:])
 
     html = t.get_html_string()
-    image = await html_to_pic(html, viewport={"width": column_num * 100, "height": 10})
+    image = await template_to_pic(
+        template_path=template_path,
+        template_name="table.html",
+        templates={"body": html},
+        pages={"viewport": {"width": column_num * 100, "height": 10}})
     return image
 
 

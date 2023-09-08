@@ -1,0 +1,25 @@
+/* Table Head */
+#table-5 thead th {
+    background-color: rgb(156, 186, 95);
+    color: #fff;
+    border-bottom-width: 0;
+}
+
+/* Column Style */
+#table-5 td {
+    color: #000;
+}
+
+/* Heading and Column Style */
+#table-5 tr, #table-5 th {
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(156, 186, 95);
+}
+
+/* Padding and font style */
+#table-5 td, #table-5 th {
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: bold;
+}
