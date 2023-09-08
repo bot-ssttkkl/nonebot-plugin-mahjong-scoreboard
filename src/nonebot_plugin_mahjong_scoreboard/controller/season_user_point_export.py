@@ -2,15 +2,14 @@ from datetime import datetime
 from io import StringIO
 
 import tzlocal
-from nonebot.adapters.onebot.v11 import Bot, MessageEvent
 from ssttkkl_nonebot_utils.errors.errors import QueryError
 from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
-from ssttkkl_nonebot_utils.platform import platform_func
 
 from .mapper.season_user_point_csv_mapper import write_season_user_point_change_logs_csv
 from .mg import matcher_group
 from .utils.dep import SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
+from .utils.send_csv import send_csv
 from ..model import Season, SeasonState
 from ..service.season_user_point_service import get_season_user_point_change_logs
 from ..utils.date import encode_date
@@ -26,8 +25,7 @@ require_platform_group_id(export_season_ranking_matcher)
 
 @export_season_ranking_matcher.handle()
 @handle_error()
-async def export_season_ranking(bot: Bot, event: MessageEvent,
-                                season: Season = SeasonFromUnaryArgOrRunningSeason()):
+async def export_season_ranking(season: Season = SeasonFromUnaryArgOrRunningSeason()):
     logs = await get_season_user_point_change_logs(season.id)
 
     if len(logs) == 0:
@@ -43,6 +41,5 @@ async def export_season_ranking(bot: Bot, event: MessageEvent,
 
     with StringIO() as sio:
         await write_season_user_point_change_logs_csv(sio, logs, season)
-
-        data = sio.getvalue().encode("utf_8_sig")
-        await platform_func(bot).upload_file(bot, event, filename, data)
+        sio.seek(0)
+        await send_csv(sio, filename)
