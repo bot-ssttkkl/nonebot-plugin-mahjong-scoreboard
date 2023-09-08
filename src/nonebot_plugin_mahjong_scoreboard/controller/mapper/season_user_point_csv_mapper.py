@@ -3,7 +3,7 @@ from typing import TextIO, Iterable, List
 
 from nonebot.internal.matcher import current_bot
 
-from nonebot_plugin_mahjong_scoreboard.controller.mapper import map_datetime
+from nonebot_plugin_mahjong_scoreboard.controller.mapper import map_datetime, map_point
 from nonebot_plugin_mahjong_scoreboard.model import Season, SeasonUserPointChangeLog, SeasonUserPointChangeType
 from nonebot_plugin_mahjong_scoreboard.utils.nickname import get_user_nickname
 
@@ -24,6 +24,7 @@ async def write_season_user_point_change_logs_csv(f: TextIO, logs: Iterable[Seas
     game_idx = {}
 
     user_point = {}
+    scale = season.config.point_precision
 
     # 初步绘制表格
     for log in logs:
@@ -38,14 +39,14 @@ async def write_season_user_point_change_logs_csv(f: TextIO, logs: Iterable[Seas
                 game_idx[log.related_game.id] = len(header) - 1
 
             _ensure_size(table[user_idx[log.user.id]], game_idx[log.related_game.id] + 1, '')
-            table[user_idx[log.user.id]][game_idx[log.related_game.id]] = str(log.change_point)
+            table[user_idx[log.user.id]][game_idx[log.related_game.id]] = map_point(log.change_point, scale)
 
             user_point[log.user.id] = user_point.get(log.user.id, 0) + log.change_point
         elif log.change_type == SeasonUserPointChangeType.manually:
             header.append(f"手动设置\n{map_datetime(log.create_time)}")
 
             _ensure_size(table[user_idx[log.user.id]], len(header), '')
-            table[user_idx[log.user.id]][-1] = str(log.change_point)
+            table[user_idx[log.user.id]][-1] = map_point(log.change_point, scale)
 
             user_point[log.user.id] = log.change_point
 
@@ -58,13 +59,7 @@ async def write_season_user_point_change_logs_csv(f: TextIO, logs: Iterable[Seas
     new_table = [header]
     for user_id, idx, point in ordered_user_idx:
         new_table.append(table[idx])
-        table[idx][1] = str(point)
-
-    # # 交换行列
-    # table = [[''] * len(new_table) for i in range(len(new_table[0]))]
-    # for i in range(len(new_table)):
-    #     for j in range(len(new_table[i])):
-    #         table[j][i] = new_table[i][j]
+        table[idx][1] = map_point(point, scale)
 
     writer = csv.writer(f)
     writer.writerows(new_table)
