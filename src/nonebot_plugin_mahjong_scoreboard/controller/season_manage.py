@@ -13,6 +13,7 @@ from .utils.dep import GroupDep, UnaryArg, RunningSeasonDep, SenderUserDep, IsGr
 from .utils.general_handlers import hint_for_question_flow_on_first, require_platform_group_id, \
     require_store_command_args
 from .utils.parse import parse_int_or_reject
+from .utils.send_msg import send_msg
 from ..model import Group, Season, User, SeasonConfig, SeasonState, RankPointPolicy
 from ..service import season_service
 from ..service.season_service import get_season_by_code, new_season, start_season, finish_season
@@ -232,7 +233,8 @@ async def new_season_confirm(matcher: Matcher, group: Group = GroupDep()):
 
     msg = map_season(season)
     msg += "\n\n确定创建赛季吗？(y/n)"
-    await matcher.pause(msg)
+    await send_msg(msg)
+    await matcher.pause()
 
 
 @new_season_matcher.handle()
@@ -283,10 +285,12 @@ async def start_season_matcher_confirm(matcher: Matcher, group: Group = GroupDep
     msg = map_season(season)
     if season.state != SeasonState.initial:
         msg += "\n\n赛季未处于初始状态，操作失败"
-        await matcher.finish(msg)
+        await send_msg(msg)
+        await matcher.finish()
     else:
         msg += "\n\n确定开启赛季吗？(y/n)"
-        await matcher.pause(msg)
+        await send_msg(msg)
+        await matcher.pause()
 
 
 @start_season_matcher.handle()
@@ -314,7 +318,8 @@ async def finish_season_confirm(matcher: Matcher, season: Season = RunningSeason
     matcher.state["season"] = season
     msg = map_season(season)
     msg += "\n\n结束赛季将删除赛季的所有未完成对局，并且无法再修改赛季的已完成对局。\n确定结束赛季吗？(y/n)"
-    await matcher.pause(msg)
+    await send_msg(msg)
+    await matcher.pause()
 
 
 @finish_season_matcher.handle()
@@ -352,10 +357,12 @@ async def remove_season_confirm(matcher: Matcher, group: Group = GroupDep(),
     msg = map_season(season)
     if season.state != SeasonState.initial:
         msg += "\n\n赛季未处于初始状态，操作失败"
-        await matcher.finish(msg)
+        await send_msg(msg)
+        await matcher.finish()
     else:
         msg += "\n\n确定删除赛季吗？(y/n)"
-        await matcher.pause(msg)
+        await send_msg(msg)
+        await matcher.pause()
 
 
 @remove_season_matcher.handle()

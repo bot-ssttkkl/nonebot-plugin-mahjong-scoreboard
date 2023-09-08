@@ -17,6 +17,7 @@ def _get_default_sql_conn_url():
 class Config(BaseSettings):
     mahjong_scoreboard_database_conn_url: str
     mahjong_scoreboard_send_forward_message: bool = True
+    mahjong_scoreboard_send_image: bool = False
     mahjong_scoreboard_enable_permission_check: bool = True
 
     @root_validator(pre=True, allow_reuse=True)

@@ -1,6 +1,7 @@
 from io import StringIO
 
 from nonebot.internal.matcher import Matcher
+from ssttkkl_nonebot_utils.errors.errors import QueryError
 from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
 
 from .mapper import season_state_mapping
@@ -8,6 +9,7 @@ from .mapper.season_mapper import map_season
 from .mg import matcher_group
 from .utils.dep import GroupDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id
+from .utils.send_msg import send_msg
 from ..model import Group, Season
 from ..service.season_service import get_group_seasons
 from ..utils.nonebot import default_cmd_start
@@ -22,10 +24,9 @@ require_platform_group_id(query_season_matcher)
 
 @query_season_matcher.handle()
 @handle_error()
-async def query_running_season(matcher: Matcher,
-                               season: Season = SeasonFromUnaryArgOrRunningSeason()):
-    msg = map_season(season, detailed=True)
-    await matcher.send(msg)
+async def query_running_season(season: Season = SeasonFromUnaryArgOrRunningSeason()):
+    msg = map_season(season)
+    await send_msg(msg)
 
 
 # ========== 查询所有赛季 ==========
@@ -38,7 +39,7 @@ require_platform_group_id(query_all_seasons_matcher)
 
 @query_all_seasons_matcher.handle()
 @handle_error()
-async def query_all_seasons(matcher: Matcher, group: Group = GroupDep()):
+async def query_all_seasons(group: Group = GroupDep()):
     seasons = await get_group_seasons(group.id)
 
     if len(seasons) != 0:
@@ -47,6 +48,6 @@ async def query_all_seasons(matcher: Matcher, group: Group = GroupDep()):
             for s in seasons:
                 sio.write(f"  {s.name}（{s.code}）   {season_state_mapping[s.state]}")
 
-            await matcher.send(sio.getvalue().strip())
+            await send_msg(sio.getvalue().strip())
     else:
-        await matcher.send("本群还没有创建赛季")
+        raise QueryError("本群还没有创建赛季")

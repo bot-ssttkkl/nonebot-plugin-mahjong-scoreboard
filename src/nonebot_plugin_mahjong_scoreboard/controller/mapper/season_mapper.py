@@ -28,7 +28,7 @@ def map_rank_point_policy(policy: int, with_description: bool = False) -> str:
     return '，'.join(res)
 
 
-def map_season(season: Season, detailed: bool = False) -> str:
+def map_season(season: Season) -> str:
     with StringIO() as io:
         # {season.name}
         io.write(season.name)
@@ -56,54 +56,53 @@ def map_season(season: Season, detailed: bool = False) -> str:
 
         io.write(f"顺位PT策略：{map_rank_point_policy(season.config.rank_point_policy)}\n")
 
-        if detailed:
-            # 半庄战：起点：25000  返点：30000  顺位点：50 30 -10 -30
-            io.write('半庄战：')
-            if season.config.south_game_enabled:
-                io.write(f'起点：{season.config.south_game_initial_point}')
-                io.write(f'  返点：{season.config.south_game_origin_point}')
-                if season.config.rank_point_policy & RankPointPolicy.absolute_rank_point \
-                        or season.config.rank_point_policy & RankPointPolicy.horse_point:
-                    io.write('  顺位点：[')
-                    io.write(' '.join(map(str, season.config.south_game_horse_point)))
+        # 半庄战：起点：25000  返点：30000  顺位点：50 30 -10 -30
+        io.write('半庄战：')
+        if season.config.south_game_enabled:
+            io.write(f'起点：{season.config.south_game_initial_point}')
+            io.write(f'  返点：{season.config.south_game_origin_point}')
+            if season.config.rank_point_policy & RankPointPolicy.absolute_rank_point \
+                    or season.config.rank_point_policy & RankPointPolicy.horse_point:
+                io.write('  顺位点：[')
+                io.write(' '.join(map(str, season.config.south_game_horse_point)))
+                io.write(']')
+            if season.config.rank_point_policy & RankPointPolicy.overwater:
+                io.write('  水上顺位点：')
+                for i, arr_1d in enumerate(season.config.south_game_overwater_point):
+                    io.write(f'{i}人：[')
+                    io.write(' '.join(map(str, arr_1d)))
                     io.write(']')
-                if season.config.rank_point_policy & RankPointPolicy.overwater:
-                    io.write('  水上顺位点：')
-                    for i, arr_1d in enumerate(season.config.south_game_overwater_point):
-                        io.write(f'{i}人：[')
-                        io.write(' '.join(map(str, arr_1d)))
-                        io.write(']')
-                        if i != len(season.config.south_game_overwater_point):
-                            io.write('，')
-            else:
-                io.write('关闭')
-            io.write('\n')
+                    if i != len(season.config.south_game_overwater_point):
+                        io.write('，')
+        else:
+            io.write('关闭')
+        io.write('\n')
 
-            # 东风战：关闭
-            io.write('东风战：')
-            if season.config.east_game_enabled:
-                io.write(f'起点：{season.config.east_game_initial_point}')
-                io.write(f'  返点：{season.config.east_game_origin_point}')
-                if season.config.rank_point_policy & RankPointPolicy.absolute_rank_point \
-                        or season.config.rank_point_policy & RankPointPolicy.horse_point:
-                    io.write('  顺位点：[')
-                    io.write(' '.join(map(str, season.config.east_game_horse_point)))
+        # 东风战：关闭
+        io.write('东风战：')
+        if season.config.east_game_enabled:
+            io.write(f'起点：{season.config.east_game_initial_point}')
+            io.write(f'  返点：{season.config.east_game_origin_point}')
+            if season.config.rank_point_policy & RankPointPolicy.absolute_rank_point \
+                    or season.config.rank_point_policy & RankPointPolicy.horse_point:
+                io.write('  顺位点：[')
+                io.write(' '.join(map(str, season.config.east_game_horse_point)))
+                io.write(']')
+            if season.config.rank_point_policy & RankPointPolicy.overwater:
+                io.write('  水上顺位点：')
+                for i, arr_1d in enumerate(season.config.east_game_overwater_point):
+                    io.write(f'{i}人：[')
+                    io.write(' '.join(map(str, arr_1d)))
                     io.write(']')
-                if season.config.rank_point_policy & RankPointPolicy.overwater:
-                    io.write('  水上顺位点：')
-                    for i, arr_1d in enumerate(season.config.east_game_overwater_point):
-                        io.write(f'{i}人：[')
-                        io.write(' '.join(map(str, arr_1d)))
-                        io.write(']')
-                        if i != len(season.config.east_game_overwater_point):
-                            io.write('，')
-            else:
-                io.write('关闭')
-            io.write('\n')
+                    if i != len(season.config.east_game_overwater_point):
+                        io.write('，')
+        else:
+            io.write('关闭')
+        io.write('\n')
 
-            # PT精度：1
-            io.write('PT精度：')
-            io.write(str(10 ** season.config.point_precision))
-            io.write('\n')
+        # PT精度：1
+        io.write('PT精度：')
+        io.write(str(10 ** season.config.point_precision))
+        io.write('\n')
 
         return io.getvalue().strip()

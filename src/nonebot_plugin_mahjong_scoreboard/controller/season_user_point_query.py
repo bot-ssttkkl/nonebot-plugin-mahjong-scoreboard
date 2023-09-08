@@ -2,10 +2,9 @@ from io import StringIO
 
 from nonebot import Bot
 from nonebot.internal.adapter import Event
-from nonebot.internal.matcher import Matcher, current_bot
+from nonebot.internal.matcher import current_bot
 from ssttkkl_nonebot_utils.errors.errors import QueryError
 from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
-from ssttkkl_nonebot_utils.platform import platform_func
 
 from .mapper import season_state_mapping, map_point
 from .mapper.pagination_mapper import map_pagination
@@ -13,6 +12,7 @@ from .mapper.season_user_point_mapper import map_season_user_point
 from .mg import matcher_group
 from .utils.dep import RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
+from .utils.send_msg import send_msg
 from ..model import Season, User, SeasonUserPoint
 from ..service.season_user_point_service import get_season_user_point, get_season_user_points
 from ..utils.nickname import get_user_nickname
@@ -29,14 +29,14 @@ require_platform_user_id(query_season_point_matcher)
 
 @query_season_point_matcher.handle()
 @handle_error()
-async def query_season_point(matcher: Matcher, season: Season = RunningSeasonDep(),
+async def query_season_point(season: Season = RunningSeasonDep(),
                              user: User = UserDep()):
     sup = await get_season_user_point(season.id, user.id)
     if sup is None:
         raise QueryError("用户还没有参加过对局")
 
     msg = await map_season_user_point(sup, season)
-    await matcher.send(msg)
+    await send_msg(msg)
 
 
 # ========== 查询榜单 ==========
@@ -57,8 +57,7 @@ async def map_sup(sup: SeasonUserPoint, season: Season):
 
 @query_season_ranking_matcher.handle()
 @handle_error()
-async def query_season_ranking(bot: Bot, event: Event,
-                               season: Season = SeasonFromUnaryArgOrRunningSeason()):
+async def query_season_ranking(season: Season = SeasonFromUnaryArgOrRunningSeason()):
     sups = await get_season_user_points(season.id)
 
     msgs = await map_pagination(sups, lambda x: map_sup(x, season))
@@ -73,4 +72,4 @@ async def query_season_ranking(bot: Bot, event: Event,
 
         msgs.insert(0, sio.getvalue().strip())
 
-    await platform_func(bot).send_msgs(bot, event, msgs)
+    await send_msg(*msgs)

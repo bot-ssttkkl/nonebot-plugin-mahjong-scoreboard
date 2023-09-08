@@ -3,6 +3,7 @@ from io import StringIO
 from typing import Optional, NamedTuple
 
 from cachetools import TTLCache
+from nonebot.internal.adapter import Event
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import Depends
 from nonebot_plugin_session import Session
@@ -12,7 +13,9 @@ from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
 from .mapper.game_mapper import map_game
 from .mg import matcher_group
 from .utils.dep import GroupDep, UserDep, UnaryArg, SessionDep, SplitCommandArgs, SenderUserDep
+from .utils.general_handlers import require_store_command_args
 from .utils.parse import parse_int_or_error, try_parse_wind, parse_float_or_error, try_parse_game_code
+from .utils.send_msg import send_msg
 from ..model import Group, User, PlayerAndWind, GameState, Wind
 from ..model.identity import get_platform_group_id
 from ..service import game_service
@@ -37,7 +40,7 @@ new_game_matcher.__help_info__ = f"{default_cmd_start}新建对局 [四人南|�
 
 @new_game_matcher.handle()
 @handle_error()
-async def new_game(matcher: Matcher, player_and_wind=UnaryArg(), session: Session = SessionDep(),
+async def new_game(player_and_wind=UnaryArg(), session: Session = SessionDep(),
                    group=GroupDep(), promoter=SenderUserDep()):
     if player_and_wind == "四人东":
         player_and_wind = PlayerAndWind.four_men_east
@@ -50,7 +53,7 @@ async def new_game(matcher: Matcher, player_and_wind=UnaryArg(), session: Sessio
 
     msg = await map_game(game)
     msg += f'\n\n新建对局成功，对此消息回复“{default_cmd_start}结算 <成绩>”指令记录你的成绩'
-    await matcher.send(msg)
+    await send_msg(msg)
 
     group_latest_game_code[get_platform_group_id(session)] = game.code
 
@@ -97,8 +100,7 @@ async def parse_record_args(args=SplitCommandArgs(), game_code=GameCodeFromGroup
 
 @record_matcher.handle()
 @handle_error()
-async def record(matcher: Matcher,
-                 group: Group = GroupDep(),
+async def record(group: Group = GroupDep(),
                  user: User = UserDep(),
                  operator: User = SenderUserDep(),
                  args=Depends(parse_record_args)):
@@ -109,7 +111,7 @@ async def record(matcher: Matcher,
     msg += '\n\n结算成功'
     if game.state == GameState.invalid_total_point:
         msg += f"\n警告：对局的成绩之和不正确，对此消息回复“{default_cmd_start}结算 <成绩>”指令重新记录你的成绩"
-    await matcher.send(msg)
+    await send_msg(msg)
 
 
 # =============== 撤销结算 ===============
@@ -119,8 +121,7 @@ revert_record_matcher.__help_info__ = f"{default_cmd_start}撤销结算对局 [�
 
 @revert_record_matcher.handle()
 @handle_error()
-async def revert_record(matcher: Matcher,
-                        group: Group = GroupDep(),
+async def revert_record(group: Group = GroupDep(),
                         user: User = UserDep(),
                         operator: User = SenderUserDep(),
                         latest_game_code=GameCodeFromGroupLatest(),
@@ -135,7 +136,7 @@ async def revert_record(matcher: Matcher,
 
     msg = await map_game(game)
     msg += '\n\n撤销结算成功'
-    await matcher.send(msg)
+    await send_msg(msg)
 
 
 # =============== 设置对局PT ===============
@@ -171,8 +172,7 @@ async def parse_set_record_point_args(args=SplitCommandArgs(),
 
 @set_record_point_matcher.handle()
 @handle_error()
-async def set_record_point(matcher: Matcher,
-                           group: Group = GroupDep(),
+async def set_record_point(group: Group = GroupDep(),
                            user: User = UserDep(),
                            operator: User = SenderUserDep(),
                            args: SetRecordPointArgs = Depends(parse_set_record_point_args)):
@@ -181,24 +181,41 @@ async def set_record_point(matcher: Matcher,
 
     msg = await map_game(game)
     msg += '\n\n设置PT成功'
-    await matcher.send(msg)
+    await send_msg(msg)
 
 
 # =============== 删除对局 ===============
 delete_game_matcher = matcher_group.on_command("删除对局", priority=5)
 delete_game_matcher.__help_info__ = f"{default_cmd_start}删除对局 [对局<编号>]"
 
+require_store_command_args(delete_game_matcher)
+
 
 @delete_game_matcher.handle()
 @handle_error()
-async def delete_game(matcher: Matcher, group: Group = GroupDep(), operator: User = SenderUserDep(),
-                      game_code=UnaryArg(parser=try_parse_game_code)):
+async def delete_game_confirm(matcher: Matcher, group: Group = GroupDep(),
+                              game_code=UnaryArg(parser=try_parse_game_code)):
     if game_code is None:
         raise BadRequestError("请指定对局编号")
 
-    await game_service.delete_game(game_code, group.id, operator.id)
+    game = await game_service.get_game(game_code, group.id)
 
-    await matcher.send(f'成功删除对局{game_code}')
+    msg = await map_game(game)
+    msg += '\n\n确定删除对局吗？(y/n)'
+    await send_msg(msg)
+    await matcher.pause()
+
+
+@delete_game_matcher.handle()
+@handle_error()
+async def delete_game(event: Event, matcher: Matcher,
+                      group: Group = GroupDep(), operator: User = SenderUserDep(),
+                      game_code=UnaryArg(parser=try_parse_game_code)):
+    if event.get_message().extract_plain_text() == 'y':
+        await game_service.delete_game(game_code, group.id, operator.id)
+        await matcher.send(f'成功删除对局{game_code}')
+    else:
+        await matcher.send("取消删除对局")
 
 
 # =============== 设置对局进度 ===============
@@ -250,7 +267,7 @@ async def parse_make_game_progress_args(args=SplitCommandArgs(),
 
 @make_game_progress_matcher.handle()
 @handle_error()
-async def make_game_progress(matcher: Matcher, group: Group = GroupDep(), operator: User = SenderUserDep(),
+async def make_game_progress(group: Group = GroupDep(), operator: User = SenderUserDep(),
                              args: MakeGameProgressArgs = Depends(parse_make_game_progress_args)):
     if not args.completed:
         game = await game_service.make_game_progress(args.game_code,
@@ -262,7 +279,7 @@ async def make_game_progress(matcher: Matcher, group: Group = GroupDep(), operat
 
     msg = await map_game(game)
     msg += "\n\n成功设置对局进度"
-    await matcher.send(msg)
+    await send_msg(msg)
 
 
 # ========== 设置对局备注 ===========
@@ -301,11 +318,11 @@ async def parse_set_game_comment_args(args=SplitCommandArgs(ignore_empty=False),
 
 @set_game_comment_matcher.handle()
 @handle_error()
-async def set_game_comment(matcher: Matcher, group: Group = GroupDep(), operator: User = SenderUserDep(),
+async def set_game_comment(group: Group = GroupDep(), operator: User = SenderUserDep(),
                            args: SetGameCommentArgs = Depends(parse_set_game_comment_args)):
     game = await game_service.set_game_comment(args.game_code, group.id, args.comment,
                                                operator.id)
 
     msg = await map_game(game)
     msg += "\n\n成功设置对局备注"
-    await matcher.send(msg)
+    await send_msg(msg)
