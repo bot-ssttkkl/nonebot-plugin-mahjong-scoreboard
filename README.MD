@@ -177,6 +177,12 @@ D: /结算 25000 北
 
 默认值：sqlite+aiosqlite:///mahjong_scoreboard.db
 
+### mahjong_scoreboard_send_image
+
+是否通过图片发送可能超长的消息。若为True，需要安装nonebot-plugin-mahjong-scoreboard[htmlrender]
+
+默认值：False
+
 ### callback_host
 
 回调HOST，若为非容器环境部署（go-cqhttp与nonebot均运行在同一环境）则保持默认值。若为Docker环境部署则设置为Docker容器名。用于上传文件时让go-cqhttp下载本机文件。
