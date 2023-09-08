@@ -2,7 +2,7 @@
 from io import StringIO
 
 from nonebot import Bot
-from nonebot.internal.matcher import Matcher, current_bot
+from nonebot.internal.matcher import current_bot
 from nonebot_plugin_session import Session
 from ssttkkl_nonebot_utils.errors.errors import QueryError
 from ssttkkl_nonebot_utils.interceptor.handle_error import handle_error
@@ -11,6 +11,7 @@ from .mapper import map_point, digit_mapping, percentile_str, map_real_point
 from .mg import matcher_group
 from .utils.dep import GroupDep, SessionDep, RunningSeasonDep, UserDep, SeasonFromUnaryArgOrRunningSeason
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
+from .utils.send_msg import send_msg
 from ..model import GameStatistics, Group, Season, User
 from ..model.identity import get_platform_group_id
 from ..service.game_service import get_game_statistics, get_games, get_season_game_statistics
@@ -28,7 +29,7 @@ require_platform_user_id(query_season_user_trend_matcher)
 
 @query_season_user_trend_matcher.handle()
 @handle_error()
-async def query_season_user_trend(bot: Bot, matcher: Matcher, group: Group = GroupDep(),
+async def query_season_user_trend(bot: Bot, group: Group = GroupDep(),
                                   session: Session = SessionDep(),
                                   user: User = UserDep(),
                                   season: Season = RunningSeasonDep()):
@@ -50,7 +51,7 @@ async def query_season_user_trend(bot: Bot, matcher: Matcher, group: Group = Gro
                           f"({map_point(record.raw_point, record.point_scale)})  "
                           f"对局{game.code}\n")
 
-            await matcher.send(sio.getvalue().strip())
+            await send_msg(sio.getvalue().strip())
     else:
         raise QueryError("用户还没有参加过对局")
 
@@ -82,11 +83,11 @@ require_platform_user_id(query_user_statistics_matcher)
 
 @query_user_statistics_matcher.handle()
 @handle_error()
-async def query_user_statistics(matcher: Matcher, group: Group = GroupDep(),
+async def query_user_statistics(group: Group = GroupDep(),
                                 user: User = UserDep()):
     game_statistics = await get_game_statistics(group.id, user.id)
     msg = await map_game_statistics(game_statistics, user, group)
-    await matcher.send(msg)
+    await send_msg(msg)
 
 
 # ============ 赛季对战数据 ============
@@ -100,9 +101,9 @@ require_platform_user_id(query_season_user_statistics_matcher)
 
 @query_season_user_statistics_matcher.handle()
 @handle_error()
-async def query_season_user_statistics(matcher: Matcher, group: Group = GroupDep(),
+async def query_season_user_statistics(group: Group = GroupDep(),
                                        user: User = UserDep(),
                                        season: Season = SeasonFromUnaryArgOrRunningSeason()):
     game_statistics = await get_season_game_statistics(group.id, user.id, season.id)
-    msg = await  map_game_statistics(game_statistics, user, group)
-    await matcher.send(msg)
+    msg = await map_game_statistics(game_statistics, user, group)
+    await send_msg(msg)

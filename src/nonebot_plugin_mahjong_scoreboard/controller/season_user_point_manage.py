@@ -9,6 +9,7 @@ from .mg import matcher_group
 from .utils.dep import UserDep, GroupDep, RunningSeasonDep, SessionDep, UnaryArg, SenderUserDep, IsGroupAdminDep
 from .utils.general_handlers import require_store_command_args, require_platform_group_id, require_platform_user_id
 from .utils.parse import parse_float_or_error
+from .utils.send_msg import send_msg
 from ..model import Group, User, Season
 from ..model.identity import get_platform_group_id
 from ..service.season_user_point_service import reset_season_user_point, change_season_user_point_manually
@@ -30,9 +31,9 @@ async def set_season_user_point_confirm(bot: Bot, matcher: Matcher, session: Ses
                                         user: User = UserDep(use_sender=False),
                                         pt=UnaryArg(parser=lambda x: parse_float_or_error(x, 'PT')),
                                         group_admin=IsGroupAdminDep()):
-    await matcher.pause(
-        f"确定设置用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
-        f"PT为{pt}吗？(y/n)")
+    await send_msg(f"确定设置用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
+                   f"PT为{pt}吗？(y/n)")
+    await matcher.pause()
 
 
 @set_season_user_point_matcher.handle()
@@ -50,7 +51,7 @@ async def set_season_user_point_end(event: Event, matcher: Matcher,
                                                       operator.id)
         msg = await map_season_user_point(sup, season)
         msg += "\n\n设置用户PT成功"
-        await matcher.send(msg)
+        await send_msg(msg)
     else:
         await matcher.finish("取消设置用户PT")
 
@@ -69,9 +70,9 @@ require_platform_user_id(reset_season_user_point_matcher, use_sender_on_group_me
 async def reset_season_user_point_confirm(bot: Bot, matcher: Matcher, session: Session = SessionDep(),
                                           user: User = UserDep(use_sender=False),
                                           group_admin=IsGroupAdminDep()):
-    await matcher.pause(
-        f"确定重置用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
-        f"PT吗？(y/n)")
+    await send_msg(f"确定重置用户[{await get_user_nickname(bot, user.platform_user_id, get_platform_group_id(session))}]"
+                   f"PT吗？(y/n)")
+    await matcher.pause()
 
 
 @reset_season_user_point_matcher.handle()
