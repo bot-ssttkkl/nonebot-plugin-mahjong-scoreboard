@@ -42,7 +42,7 @@ async def write_season_user_point_change_logs_csv(f: TextIO, logs: Iterable[Seas
 
             user_point[log.user.id] = user_point.get(log.user.id, 0) + log.change_point
         elif log.change_type == SeasonUserPointChangeType.manually:
-            header.append(f"手动设置 {map_datetime(log.create_time)}")
+            header.append(f"手动设置\n{map_datetime(log.create_time)}")
 
             _ensure_size(table[user_idx[log.user.id]], len(header), '')
             table[user_idx[log.user.id]][-1] = str(log.change_point)
