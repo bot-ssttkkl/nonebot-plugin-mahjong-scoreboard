@@ -60,7 +60,7 @@ class RankPointPolicy(int, Enum):
 
 
 class SeasonConfig(BaseModel):
-    rank_point_policy: Optional[int]
+    rank_point_policy: Optional[int] = None
     """
     顺位PT策略
     """
@@ -70,22 +70,22 @@ class SeasonConfig(BaseModel):
     是否启用半庄战
     """
 
-    south_game_initial_point: Optional[int]
+    south_game_initial_point: Optional[int] = None
     """
     半庄战起点
     """
 
-    south_game_origin_point: Optional[int]
+    south_game_origin_point: Optional[int] = None
     """
     半庄战返点（多于起点的部分将作为头名赏）
     """
 
-    south_game_horse_point: Optional[List[int]]
+    south_game_horse_point: Optional[List[int]] = None
     """
     半庄战顺位点（绝对顺位点或马点）
     """
 
-    south_game_overwater_point: Optional[List[List[int]]]
+    south_game_overwater_point: Optional[List[List[int]]] = None
     """
     半庄战水上顺位点
     """
@@ -95,12 +95,12 @@ class SeasonConfig(BaseModel):
     是否启用东风战
     """
 
-    east_game_initial_point: Optional[int]
+    east_game_initial_point: Optional[int] = None
     """
     东风战起点
     """
 
-    east_game_origin_point: Optional[int]
+    east_game_origin_point: Optional[int] = None
     """
     东风战返点（多于起点的部分将作为头名赏）
     """
@@ -110,7 +110,7 @@ class SeasonConfig(BaseModel):
     东风战顺位点（绝对顺位点或马点）
     """
 
-    east_game_overwater_point: Optional[List[List[int]]]
+    east_game_overwater_point: Optional[List[List[int]]] = None
     """
     东风战水上顺位点
     """
@@ -127,16 +127,16 @@ class Season(BaseModel):
     state: SeasonState
     code: str
     name: str
-    start_time: Optional[datetime]
-    finish_time: Optional[datetime]
+    start_time: Optional[datetime] = None
+    finish_time: Optional[datetime] = None
     config: SeasonConfig
 
 
 class GameRecord(BaseModel):
     user: User
-    wind: Optional[Wind]
+    wind: Optional[Wind] = None
     score: int
-    rank: Optional[int]
+    rank: Optional[int] = None
     raw_point: int
     point_scale: int
 
@@ -154,28 +154,28 @@ class Game(BaseModel):
     id: int
     code: int
     group: Group
-    promoter: Optional[User]
-    season: Optional[Season]
+    promoter: Optional[User] = None
+    season: Optional[Season] = None
     player_and_wind: PlayerAndWind
     state: GameState
     records: conlist(GameRecord, max_items=4)
-    progress: Optional[GameProgress]
-    complete_time: Optional[datetime]
-    comment: Optional[str]
+    progress: Optional[GameProgress] = None
+    complete_time: Optional[datetime] = None
+    comment: Optional[str] = None
 
 
 class SeasonUserPoint(BaseModel):
     user: User
     point: int
-    rank: Optional[int]
-    total: Optional[int]
+    rank: Optional[int] = None
+    total: Optional[int] = None
 
 
 class SeasonUserPointChangeLog(BaseModel):
     user: User
     change_type: SeasonUserPointChangeType
     change_point: int
-    related_game: Optional[Game]
+    related_game: Optional[Game] = None
     create_time: datetime
 
 
