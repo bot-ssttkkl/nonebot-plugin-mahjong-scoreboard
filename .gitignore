@@ -147,3 +147,5 @@ dmypy.json
 .env.*
 *.db
 bot.py
+
+.pdm-*

@@ -1,55 +1,52 @@
-[tool.poetry]
+[tool.pdm]
+distribution = false
+
+[tool.pdm.build]
+includes = ["src/nonebot_plugin_mahjong_scoreboard"]
+[project]
 name = "nonebot-plugin-mahjong-scoreboard"
 version = "0.7.0"
 description = "日麻寄分器（NoneBot插件）"
-authors = ["ssttkkl <huang.wen.long@hotmail.com>"]
-readme = "README.MD"
-license = "MIT"
-repository = "https://github.com/ssttkkl/nonebot-plugin-mahjong-scoreboard"
-packages = [
-    { include = "nonebot_plugin_mahjong_scoreboard", from = "src" },
+authors = [
+    {name = "ssttkkl", email = "huang.wen.long@hotmail.com"},
 ]
+dependencies = [
+    "nonebot2<3.0,>=2.2",
+    "nonebot-plugin-apscheduler>=0.3.0",
+    "nonebot-plugin-gocqhttp-cross-machine-upload-file>=0.1.5",
+    "nonebot-plugin-localstore>=0.5.1",
+    "nonebot-plugin-sqlalchemy>=0.2.1",
+    "nonebot-plugin-session>=0.2.0",
+    "aiosqlite>=0.17.0",
+    "tzlocal>=4.2",
+    "cachetools>=5.2.0",
+    "ssttkkl-nonebot-utils>=0.1.15",
+]
+requires-python = "<4.0,>=3.9"
+readme = "README.MD"
+license = {text = "MIT"}
 
-[tool.poetry.dependencies]
-python = "^3.9"
-nonebot2 = "^2.2"
-nonebot_plugin_apscheduler = ">=0.3.0"
-nonebot-plugin-gocqhttp-cross-machine-upload-file = ">=0.1.5"
-nonebot-plugin-localstore = ">=0.5.1"
-nonebot-plugin-sqlalchemy = ">=0.2.1"
-nonebot-plugin-session = ">=0.2.0"
-aiosqlite = ">=0.17.0"
-tzlocal = ">=4.2"
-cachetools = ">=5.2.0"
-ssttkkl-nonebot-utils = ">=0.1.15"
-nonebot-plugin-htmlrender = { version = ">=0.2.0.3", optional = true }
-nonebot-plugin-send-anything-anywhere = { version = ">=0.3.0", optional = true }
-prettytable = { version = ">=3.8.0", optional = true }
+[project.urls]
+repository = "https://github.com/ssttkkl/nonebot-plugin-mahjong-scoreboard"
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.0.275"
-isort = "^5.10.1"
-black = "^23.1.0"
-pre-commit = "^3.1.0"
+[project.optional-dependencies]
+htmlrender = ["nonebot-plugin-htmlrender>=0.2.0.3", "nonebot-plugin-send-anything-anywhere>=0.3.0", "prettytable>=3.8.0"]
 
-setuptools = "^68.1.2"
-nb-cli = "^1.2.5"
-nonebot-plugin-orm = {extras = ["default"], version = "^0.6.0"}
-
-nonebot2 = {extras = ["fastapi"], version = "^2.1.2"}
-nonebot-adapter-onebot = "*"
-nonebot-adapter-qqguild = "*"
-
-nonebug = "^0.3.5"
-pytest = "^7.4.3"
-pytest-asyncio = "^0.21.1"
-pytest-cov = "^4.1.0"
-
-asyncpg = "^0.28.0"
-
-[tool.poetry.extras]
-htmlrender = ["nonebot-plugin-htmlrender", "nonebot-plugin-send-anything-anywhere", "prettytable"]
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "ruff<1.0.0,>=0.0.275",
+    "isort<6.0.0,>=5.10.1",
+    "black<24.0.0,>=23.1.0",
+    "pre-commit<4.0.0,>=3.1.0",
+    "setuptools<69.0.0,>=68.1.2",
+    "nb-cli<2.0.0,>=1.2.5",
+    "nonebot-plugin-orm[default]<1.0.0,>=0.6.0",
+    "nonebot2[fastapi]<3.0.0,>=2.1.2",
+    "nonebot-adapter-onebot",
+    "nonebot-adapter-qqguild",
+    "nonebug<1.0.0,>=0.3.5",
+    "pytest<8.0.0,>=7.4.3",
+    "pytest-asyncio<1.0.0,>=0.21.1",
+    "pytest-cov<5.0.0,>=4.1.0",
+    "asyncpg<1.0.0,>=0.28.0",
+]
